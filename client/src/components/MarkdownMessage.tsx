@@ -58,12 +58,15 @@ export function MarkdownMessage({ content, theme = 'dark' }: MarkdownMessageProp
     <div className="prose prose-sm dark:prose-invert max-w-none">
       <ReactMarkdown
         components={{
-          code({ node, inline, className, children, ...props }) {
+          code(props) {
+            const { children, className, ...rest } = props;
             const value = String(children).replace(/\n$/, '');
-            return inline ? (
+            const isInline = !className;
+            
+            return isInline ? (
               <code
                 className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-sm font-mono text-gray-800 dark:text-gray-200"
-                {...props}
+                {...rest}
               >
                 {value}
               </code>

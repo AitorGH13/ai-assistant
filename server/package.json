@@ -9,6 +9,7 @@
     "openai": "^4.68.0"
   },
   "devDependencies": {
-    "@types/bun": "^1.1.0"
+    "@types/bun": "^1.1.0",
+    "tsx": "^4.21.0"
   }
 }
