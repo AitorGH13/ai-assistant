@@ -1,46 +1,54 @@
-import { ButtonHTMLAttributes } from 'react';
-import { LucideIcon } from 'lucide-react';
+import { Button, ButtonProps } from "./Button"
+import { LucideIcon } from "lucide-react"
+import { cn } from "../../lib/utils"
 
-interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  icon: LucideIcon;
-  size?: 'sm' | 'md' | 'lg';
-  variant?: 'default' | 'ghost' | 'primary';
-  label?: string;
+interface IconButtonProps extends Omit<ButtonProps, 'children'> {
+  icon: LucideIcon
+  label?: string
 }
 
-export function IconButton({
-  icon: Icon,
-  size = 'md',
-  variant = 'default',
+export function IconButton({ 
+  icon: Icon, 
+  className, 
+  variant = "ghost", 
+  size = "icon", // Default to icon size of shadcn
   label,
-  className = '',
-  ...props
+  ...props 
 }: IconButtonProps) {
-  const sizeClasses = {
-    sm: 'p-1',
-    md: 'p-2',
-    lg: 'p-3',
-  };
-
-  const iconSizes = {
-    sm: 16,
-    md: 20,
-    lg: 24,
-  };
-
-  const variantClasses = {
-    default: 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800',
-    ghost: 'text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300',
-    primary: 'text-primary-600 hover:text-primary-700 hover:bg-primary-50 dark:text-primary-400 dark:hover:text-primary-300 dark:hover:bg-primary-900/20',
-  };
+    // Map variants if old code uses 'primary'
+    const mappedVariant = (variant as any) === "primary" ? "default" : variant
+    
+    // Adjust icon size based on button size prop if needed, or default to reasonable size
+    // Shadcn 'icon' size is h-10 w-10. 'sm' button is h-9. 'lg' is h-11.
+    // Let's deduce icon size.
+    const iconClass = size === "sm" ? "h-4 w-4" : size === "lg" ? "h-6 w-6" : "h-5 w-5"
+    
+    // If user passed a specific size like 'sm' but wants an icon button (square),
+    // Shadcn Button with size='sm' is NOT square (it has px-3). 
+    // We should force square dimensions if we want a true icon button, or use size="icon" and scale via className.
+    // For simplicity, let's trust size="icon" is mostly what we want, or map:
+    const buttonSize = size === "sm" || size === "lg" || size === "default" || size === "icon" ? "icon" : "icon"
+    
+    const sizeClasses = {
+        sm: "h-8 w-8",
+        default: "h-10 w-10",
+        md: "h-10 w-10", // map md to default/icon
+        lg: "h-12 w-12",
+        icon: "h-10 w-10"
+    }
+    
+    const heightClass = sizeClasses[size as keyof typeof sizeClasses] || "h-10 w-10"
 
   return (
-    <button
-      className={`rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed ${sizeClasses[size]} ${variantClasses[variant]} ${className}`}
+    <Button
+      variant={mappedVariant as any}
+      size="icon"
+      className={cn(heightClass, className)} 
       aria-label={label}
+      title={label}
       {...props}
     >
-      <Icon size={iconSizes[size]} />
-    </button>
-  );
+      <Icon className={iconClass} />
+    </Button>
+  )
 }

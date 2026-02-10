@@ -9,30 +9,87 @@
 
 @layer base {
   :root {
-    /* Light theme colors */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+ 
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+ 
+    --primary: 229 76% 57%;
+    --primary-foreground: 210 40% 98%;
+ 
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+ 
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+ 
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+ 
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 229 76% 57%;
+ 
+    --radius: 0.5rem;
+
+    /* Legacy variables mapping to keep existing layouts working if needed */
     --bg-primary: 255 255 255;
+    --text-primary: 17 24 39;
     --bg-secondary: 249 250 251;
     --bg-tertiary: 243 244 246;
-    --text-primary: 17 24 39;
-    --text-secondary: 75 85 99;
-    --border-color: 229 231 235;
   }
-
+ 
   .dark {
-    /* Dark theme colors */
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+ 
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+ 
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+ 
+    --primary: 229 76% 57%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+ 
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+ 
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+ 
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+ 
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+ 
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 229 76% 57%;
+
+    /* Legacy dark variables */
     --bg-primary: 17 24 39;
+    --text-primary: 243 244 246;
     --bg-secondary: 31 41 55;
     --bg-tertiary: 55 65 81;
-    --text-primary: 243 244 246;
-    --text-secondary: 156 163 175;
-    --border-color: 55 65 81;
   }
 }
-
-body {
-  @apply transition-colors duration-200;
-  background-color: rgb(var(--bg-primary));
-  color: rgb(var(--text-primary));
+ 
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }
 
 /* Custom scrollbar */
@@ -41,12 +98,11 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background-color: rgb(var(--bg-secondary));
+  @apply bg-secondary/50;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply rounded-full;
-  background-color: rgb(var(--bg-tertiary));
+  @apply rounded-full bg-muted-foreground/30 hover:bg-muted-foreground/50;
 }
 
 ::-webkit-scrollbar-thumb:hover {

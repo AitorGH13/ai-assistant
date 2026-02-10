@@ -1,5 +1,6 @@
 import { useState, KeyboardEvent } from "react";
 import { Send, Loader2 } from "lucide-react";
+import { Button } from "./ui/Button";
 
 interface Props {
   onSend: (message: string) => void;
@@ -39,23 +40,23 @@ export function ChatInput({ onSend, disabled }: Props) {
             overflowY: input.split('\n').length > 3 ? 'auto' : 'hidden'
           }}
         />
-        <button
+        <Button
           onClick={handleSubmit}
           disabled={disabled || !input.trim()}
-          className="rounded-xl bg-primary-600 dark:bg-primary-500 px-5 py-3 font-semibold text-white transition-all duration-200 hover:bg-primary-700 dark:hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md active:scale-95 min-w-[100px] flex items-center justify-center gap-2"
+          className="rounded-xl px-5 py-6 h-auto min-w-[100px]"
         >
           {disabled ? (
             <>
-              <Loader2 className="animate-spin" size={20} />
+              <Loader2 className="animate-spin mr-2 h-5 w-5" />
               <span className="hidden sm:inline">Sending</span>
             </>
           ) : (
             <>
-              <Send size={20} />
+              <Send className="mr-2 h-5 w-5" />
               <span className="hidden sm:inline">Send</span>
             </>
           )}
-        </button>
+        </Button>
       </div>
     </div>
   );
