@@ -1,7 +1,6 @@
 ---
 description: "Generate an implementation plan for new features or refactoring existing code."
 name: "Planning mode instructions"
-model: Claude Opus 4.5 (copilot)
 tools: ["codebase", "fetch", "findTestFiles", "githubRepo", "search", "usages"]
 ---
 
