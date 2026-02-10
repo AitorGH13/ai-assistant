@@ -3,11 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently --kill-others \"bun run dev:server\" \"bun run dev:client\"",
-    "dev:server": "cd server && bun run --watch index.ts",
+    "dev": "bun run cleanup && concurrently --kill-others \"bun run dev:server\" \"bun run dev:client\"",
+    "dev:server": "powershell -Command \"cd server; python -m uvicorn main:app --reload --port 3001\"",
     "dev:client": "cd client && bun run dev",
+    "cleanup": "powershell -ExecutionPolicy Bypass -File ./cleanup-ports.ps1",
     "build": "cd client && bun run build",
-    "install:all": "bun install && cd client && bun install && cd ../server && bun install"
+    "install:all": "bun install && cd client && bun install && cd ../server && pip install -r requirements.txt"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

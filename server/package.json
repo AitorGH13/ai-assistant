@@ -2,14 +2,8 @@
   "name": "server",
   "version": "1.0.0",
   "scripts": {
-    "dev": "bun run --watch index.ts",
-    "start": "bun run index.ts"
-  },
-  "dependencies": {
-    "openai": "^4.68.0"
-  },
-  "devDependencies": {
-    "@types/bun": "^1.1.0",
-    "tsx": "^4.21.0"
+    "dev": "uvicorn main:app --reload --port 3001",
+    "start": "uvicorn main:app --port 3001",
+    "install": "pip install -r requirements.txt"
   }
 }
