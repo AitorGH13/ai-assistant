@@ -64,10 +64,10 @@ export function ChatInput({ onSend, disabled, showImageUpload = false }: Props) 
   };
 
   return (
-    <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4">
+    <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-3 sm:p-4">
       <div className="max-w-4xl mx-auto">
         {imagePreview && (
-          <div className="mb-3 relative inline-block">
+          <div className="mb-2 sm:mb-3 relative inline-block">
             <img
               src={imagePreview}
               alt="Preview"
@@ -75,14 +75,14 @@ export function ChatInput({ onSend, disabled, showImageUpload = false }: Props) 
             />
             <button
               onClick={handleRemoveImage}
-              className="absolute -top-2 -right-2 p-1 rounded-full bg-red-500 hover:bg-red-600 text-white shadow-lg"
+              className="absolute -top-2 -right-2 p-1.5 rounded-full bg-red-500 hover:bg-red-600 text-white shadow-lg min-w-[32px] min-h-[32px] flex items-center justify-center"
             >
               <X size={16} />
             </button>
           </div>
         )}
         
-        <div className="flex gap-3">
+        <div className="flex gap-2">
           {showImageUpload && (
             <div>
               <input
@@ -97,7 +97,7 @@ export function ChatInput({ onSend, disabled, showImageUpload = false }: Props) 
                 variant="ghost"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={disabled}
-                className="rounded-xl px-4 py-6 h-auto"
+                className="rounded-lg min-w-[44px] min-h-[44px] h-[44px] w-[44px] p-0 flex items-center justify-center"
               >
                 <Image size={20} />
               </Button>
@@ -108,10 +108,10 @@ export function ChatInput({ onSend, disabled, showImageUpload = false }: Props) 
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Type your message... (Shift+Enter for new line)"
+            placeholder="Type your message..."
             disabled={disabled}
             rows={1}
-            className="flex-1 resize-none rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-3 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:border-primary-500 dark:focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 disabled:opacity-50 transition-all duration-200 min-h-[52px] shadow-sm hover:shadow-md focus:shadow-md"
+            className="flex-1 resize-none rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 sm:px-4 py-2.5 text-sm sm:text-base text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:border-primary-500 dark:focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 disabled:opacity-50 transition-all duration-200 min-h-[44px] shadow-sm hover:shadow-md focus:shadow-md"
             style={{ 
               maxHeight: '200px',
               overflowY: input.split('\n').length > 3 ? 'auto' : 'hidden'
@@ -120,17 +120,17 @@ export function ChatInput({ onSend, disabled, showImageUpload = false }: Props) 
           <Button
             onClick={handleSubmit}
             disabled={disabled || !input.trim()}
-            className="rounded-xl px-5 py-6 h-auto min-w-[100px]"
+            className="rounded-lg min-w-[44px] min-h-[44px] h-[44px] px-3 sm:px-4 flex items-center justify-center"
           >
             {disabled ? (
               <>
-                <Loader2 className="animate-spin mr-2 h-5 w-5" />
-                <span className="hidden sm:inline">Sending</span>
+                <Loader2 className="animate-spin h-5 w-5" />
+                <span className="hidden sm:inline ml-2">Sending</span>
               </>
             ) : (
               <>
-                <Send className="mr-2 h-5 w-5" />
-                <span className="hidden sm:inline">Send</span>
+                <Send className="h-5 w-5" />
+                <span className="hidden sm:inline ml-2">Send</span>
               </>
             )}
           </Button>

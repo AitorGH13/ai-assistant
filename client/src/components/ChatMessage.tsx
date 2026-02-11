@@ -78,13 +78,13 @@ export function ChatMessage({ message, theme = 'dark' }: Props) {
 
   return (
     <div
-      className={`flex gap-3 mb-6 animate-fade-in ${
+      className={`flex gap-2 sm:gap-3 mb-4 sm:mb-6 animate-fade-in ${
         isUser ? "flex-row-reverse" : "flex-row"
       }`}
     >
       <Avatar role={message.role} size="md" />
       
-      <div className={`flex flex-col gap-1 max-w-[85%] md:max-w-[75%] ${isUser ? 'items-end' : 'items-start'}`}>
+      <div className={`flex flex-col gap-1 max-w-[90%] sm:max-w-[85%] md:max-w-[75%] ${isUser ? 'items-end' : 'items-start'}`}>
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
             {isUser ? "You" : "AI Assistant"}
@@ -101,7 +101,7 @@ export function ChatMessage({ message, theme = 'dark' }: Props) {
         </div>
         
         <div
-          className={`rounded-2xl px-4 py-3 shadow-sm ${
+          className={`rounded-xl sm:rounded-2xl px-3 sm:px-4 py-2.5 sm:py-3 shadow-sm ${
             isUser
               ? "bg-primary-600 dark:bg-primary-500 text-white rounded-tr-md"
               : "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-tl-md"

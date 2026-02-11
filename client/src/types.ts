@@ -17,7 +17,7 @@ export interface MessageContent {
 export interface ChatRequest {
   messages: { role: "user" | "assistant"; content: string | MessageContent[] }[];
   systemPrompt?: string;
-  mode?: "chat" | "vision" | "function";
+  mode?: "chat" | "function";
 }
 
 export interface SearchRequest {
@@ -34,4 +34,4 @@ export interface SearchResponse {
   }>;
 }
 
-export type AppMode = "chat" | "vision" | "search";
+export type AppMode = "chat" | "search";

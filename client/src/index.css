@@ -89,12 +89,21 @@
   }
   body {
     @apply bg-background text-foreground;
+    overflow-x: hidden;
+  }
+  html {
+    overflow-x: hidden;
+  }
+  #root {
+    overflow-x: hidden;
+    min-height: 100vh;
   }
 }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -107,4 +116,22 @@
 
 ::-webkit-scrollbar-thumb:hover {
   @apply opacity-80;
+}
+
+/* Thin scrollbar utility */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  @apply rounded-full bg-muted-foreground/20;
+}
+
+/* Hide scrollbar on mobile for horizontal scroll areas but keep functionality */
+@media (max-width: 640px) {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    -ms-overflow-style: -ms-autohiding-scrollbar;
+  }
 }
