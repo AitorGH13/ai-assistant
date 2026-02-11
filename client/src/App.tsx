@@ -1,14 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { ChatMessage } from "./components/ChatMessage";
 import { ChatInput } from "./components/ChatInput";
-import { SettingsPanel } from "./components/SettingsPanel";
-import { ThemeToggle } from "./components/ui/ThemeToggle";
-import { ModeSelector } from "./components/ModeSelector";
+import { Sidebar } from "./components/Sidebar";
 import { SemanticSearch } from "./components/SemanticSearch";
-import { Button } from "./components/ui/Button";
 import { ChatMessage as ChatMessageType, AppMode, MessageContent } from "./types";
 import { useTheme } from "./utils/theme";
-import { MessageSquare, Trash2, Search } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 
 function App() {
   const [mode, setMode] = useState<AppMode>("chat");
@@ -152,7 +149,7 @@ function App() {
     }
   };
 
-  const handleClearChat = () => {
+  const handleNewConversation = () => {
     setMessages([]);
   };
 
@@ -167,48 +164,16 @@ function App() {
     "What is the weather in Tokyo?",
   ];
 
-  const getHeaderIcon = () => {
-    switch (mode) {
-      case "search":
-        return <Search className="h-4 w-4 sm:h-5 sm:w-5 text-white" />;
-      default:
-        return <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-white" />;
-    }
-  };
-
   return (
     <div className="flex h-screen flex-col bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
-      <header className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 sm:px-4 md:px-6 py-3 shadow-sm">
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <div className="p-2 rounded-lg bg-gradient-to-br from-primary-500 to-accent-500 flex-shrink-0">
-            {getHeaderIcon()}
-          </div>
-          <h1 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 dark:text-white truncate">AI Assistant</h1>
-        </div>
-        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-          <ThemeToggle theme={theme} onToggle={toggleTheme} />
-          {mode !== "search" && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClearChat}
-              className="flex items-center gap-1 sm:gap-2 h-9 px-2 sm:px-3"
-            >
-              <Trash2 size={16} />
-              <span className="hidden sm:inline text-sm">Clear</span>
-            </Button>
-          )}
-        </div>
-      </header>
-
-      <ModeSelector mode={mode} onModeChange={setMode} />
-
-      {mode !== "search" && (
-        <SettingsPanel
-          systemPrompt={systemPrompt}
-          onSystemPromptChange={setSystemPrompt}
-        />
-      )}
+      {/* Sidebar with hamburger menu, settings, and history */}
+      <Sidebar
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        systemPrompt={systemPrompt}
+        onSystemPromptChange={setSystemPrompt}
+        onNewConversation={handleNewConversation}
+      />
 
       {mode === "search" ? (
         <div className="flex-1 overflow-y-auto">
@@ -259,7 +224,9 @@ function App() {
           <ChatInput 
             onSend={handleSendMessage} 
             disabled={isLoading} 
-            showImageUpload={true}
+            showImageUpload={mode === "chat"}
+            mode={mode}
+            onModeChange={setMode}
           />
         </>
       )}
