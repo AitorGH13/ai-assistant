@@ -2,9 +2,34 @@
 
 A modern, professional ChatGPT-lite clone with a beautiful UI, built with Python FastAPI backend and React frontend.
 
+## 🌟 Advanced Features
+
+### Three Powerful Modes
+
+1. **💬 Chat Mode** - AI conversation with function calling capabilities
+   - Agentic tool execution (e.g., getCurrentWeather)
+   - Visual indicators when tools are used
+   - Streaming responses
+
+2. **🖼️ Vision Mode** - Multimodal image analysis
+   - Upload and analyze images
+   - Ask questions about visual content
+   - Powered by GPT-4o-mini vision capabilities
+
+3. **🔍 Search Mode** - Semantic search with embeddings
+   - Basic RAG (Retrieval-Augmented Generation)
+   - In-memory knowledge base
+   - Cosine similarity matching
+   - Top-3 relevant results
+
+👉 **See [FEATURES.md](FEATURES.md) for detailed documentation**
+
 ## Features
 
 - 🚀 **Streaming responses** - See AI responses in real-time as they're generated
+- 🤖 **Function Calling** - AI can call tools for real-time information
+- 📸 **Vision Analysis** - Upload images and ask questions about them
+- 🔎 **Semantic Search** - Find relevant information using embeddings
 - 🎨 **Modern UI** - Professional minimalist design with light/dark themes
 - 📱 **Fully Responsive** - Optimized for mobile, tablet, and desktop
 - 🌓 **Dark/Light Mode** - Toggle between themes with persistent preference
@@ -18,10 +43,10 @@ A modern, professional ChatGPT-lite clone with a beautiful UI, built with Python
 
 ## Tech Stack
 
-- **Backend**: Python + FastAPI + Uvicorn
+- **Backend**: Python + FastAPI + Uvicorn + NumPy
 - **Frontend**: Vite + React + TypeScript + Tailwind CSS
-- **Package Manager**: Bun (for frontend)
-- **AI**: OpenAI API (gpt-4o-mini)
+- **Package Manager**: Bun (for frontend) / pip (for backend)
+- **AI**: OpenAI API (gpt-4o-mini for chat/vision, text-embedding-3-small for search)
 - **UI Components**: Custom component library with lucide-react icons
 - **Markdown**: react-markdown with syntax highlighting
 - **Font**: Inter font family
@@ -99,6 +124,8 @@ ai-assistant/
 │   │   │   ├── ui/       # Reusable UI components (Avatar, Button, etc.)
 │   │   │   ├── ChatMessage.tsx
 │   │   │   ├── ChatInput.tsx
+│   │   │   ├── ModeSelector.tsx     # NEW: Tab selector
+│   │   │   ├── SemanticSearch.tsx   # NEW: Search interface
 │   │   │   ├── SettingsPanel.tsx
 │   │   │   └── MarkdownMessage.tsx
 │   │   ├── utils/        # Utility functions (theme management)
@@ -110,12 +137,13 @@ ai-assistant/
 │   ├── tailwind.config.js
 │   └── package.json
 ├── server/                 # Python FastAPI backend
-│   ├── main.py            # FastAPI server with /api/chat endpoint
+│   ├── main.py            # FastAPI server with API endpoints
 │   ├── requirements.txt   # Python dependencies
 │   └── package.json       # NPM scripts for convenience
 ├── .env.example
 ├── .gitignore
 ├── cleanup-ports.ps1      # Windows script to cleanup ports
+├── FEATURES.md            # NEW: Detailed feature documentation
 ├── package.json           # Root scripts
 └── README.md
 ```
@@ -124,15 +152,35 @@ ai-assistant/
 
 ### POST /api/chat
 
-Send messages to the AI and receive streaming responses.
+Send messages to the AI and receive streaming responses. Supports function calling and vision analysis.
 
 **Request Body:**
 ```json
 {
   "messages": [
-    { "role": "user", "content": "Hello!" }
+    { 
+      "role": "user", 
+      "content": "Hello!" 
+    }
   ],
-  "systemPrompt": "You are a helpful assistant." // optional
+  "systemPrompt": "You are a helpful assistant.", // optional
+  "mode": "function" // optional: "function" | "vision" | "chat"
+}
+```
+
+**For Vision (multimodal):**
+```json
+{
+  "messages": [
+    { 
+      "role": "user", 
+      "content": [
+        { "type": "text", "text": "What's in this image?" },
+        { "type": "image_url", "image_url": { "url": "data:image/jpeg;base64,..." }}
+      ]
+    }
+  ],
+  "mode": "vision"
 }
 ```
 
@@ -142,7 +190,34 @@ data: {"content":"Hello"}
 
 data: {"content":" there!"}
 
+data: {"tool_calling": true}  // when function is called
+
 data: [DONE]
+```
+
+### POST /api/search
+
+Semantic search using embeddings.
+
+**Request Body:**
+```json
+{
+  "query": "What is the secret code?"
+}
+```
+
+**Response:**
+```json
+{
+  "query": "What is the secret code?",
+  "result": "The secret code is 1234.",
+  "similarity": 0.89,
+  "all_results": [
+    { "text": "The secret code is 1234.", "similarity": 0.89 },
+    { "text": "...", "similarity": 0.72 },
+    { "text": "...", "similarity": 0.65 }
+  ]
+}
 ```
 
 ### GET /

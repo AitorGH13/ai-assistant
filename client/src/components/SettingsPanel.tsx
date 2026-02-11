@@ -13,7 +13,7 @@ export function SettingsPanel({ systemPrompt, onSystemPromptChange }: Props) {
     <div className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
+        className="flex w-full items-center justify-between px-3 sm:px-4 py-3 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 min-h-[52px]"
       >
         <div className="flex items-center gap-2">
           <Settings className="h-5 w-5 text-gray-600 dark:text-gray-400" />
@@ -32,7 +32,7 @@ export function SettingsPanel({ systemPrompt, onSystemPromptChange }: Props) {
       </button>
 
       {isOpen && (
-        <div className="px-4 pb-4 animate-slide-up">
+        <div className="px-3 sm:px-4 pb-3 sm:pb-4 animate-slide-up">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             System Prompt
           </label>
