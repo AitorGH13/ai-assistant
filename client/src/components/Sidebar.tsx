@@ -65,7 +65,7 @@ export function Sidebar({
               onClick={handleMenuToggle}
               className="w-full flex items-center justify-center gap-2 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors rounded-lg"
             >
-              <Menu className="h-5 w-5 text-gray-600 dark:text-gray-400 flex-shrink-0" />
+              <Menu className="h-5 w-5 text-primary-600 dark:text-primary-400  flex-shrink-0" />
               {isOpen && <span className="font-medium text-gray-900 dark:text-gray-100">Menú</span>}
             </button>
           </div>
@@ -76,7 +76,7 @@ export function Sidebar({
               onClick={onNewConversation}
               className="w-full flex items-center justify-center gap-2 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors rounded-lg"
             >
-              <Plus className="h-5 w-5 text-gray-600 dark:text-gray-400 flex-shrink-0" />
+              <Plus className="h-5 w-5 text-primary-600 dark:text-primary-400  flex-shrink-0" />
               {isOpen && <span className="font-medium text-gray-900 dark:text-gray-100">Nueva Conversación</span>}
             </button>
           </div>
@@ -112,16 +112,16 @@ export function Sidebar({
                           >
                             {conversation.title}
                           </button>
-                          <button
+                            <button
                             onClick={(e) => {
                               e.stopPropagation();
                               onDeleteConversation(conversation.id);
                             }}
-                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 rounded transition-all"
+                            className="opacity-0 group-hover:opacity-100 p-1 rounded transition-all transform hover:scale-105 shadow-md hover:bg-primary-200 dark:hover:bg-primary-800/50"
                             title="Eliminar conversación"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                            >
+                            <Trash2 className="h-3.5 w-3.5 text-primary-600 dark:text-primary-400" />
+                            </button>
                         </div>
                       ))}
                     </div>
@@ -135,10 +135,18 @@ export function Sidebar({
           <div className="p-4">
             <button
               onClick={handleSettingsClick}
-              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors justify-center rounded-lg"
+              className={`w-full flex items-center gap-3 px-4 py-3 transition-all justify-center rounded-lg shadow-md transform hover:scale-105 ${
+              !isOpen && showFloatingSettings
+                ? "bg-primary-200 dark:bg-primary-800/50"
+                : "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
+              }`}
             >
-              <Settings className="h-5 w-5 text-gray-600 dark:text-gray-400 flex-shrink-0" />
-              {isOpen && <span className="font-medium text-gray-900 dark:text-gray-100">Configuración</span>}
+              <Settings className="h-5 w-5 text-primary-600 dark:text-primary-400 flex-shrink-0" />
+              {isOpen && (
+              <span className="font-medium text-gray-900 dark:text-gray-100">
+                Configuración
+              </span>
+              )}
             </button>
 
             {showSettings && isOpen && (
