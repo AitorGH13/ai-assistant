@@ -11,7 +11,10 @@ import { useAutoSave } from "./hooks/useAutoSave";
 
 function App() {
   const [mode, setMode] = useState<AppMode>("chat");
-  const [systemPrompt, setSystemPrompt] = useState("");
+  const [systemPrompt, setSystemPrompt] = useState(() => {
+    const saved = localStorage.getItem("systemPrompt");
+    return saved || "";
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -41,6 +44,10 @@ function App() {
   useEffect(() => {
     handleAutoSave();
   }, [currentMessages, handleAutoSave]);
+
+  useEffect(() => {
+    localStorage.setItem("systemPrompt", systemPrompt);
+  }, [systemPrompt]);
 
   const handleNewConversation = () => {
     if (currentConversationId && currentMessages.length > 0) {
