@@ -9,21 +9,11 @@ import json
 from pathlib import Path
 import numpy as np
 from typing import List, Dict, Any, Union
+from contextlib import asynccontextmanager
 
 # Load environment variables (robust path handling)
 env_path = Path(__file__).parent.parent / '.env'
 load_dotenv(dotenv_path=env_path, override=True)
-
-app = FastAPI()
-
-# CORS configuration
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
-    allow_credentials=True,
-    allow_methods=["POST", "OPTIONS"],
-    allow_headers=["Content-Type"],
-)
 
 # Initialize OpenAI client 
 api_key = os.getenv("OPENAI_API_KEY")
@@ -49,6 +39,41 @@ KNOWLEDGE_BASE = [
 
 # Store embeddings (will be initialized on startup)
 knowledge_base_embeddings: List[List[float]] = []
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialize embeddings on startup."""
+    global knowledge_base_embeddings
+    try:
+        print("[INFO] Initializing knowledge base embeddings...")
+        response = client.embeddings.create(
+            model="text-embedding-3-small",
+            input=KNOWLEDGE_BASE
+        )
+        knowledge_base_embeddings = [item.embedding for item in response.data]
+        print(f"[OK] Initialized {len(knowledge_base_embeddings)} embeddings")
+    except Exception as e:
+        print(f"[ERROR] Failed to initialize embeddings: {e}")
+        # Continue without embeddings - will fail at search time
+        knowledge_base_embeddings = []
+    
+    yield
+    
+    # Cleanup (if needed)
+    print("[INFO] Shutting down...")
+
+
+app = FastAPI(lifespan=lifespan)
+
+# CORS configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["POST", "OPTIONS"],
+    allow_headers=["Content-Type"],
+)
 
 
 def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
@@ -127,7 +152,7 @@ async def generate_stream(messages: list, system_prompt: str | None, mode: str =
                 }
             ]
         
-        # Use gpt-4o or gpt-4o-mini for vision support
+        # Use gpt-4o-mini for all modes (supports both vision and function calling)
         model = "gpt-4o-mini"
         
         # First API call
@@ -278,24 +303,6 @@ async def search(request: SearchRequest):
 @app.get("/")
 async def root():
     return {"status": "ok", "message": "AI Assistant API"}
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Initialize embeddings on startup."""
-    global knowledge_base_embeddings
-    try:
-        print("[INFO] Initializing knowledge base embeddings...")
-        response = client.embeddings.create(
-            model="text-embedding-3-small",
-            input=KNOWLEDGE_BASE
-        )
-        knowledge_base_embeddings = [item.embedding for item in response.data]
-        print(f"[OK] Initialized {len(knowledge_base_embeddings)} embeddings")
-    except Exception as e:
-        print(f"[ERROR] Failed to initialize embeddings: {e}")
-        # Continue without embeddings - will fail at search time
-        knowledge_base_embeddings = []
 
 
 if __name__ == "__main__":

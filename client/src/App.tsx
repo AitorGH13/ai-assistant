@@ -129,7 +129,9 @@ function App() {
                     msg.id === assistantMessageId
                       ? { 
                           ...msg, 
-                          content: msg.content + parsed.content,
+                          content: typeof msg.content === 'string' 
+                            ? msg.content + parsed.content 
+                            : parsed.content,
                           toolUsed: toolWasUsed 
                         }
                       : msg
