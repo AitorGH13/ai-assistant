@@ -3,16 +3,17 @@ import { ChatMessage } from "./components/ChatMessage";
 import { ChatInput } from "./components/ChatInput";
 import { Sidebar } from "./components/Sidebar";
 import { SemanticSearch } from "./components/SemanticSearch";
-import { VoiceTab } from "./components/VoiceTab";
-import { ModeSelector } from "./components/ModeSelector";
+import { VoiceSelector } from "./components/VoiceSelector";
+import { ConversationalAI } from "./components/ConversationalAI";
 import { ChatMessage as ChatMessageType, AppMode, MessageContent } from "./types";
 import { useTheme } from "./utils/theme";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, Volume2 } from "lucide-react";
 import { useConversations } from "./hooks/useConversations";
 import { useAutoSave } from "./hooks/useAutoSave";
 
 function App() {
   const [mode, setMode] = useState<AppMode>("chat");
+  const [selectedVoiceId, setSelectedVoiceId] = useState<string>("IKne3meq5aSn9XLyUdCD"); // Roger - Laid-Back, Casual, Resonant
   const [systemPrompt, setSystemPrompt] = useState(() => {
     const saved = localStorage.getItem("systemPrompt");
     return saved || "";
@@ -103,6 +104,43 @@ function App() {
   useEffect(() => {
     scrollToBottom();
   }, [currentMessages]);
+
+  const handleTTSGenerate = async (text: string) => {
+    if (!text || !selectedVoiceId) {
+      alert("Por favor ingresa texto y selecciona una voz");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch("http://localhost:3002/api/speak", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          text,
+          voiceId: selectedVoiceId,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate speech");
+      }
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      
+      // Crear y reproducir el audio
+      const audio = new Audio(audioUrl);
+      audio.play();
+    } catch (error) {
+      console.error("Error generating speech:", error);
+      alert("No se pudo generar el audio. Verifica la consola para más detalles.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSendMessage = async (content: string, imageBase64?: string) => {
     let conversationId = currentConversationId;
@@ -254,6 +292,17 @@ function App() {
     "¿Cuál es el clima en Tokio?",
   ];
 
+  const ttsSuggestions = [
+    "Bienvenido a nuestra aplicación de inteligencia artificial",
+    "La tecnología de síntesis de voz ha avanzado enormemente en los últimos años",
+    "Hola, mi nombre es Roger y estoy aquí para ayudarte",
+    "El futuro de la comunicación está en la voz artificial",
+  ];
+
+  const handleTTSSuggestionClick = (suggestion: string) => {
+    handleTTSGenerate(suggestion);
+  };
+
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
       {/* Sidebar */}
@@ -335,8 +384,37 @@ function App() {
             </div>
           ) : mode === "search" ? (
             <SemanticSearch />
-          ) : mode === "voice" ? (
-            <VoiceTab />
+          ) : mode === "conversational" ? (
+            <ConversationalAI />
+          ) : mode === "tts" ? (
+            <div className="mx-auto max-w-4xl">
+              <div className="flex h-full items-center justify-center">
+                <div className="text-center max-w-2xl px-3 sm:px-4">
+                  <div className="mb-4 sm:mb-6 inline-flex p-3 sm:p-4 rounded-full bg-gradient-to-br from-primary-500/10 to-accent-500/10">
+                    <Volume2 className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-primary-600 dark:text-primary-400" />
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                    Text-to-Speech
+                  </h2>
+                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-6 sm:mb-8">
+                    Escribe o selecciona un texto para convertirlo a voz
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                    {ttsSuggestions.map((suggestion, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleTTSSuggestionClick(suggestion)}
+                        className="p-3 sm:p-4 text-left rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-primary-500 dark:hover:border-primary-400 hover:shadow-md transition-all duration-200 group"
+                      >
+                        <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 group-hover:text-primary-600 dark:group-hover:text-primary-400">
+                          {suggestion}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
           ) : (
             <div className="mx-auto max-w-4xl">
               {currentMessages.length === 0 ? (
@@ -378,15 +456,23 @@ function App() {
           )}
         </div>
 
-        {/* Chat Input - Only visible when NOT in search view or voice mode */}
-        {!showSearchView && mode !== "voice" && (
+        {/* Chat Input - Only visible when NOT in search view or conversational mode */}
+        {!showSearchView && mode !== "conversational" && (
           <ChatInput 
-            onSend={handleSendMessage}
+            onSend={mode === "tts" ? handleTTSGenerate : handleSendMessage}
             onSearch={handleSemanticSearch}
             disabled={isLoading} 
             showImageUpload={mode === "chat"}
             mode={mode}
             onModeChange={setMode}
+          />
+        )}
+
+        {/* Voice Selector - Only visible in TTS mode */}
+        {mode === "tts" && (
+          <VoiceSelector 
+            selectedVoiceId={selectedVoiceId}
+            onVoiceChange={setSelectedVoiceId}
           />
         )}
       </div>

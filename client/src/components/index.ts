@@ -4,6 +4,8 @@ export { SettingsPanel } from "./SettingsPanel";
 export { MarkdownMessage } from "./MarkdownMessage";
 export { ModeSelector } from "./ModeSelector";
 export { SemanticSearch } from "./SemanticSearch";
+export { VoiceSelector } from "./VoiceSelector";
+export { ConversationalAI } from "./ConversationalAI";
 export { Avatar } from "./ui/Avatar";
 export { Button } from "./ui/Button";
 export { IconButton } from "./ui/IconButton";

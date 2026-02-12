@@ -1,5 +1,5 @@
 import { useState, KeyboardEvent, useRef } from "react";
-import { Image, X, Search, Mic } from "lucide-react";
+import { Image, X, Search, Mic, Volume2 } from "lucide-react";
 import { AppMode } from "../types";
 
 interface Props {
@@ -104,14 +104,22 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
     }
   };
 
-  const handleVoiceToggle = () => {
+  const handleTTSToggle = () => {
     if (onModeChange) {
-      onModeChange("voice");
+      onModeChange("tts");
+    }
+  };
+
+  const handleConversationalToggle = () => {
+    if (onModeChange) {
+      onModeChange("conversational");
     }
   };
 
   const placeholder = mode === "search" 
     ? "Buscar en la base de conocimientos..." 
+    : mode === "tts"
+    ? "Escribe el texto que quieres convertir a voz..."
     : "Escribe tu mensaje...";
 
   return (
@@ -197,20 +205,37 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
             {/* Right side buttons - Voice AI */}
             <div className="flex items-center gap-1">
               {onModeChange && (
-                <button
-                  type="button"
-                  onClick={handleVoiceToggle}
-                  disabled={disabled}
-                  className={`p-2 rounded-lg transition-all flex-shrink-0 ${
-                    mode === "voice"
-                      ? "bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400"
-                      : "text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400"
-                  }`}
-                  aria-label="Voice AI mode"
-                  title="Voice AI (Text-to-Speech & Conversational AI)"
-                >
-                  <Mic size={20} />
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={handleConversationalToggle}
+                    disabled={disabled}
+                    className={`p-2 rounded-lg transition-all flex-shrink-0 ${
+                      mode === "conversational"
+                        ? "bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400"
+                        : "text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400"
+                    }`}
+                    aria-label="Conversational AI mode"
+                    title="Conversational AI"
+                  >
+                    <Mic size={20} />
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={handleTTSToggle}
+                    disabled={disabled}
+                    className={`p-2 rounded-lg transition-all flex-shrink-0 ${
+                      mode === "tts"
+                        ? "bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400"
+                        : "text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400"
+                    }`}
+                    aria-label="Text-to-Speech mode"
+                    title="Text-to-Speech"
+                  >
+                    <Volume2 size={20} />
+                  </button>
+                </>
               )}
             </div>
           </div>
