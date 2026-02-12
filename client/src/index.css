@@ -145,3 +145,24 @@
     -ms-overflow-style: -ms-autohiding-scrollbar;
   }
 }
+
+/* Custom animations for settings panels */
+@keyframes slideInFromBottom {
+  from {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-bottom {
+  animation: slideInFromBottom 300ms ease-in-out;
+}
+
+/* Prevent scrollbar flicker during animations */
+.scrollbar-stable {
+  scrollbar-gutter: stable;
+}

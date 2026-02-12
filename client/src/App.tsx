@@ -238,6 +238,13 @@ function App() {
     handleSendMessage(suggestion);
   };
 
+  const handleSemanticSearch = async (query: string) => {
+    // Llamar a la función de búsqueda del componente SemanticSearch
+    if ((window as any).__performSemanticSearch) {
+      await (window as any).__performSemanticSearch(query);
+    }
+  };
+
   const suggestions = [
     "¿Quién ha desarrollado esta aplicación?",
     "Explica la computación cuántica en términos simples",
@@ -367,14 +374,17 @@ function App() {
           )}
         </div>
 
-        {/* Chat Input */}
-        <ChatInput 
-          onSend={handleSendMessage} 
-          disabled={isLoading} 
-          showImageUpload={mode === "chat"}
-          mode={mode}
-          onModeChange={setMode}
-        />
+        {/* Chat Input - Solo visible cuando NO estamos en búsqueda de conversaciones */}
+        {!showSearchView && (
+          <ChatInput 
+            onSend={handleSendMessage}
+            onSearch={handleSemanticSearch}
+            disabled={isLoading} 
+            showImageUpload={mode === "chat"}
+            mode={mode}
+            onModeChange={setMode}
+          />
+        )}
       </div>
     </div>
   );

@@ -36,15 +36,10 @@ export function Sidebar({
   showSearchView,
   onCloseSearch,
 }: Props) {
-  const [showSettings, setShowSettings] = useState(false);
   const [showFloatingSettings, setShowFloatingSettings] = useState(false);
 
   const handleSettingsClick = () => {
-    if (!isOpen) {
-      setShowFloatingSettings(!showFloatingSettings);
-    } else {
-      setShowSettings(!showSettings);
-    }
+    setShowFloatingSettings(!showFloatingSettings);
   };
 
   const handleNewConversationClick = () => {
@@ -58,11 +53,6 @@ export function Sidebar({
   };
 
   const handleMenuToggle = () => {
-    if (isOpen) {
-      setShowSettings(false);
-    } else if (!isOpen && showFloatingSettings) {
-      setShowSettings(true);
-    }
     setShowFloatingSettings(false);
     onToggleSidebar();
   };
@@ -91,7 +81,7 @@ export function Sidebar({
                   onClick={onSearchClick}
                   disabled={showSearchView}
                   className={`flex items-center justify-center px-4 py-3 transition-all rounded-lg ${
-                    !showSearchView&&"hover:bg-gray-50 dark:hover:bg-gray-800 hover:scale-105"
+                    !showSearchView&&!showSearchView && "hover:bg-gray-50 dark:hover:bg-gray-800 hover:scale-105"
                   }`}
                   title={showSearchView ? "Búsqueda activa" : "Buscar conversaciones"}
                 >
@@ -112,16 +102,16 @@ export function Sidebar({
               className="w-full flex items-center justify-center gap-2 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors rounded-lg"
             >
               <Plus className="h-5 w-5 text-primary-600 dark:text-primary-400  flex-shrink-0" />
-              {isOpen && <span className="font-medium text-gray-900 dark:text-gray-100">Nueva Conversación</span>}
+              {isOpen && <span className="font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap overflow-hidden">Nueva Conversación</span>}
             </button>
           </div>
 
           {/* Historial de Conversaciones */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto scrollbar-stable" style={{ scrollbarGutter: 'stable' }}>
             {isOpen && (
               <div className="px-4 space-y-2">
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 px-2">
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 px-2 whitespace-nowrap overflow-hidden transition-opacity duration-300">
                     Historial
                   </h3>
                   {conversations.length === 0 ? (
@@ -170,64 +160,26 @@ export function Sidebar({
           <div className="p-4">
             <button
               onClick={handleSettingsClick}
-              className={`w-full flex items-center gap-3 px-4 py-3 transition-all justify-center rounded-lg shadow-md transform hover:scale-105 ${
-              !isOpen && showFloatingSettings
-                ? "bg-primary-200 dark:bg-primary-800/50"
-                : "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
+              className={`w-full flex items-center gap-3 px-4 py-3 transition-all duration-500 ease-in-out justify-center rounded-lg shadow-md ${
+                showFloatingSettings
+                  ? "bg-primary-200 dark:bg-primary-800/50"
+                  : "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
               }`}
             >
               <Settings className="h-5 w-5 text-primary-600 dark:text-primary-400 flex-shrink-0" />
               {isOpen && (
               <span className="font-medium text-gray-900 dark:text-gray-100">
-                Configuración
+              Configuración
               </span>
               )}
             </button>
-
-            {showSettings && isOpen && (
-              <div className="px-4 pb-4 space-y-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 mt-3 pt-4">
-                {/* Cambiar Tema */}
-                <button
-                  onClick={onToggleTheme}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white dark:hover:bg-gray-700 transition-colors text-left"
-                >
-                  <Palette className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                  <span className="text-sm text-gray-900 dark:text-gray-100">Cambiar Tema</span>
-                  <span className="ml-auto text-xs text-gray-500 dark:text-gray-400 capitalize">
-                    {theme}
-                  </span>
-                </button>
-
-                {/* Instrucciones del Chat */}
-                <div className="px-3 py-2">
-                  <div className="flex items-center gap-2 mb-2">
-                    <FileText className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Instrucciones del Chat
-                    </label>
-                  </div>
-                  <textarea
-                    value={systemPrompt}
-                    onChange={(e) => onSystemPromptChange(e.target.value)}
-                    placeholder="Por ejemplo: Eres un asistente útil..."
-                    rows={3}
-                    className="w-full resize-none rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:border-primary-500 dark:focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 transition-all duration-200"
-                  />
-                  {systemPrompt && (
-                    <p className="mt-1 text-xs text-primary-600 dark:text-primary-400">
-                      Instrucciones personalizadas activas
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
 
-      {/* Panel flotante de configuración cuando el sidebar está cerrado */}
-      {showFloatingSettings && !isOpen && (
-        <div className="absolute bottom-20 left-20 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50">
+      {/* Panel flotante de configuración */}
+      {showFloatingSettings && (
+        <div className="absolute bottom-20 left-20 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 animate-slide-in-bottom">
           <div className="p-4 space-y-3">
             {/* Cambiar Tema */}
             <button

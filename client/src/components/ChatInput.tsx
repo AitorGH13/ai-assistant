@@ -1,16 +1,17 @@
 import { useState, KeyboardEvent, useRef } from "react";
-import { Loader2, Image, X, Search } from "lucide-react";
+import { Loader2, Image, X, Search, Send } from "lucide-react";
 import { AppMode } from "../types";
 
 interface Props {
   onSend: (message: string, imageBase64?: string) => void;
+  onSearch?: (query: string) => void;
   disabled?: boolean;
   showImageUpload?: boolean;
   mode?: AppMode;
   onModeChange?: (mode: AppMode) => void;
 }
 
-export function ChatInput({ onSend, disabled, showImageUpload = false, mode = "chat", onModeChange }: Props) {
+export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false, mode = "chat", onModeChange }: Props) {
   const [input, setInput] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
@@ -18,20 +19,34 @@ export function ChatInput({ onSend, disabled, showImageUpload = false, mode = "c
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSubmit = () => {
-    // Permitir enviar si hay texto o una imagen seleccionada
-    if ((input.trim() || imageBase64) && !disabled) {
-      onSend(input.trim(), imageBase64 || undefined);
-      setInput("");
-      setImagePreview(null);
-      setImageBase64(null);
+    if (mode === "search" && onSearch) {
+      // Modo búsqueda semántica
+      if (input.trim()) {
+        onSearch(input.trim());
+        setInput("");
+      }
+    } else {
+      // Modo chat normal
+      if ((input.trim() || imageBase64) && !disabled) {
+        onSend(input.trim(), imageBase64 || undefined);
+        setInput("");
+        setImagePreview(null);
+        setImageBase64(null);
+      }
     }
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (imageBase64 || input.trim()) {
-        handleSubmit();
+      if (mode === "search") {
+        if (input.trim()) {
+          handleSubmit();
+        }
+      } else {
+        if (imageBase64 || input.trim()) {
+          handleSubmit();
+        }
       }
     }
   };
@@ -77,10 +92,26 @@ export function ChatInput({ onSend, disabled, showImageUpload = false, mode = "c
     }
   };
 
+  const handleModeToggle = () => {
+    if (onModeChange) {
+      const newMode = mode === "chat" ? "search" : "chat";
+      onModeChange(newMode);
+      // Limpiar imagen si cambiamos a modo búsqueda
+      if (newMode === "search") {
+        setImagePreview(null);
+        setImageBase64(null);
+      }
+    }
+  };
+
+  const placeholder = mode === "search" 
+    ? "Buscar en la base de conocimientos..." 
+    : "Escribe tu mensaje...";
+
   return (
     <div className="bg-white dark:bg-gray-900 p-3 sm:p-4">
       <div className="max-w-4xl mx-auto">
-        {imagePreview && (
+        {imagePreview && mode !== "search" && (
           <div className="mb-2 sm:mb-3 relative inline-block">
             <img
               src={imagePreview}
@@ -103,7 +134,7 @@ export function ChatInput({ onSend, disabled, showImageUpload = false, mode = "c
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Escribe tu mensaje..."
+            placeholder={placeholder}
             disabled={disabled}
             rows={1}
             className="flex-1 resize-none bg-transparent py-2.5 text-sm sm:text-base text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none disabled:opacity-50 min-h-[44px]"
@@ -117,7 +148,7 @@ export function ChatInput({ onSend, disabled, showImageUpload = false, mode = "c
             {onModeChange && (
               <button
                 type="button"
-                onClick={() => onModeChange(mode === "chat" ? "search" : "chat")}
+                onClick={handleModeToggle}
                 disabled={disabled}
                 className={`p-2 rounded-lg transition-all flex-shrink-0 ${
                   mode === "search"
@@ -125,13 +156,13 @@ export function ChatInput({ onSend, disabled, showImageUpload = false, mode = "c
                     : "text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400"
                 }`}
                 aria-label={mode === "search" ? "Cambiar a modo chat" : "Cambiar a modo búsqueda"}
-                title={mode === "search" ? "Modo chat" : "Modo búsqueda"}
+                title={mode === "search" ? "Modo chat" : "Modo búsqueda semántica"}
               >
                 <Search size={20} />
               </button>
             )}
 
-            {showImageUpload && (
+            {showImageUpload && mode !== "search" && (
               <>
                 <input
                   ref={fileInputRef}
@@ -153,6 +184,7 @@ export function ChatInput({ onSend, disabled, showImageUpload = false, mode = "c
                 </button>
               </>
             )}
+            
           </div>
         </div>
       </div>
