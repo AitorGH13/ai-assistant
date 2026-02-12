@@ -12,6 +12,11 @@ import { useConversations } from "./hooks/useConversations";
 import { useAutoSave } from "./hooks/useAutoSave";
 
 function App() {
+    useEffect(() => {
+      const handler = () => setMode("chat");
+      window.addEventListener("forceChatMode", handler);
+      return () => window.removeEventListener("forceChatMode", handler);
+    }, []);
   const [mode, setMode] = useState<AppMode>("chat");
   // Voz predeterminada: Roger - Laid-Back, Casual, Resonant
   const selectedVoiceId = "IKne3meq5aSn9XLyUdCD";

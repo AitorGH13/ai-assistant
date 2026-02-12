@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Settings, Palette, FileText, Menu, MoreVertical, Search, Volume2, MessageSquare, Pencil, Trash2 } from "lucide-react";
+import { Plus, Settings, Palette, FileText, Menu, Search, Volume2, MessageSquare, Pencil, Trash2 } from "lucide-react";
 import { Theme } from "../utils/theme";
 import { Conversation } from "../types";
 
@@ -39,24 +39,6 @@ export function Sidebar({
   onCloseSearch,
 }: Props) {
   const [showFloatingSettings, setShowFloatingSettings] = useState(false);
-  const [dropdownOpenId, setDropdownOpenId] = useState<string | null>(null);
-    // Close dropdown on outside click
-    // Only attach listener if dropdown is open
-    useEffect(() => {
-      if (!dropdownOpenId) return;
-      const handleClickOutside = (e: MouseEvent) => {
-        const dropdowns = document.querySelectorAll('.conversation-dropdown');
-        let inside = false;
-        dropdowns.forEach(dropdown => {
-          if (dropdown.contains(e.target as Node)) inside = true;
-        });
-        if (!inside) setDropdownOpenId(null);
-      };
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-      };
-    }, [dropdownOpenId]);
   const [editTitleId, setEditTitleId] = useState<string | null>(null);
   const [editTitleValue, setEditTitleValue] = useState("");
 
@@ -147,7 +129,6 @@ export function Sidebar({
                       {filteredConversations.map((conversation) => {
                         const hasMessages = conversation.messages && conversation.messages.length > 0;
                         const hasTTSAudios = conversation.ttsHistory && conversation.ttsHistory.length > 0;
-                        const isDropdownOpen = dropdownOpenId === conversation.id;
                         const isEditing = editTitleId === conversation.id;
                         return (
                           <div
@@ -169,11 +150,40 @@ export function Sidebar({
                               style={{ position: "relative" }}
                             >
                               <div className="flex items-center gap-2 min-w-0 flex-1">
-                                {hasTTSAudios && !hasMessages ? (
-                                  <Volume2 size={16} className="flex-shrink-0 text-gray-600 dark:text-gray-400" />
-                                ) : (
-                                  <MessageSquare size={16} className="flex-shrink-0 text-gray-600 dark:text-gray-400" />
-                                )}
+                                {/* Icon that changes on hover: chat icon becomes edit icon */}
+                                <div className="flex-shrink-0 relative">
+                                  {hasTTSAudios && !hasMessages ? (
+                                    <>
+                                      <Volume2 size={16} className="text-gray-600 dark:text-gray-400 group-hover:opacity-0 transition-opacity" />
+                                      <button
+                                        onClick={e => {
+                                          e.stopPropagation();
+                                          setEditTitleId(conversation.id);
+                                          setEditTitleValue(conversation.title);
+                                        }}
+                                        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                                        aria-label="Editar nombre"
+                                      >
+                                        <Pencil size={16} className="text-primary-600 dark:text-primary-400" />
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <MessageSquare size={16} className="text-gray-600 dark:text-gray-400 group-hover:opacity-0 transition-opacity" />
+                                      <button
+                                        onClick={e => {
+                                          e.stopPropagation();
+                                          setEditTitleId(conversation.id);
+                                          setEditTitleValue(conversation.title);
+                                        }}
+                                        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                                        aria-label="Editar nombre"
+                                      >
+                                        <Pencil size={16} className="text-primary-600 dark:text-primary-400" />
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
                                 {isEditing ? (
                                   <input
                                     type="text"
@@ -213,53 +223,18 @@ export function Sidebar({
                                   </span>
                                 )}
                               </div>
-                              {/* 3 dots icon, only visible on hover */}
-                                <button
+                              {/* Delete button - appears on hover replacing 3 dots */}
+                              <button
                                 onClick={e => {
                                   e.stopPropagation();
-                                  setDropdownOpenId(conversation.id);
-                                  setEditTitleId(null);
-                                  setEditTitleValue(conversation.title);
+                                  onDeleteConversation(conversation.id);
                                 }}
-                                className={`p-1 rounded transition-colors flex-shrink-0 focus:outline-none ${
-                                  isDropdownOpen ? "opacity-100 bg-primary-200 dark:bg-primary-800/50" : "group-hover:opacity-100 opacity-0"
-                                } hover:bg-primary-200 dark:hover:bg-primary-800/50 active:bg-primary-200 dark:active:bg-primary-800/50`}
-                                aria-label="Más opciones"
+                                className="p-1 rounded transition-all duration-200 flex-shrink-0 focus:outline-none group-hover:opacity-100 opacity-0 hover:bg-primary-100 dark:hover:bg-primary-900/30"
+                                aria-label="Eliminar"
                                 style={{ zIndex: 2 }}
-                                >
-                                <MoreVertical size={16} className="text-primary-600 dark:text-primary-400" />
-                                </button>
-                              {/* Dropdown menu */}
-                              {isDropdownOpen && (
-                                <div className="absolute right-2 top-10 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 animate-slide-in-bottom conversation-dropdown">
-                                  <div className="flex flex-col py-2">
-                                    <button
-                                      onClick={e => {
-                                        e.stopPropagation();
-                                        setEditTitleId(conversation.id);
-                                        setDropdownOpenId(null);
-                                        setEditTitleValue(conversation.title);
-                                      }}
-                                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                                    >
-                                      <Pencil size={14} className="text-primary-600 dark:text-primary-400" />
-                                      Editar nombre
-                                    </button>
-                                    <button
-                                      onClick={e => {
-                                        e.stopPropagation();
-                                        if (onDeleteConversation) onDeleteConversation(conversation.id);
-                                        setDropdownOpenId(null);
-                                        setEditTitleId(null);
-                                      }}
-                                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                                    >
-                                      <Trash2 size={14} className="text-primary-600 dark:text-primary-400" />
-                                      Eliminar
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
+                              >
+                                <Trash2 size={16} className="text-primary-600 dark:text-primary-400" />
+                              </button>
                             </button>
                           </div>
                         );

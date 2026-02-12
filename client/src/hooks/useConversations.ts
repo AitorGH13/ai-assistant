@@ -137,12 +137,25 @@ export function useConversations(): {
   }, [conversations, generateTitle]);
 
   const deleteConversation = useCallback((id: string) => {
-    setConversations(prev => prev.filter(c => c.id !== id));
-    
-    // If deleting current conversation, create a new one
-    if (id === currentConversationId) {
-      createConversation();
-    }
+    setConversations(prev => {
+      const updated = prev.filter(c => c.id !== id);
+      if (id === currentConversationId) {
+        const deleted = prev.find(c => c.id === id);
+        const wasTTSOnly = deleted && (!deleted.messages || deleted.messages.length === 0) && deleted.ttsHistory && deleted.ttsHistory.length > 0;
+        if (wasTTSOnly) {
+          // Forzar modo chat en App
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("forceChatMode"));
+          }
+        } else if (updated.length > 0) {
+          setCurrentConversationId(updated[0].id);
+          setCurrentMessages([...updated[0].messages]);
+        } else {
+          createConversation();
+        }
+      }
+      return updated;
+    });
   }, [currentConversationId, createConversation]);
 
   const updateCurrentMessages = useCallback((messages: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => {
