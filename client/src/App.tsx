@@ -1,22 +1,98 @@
 import { useState, useRef, useEffect } from "react";
 import { ChatMessage } from "./components/ChatMessage";
 import { ChatInput } from "./components/ChatInput";
-import { SettingsPanel } from "./components/SettingsPanel";
-import { ThemeToggle } from "./components/ui/ThemeToggle";
-import { ModeSelector } from "./components/ModeSelector";
+import { Sidebar } from "./components/Sidebar";
 import { SemanticSearch } from "./components/SemanticSearch";
-import { Button } from "./components/ui/Button";
 import { ChatMessage as ChatMessageType, AppMode, MessageContent } from "./types";
 import { useTheme } from "./utils/theme";
-import { MessageSquare, Trash2, Search } from "lucide-react";
+import { MessageSquare } from "lucide-react";
+import { useConversations } from "./hooks/useConversations";
+import { useAutoSave } from "./hooks/useAutoSave";
 
 function App() {
   const [mode, setMode] = useState<AppMode>("chat");
-  const [messages, setMessages] = useState<ChatMessageType[]>([]);
-  const [systemPrompt, setSystemPrompt] = useState("");
+  const [systemPrompt, setSystemPrompt] = useState(() => {
+    const saved = localStorage.getItem("systemPrompt");
+    return saved || "";
+  });
   const [isLoading, setIsLoading] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [showSearchView, setShowSearchView] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { theme, toggleTheme } = useTheme();
+
+  const {
+    conversations,
+    currentConversationId,
+    currentMessages,
+    createConversation,
+    loadConversation,
+    saveConversation,
+    deleteConversation,
+    updateCurrentMessages,
+  } = useConversations();
+
+  const handleAutoSave = useAutoSave({
+    delay: 1000,
+    onSave: () => {
+      if (currentConversationId && currentMessages.length > 0) {
+        saveConversation(currentConversationId, currentMessages);
+      }
+    },
+    enabled: currentMessages.length > 0,
+  });
+
+  useEffect(() => {
+    handleAutoSave();
+  }, [currentMessages, handleAutoSave]);
+
+  useEffect(() => {
+    localStorage.setItem("systemPrompt", systemPrompt);
+  }, [systemPrompt]);
+
+  const handleNewConversation = () => {
+    if (currentConversationId && currentMessages.length > 0) {
+      saveConversation(currentConversationId, currentMessages);
+    }
+    createConversation();
+  };
+
+  const handleLoadConversation = (conversationId: string) => {
+    if (currentConversationId && currentMessages.length > 0) {
+      saveConversation(currentConversationId, currentMessages);
+    }
+    loadConversation(conversationId);
+  };
+
+  const handleDeleteConversation = (conversationId: string) => {
+    deleteConversation(conversationId);
+  };
+
+  const handleSearchClick = () => {
+    setShowSearchView(!showSearchView);
+    if (!showSearchView) {
+      setSearchQuery("");
+    }
+  };
+
+  const handleCloseSearch = () => {
+    if (showSearchView) {
+      setShowSearchView(false);
+      setSearchQuery("");
+    }
+  };
+
+  const normalizeText = (text: string) => {
+    return text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  };
+
+  const filteredConversations = conversations.filter((conv) =>
+    normalizeText(conv.title).includes(normalizeText(searchQuery))
+  );
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -24,9 +100,14 @@ function App() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [currentMessages]);
 
   const handleSendMessage = async (content: string, imageBase64?: string) => {
+    let conversationId = currentConversationId;
+    if (!conversationId) {
+      conversationId = createConversation();
+    }
+
     let messageContent: string | MessageContent[];
     
     if (imageBase64) {
@@ -45,7 +126,8 @@ function App() {
       timestamp: new Date().toISOString(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const updatedMessages = [...currentMessages, userMessage];
+    updateCurrentMessages(updatedMessages);
     setIsLoading(true);
 
     const assistantMessageId = crypto.randomUUID();
@@ -56,10 +138,10 @@ function App() {
       timestamp: new Date().toISOString(),
     };
 
-    setMessages((prev) => [...prev, assistantMessage]);
+    updateCurrentMessages([...updatedMessages, assistantMessage]);
 
     try {
-      const apiMessages = [...messages, userMessage].map(({ role, content }) => ({
+      const apiMessages = updatedMessages.map(({ role, content }) => ({
         role,
         content,
       }));
@@ -115,8 +197,8 @@ function App() {
               }
               
               if (parsed.content) {
-                setMessages((prev) =>
-                  prev.map((msg) =>
+                updateCurrentMessages((prev: ChatMessageType[]) =>
+                  prev.map((msg: ChatMessageType) =>
                     msg.id === assistantMessageId
                       ? { 
                           ...msg, 
@@ -137,8 +219,8 @@ function App() {
       }
     } catch (error) {
       console.error("Failed to send message:", error);
-      setMessages((prev) =>
-        prev.map((msg) =>
+      updateCurrentMessages((prev: ChatMessageType[]) =>
+        prev.map((msg: ChatMessageType) =>
           msg.id === assistantMessageId
             ? {
                 ...msg,
@@ -152,83 +234,111 @@ function App() {
     }
   };
 
-  const handleClearChat = () => {
-    setMessages([]);
-  };
-
   const handleSuggestionClick = (suggestion: string) => {
     handleSendMessage(suggestion);
   };
 
   const suggestions = [
-    "Explain quantum computing in simple terms",
-    "Write a Python function to sort a list",
-    "What are the best practices for React development?",
-    "What is the weather in Tokyo?",
+    "¿Quién ha desarrollado esta aplicación?",
+    "Explica la computación cuántica en términos simples",
+    "¿Cuáles son las mejores prácticas para el desarrollo en React?",
+    "¿Cuál es el clima en Tokio?",
   ];
 
-  const getHeaderIcon = () => {
-    switch (mode) {
-      case "search":
-        return <Search className="h-4 w-4 sm:h-5 sm:w-5 text-white" />;
-      default:
-        return <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-white" />;
-    }
-  };
-
   return (
-    <div className="flex h-screen flex-col bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
-      <header className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 sm:px-4 md:px-6 py-3 shadow-sm">
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <div className="p-2 rounded-lg bg-gradient-to-br from-primary-500 to-accent-500 flex-shrink-0">
-            {getHeaderIcon()}
-          </div>
-          <h1 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 dark:text-white truncate">AI Assistant</h1>
-        </div>
-        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-          <ThemeToggle theme={theme} onToggle={toggleTheme} />
-          {mode !== "search" && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClearChat}
-              className="flex items-center gap-1 sm:gap-2 h-9 px-2 sm:px-3"
-            >
-              <Trash2 size={16} />
-              <span className="hidden sm:inline text-sm">Clear</span>
-            </Button>
-          )}
-        </div>
-      </header>
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+      {/* Sidebar */}
+      <Sidebar
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        systemPrompt={systemPrompt}
+        onSystemPromptChange={setSystemPrompt}
+        onNewConversation={handleNewConversation}
+        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+        isOpen={isSidebarOpen}
+        conversations={conversations}
+        currentConversationId={currentConversationId}
+        onLoadConversation={handleLoadConversation}
+        onDeleteConversation={handleDeleteConversation}
+        onSearchClick={handleSearchClick}
+        showSearchView={showSearchView}
+        onCloseSearch={handleCloseSearch}
+      />
 
-      <ModeSelector mode={mode} onModeChange={setMode} />
-
-      {mode !== "search" && (
-        <SettingsPanel
-          systemPrompt={systemPrompt}
-          onSystemPromptChange={setSystemPrompt}
-        />
-      )}
-
-      {mode === "search" ? (
-        <div className="flex-1 overflow-y-auto">
-          <SemanticSearch />
+      {/* Main content area */}
+      <div className="flex flex-col flex-1 min-w-0">
+        {/* Header */}
+        <div className="bg-white dark:bg-gray-900 px-3 sm:px-4 py-2 sm:py-3 flex items-center gap-3">
+          <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
+            Assistant AI
+          </h1>
         </div>
-      ) : (
-        <>
-          <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6">
+
+        {/* Chat content */}
+        <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6">
+          {showSearchView ? (
             <div className="mx-auto max-w-4xl">
-              {messages.length === 0 ? (
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Buscar</h2>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar conversaciones..."
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:border-primary-500 dark:focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 transition-all duration-200 mb-4"
+              />
+              <div className="overflow-y-auto max-h-[calc(100vh-250px)]">
+                {filteredConversations.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                    {searchQuery ? "No se encontraron conversaciones" : "No hay conversaciones"}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {filteredConversations.map((conversation) => (
+                      <div
+                        key={conversation.id}
+                        className="group relative flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800/50"
+                      >
+                        <MessageSquare className="h-5 w-5 flex-shrink-0" />
+                        <button
+                          onClick={() => {
+                            handleLoadConversation(conversation.id);
+                            setShowSearchView(false);
+                          }}
+                          className="flex-1 text-left truncate"
+                          title={conversation.title}
+                        >
+                          <div className="font-medium">{conversation.title}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            {new Date(conversation.updatedAt).toLocaleDateString('es-ES', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </div>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : mode === "search" ? (
+            <SemanticSearch />
+          ) : (
+            <div className="mx-auto max-w-4xl">
+              {currentMessages.length === 0 ? (
                 <div className="flex h-full items-center justify-center">
                   <div className="text-center max-w-2xl px-3 sm:px-4">
                     <div className="mb-4 sm:mb-6 inline-flex p-3 sm:p-4 rounded-full bg-gradient-to-br from-primary-500/10 to-accent-500/10">
                       <MessageSquare className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-primary-600 dark:text-primary-400" />
                     </div>
                     <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                      Start a conversation
+                      Inicia una conversación
                     </h2>
                     <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-6 sm:mb-8">
-                      Type a message below or try one of these suggestions
+                      Escribe un mensaje abajo o prueba una de estas sugerencias
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                       {suggestions.map((suggestion, index) => (
@@ -247,22 +357,25 @@ function App() {
                 </div>
               ) : (
                 <div className="space-y-3 sm:space-y-4">
-                  {messages.map((message) => (
+                  {currentMessages.map((message) => (
                     <ChatMessage key={message.id} message={message} theme={theme} />
                   ))}
                 </div>
               )}
               <div ref={messagesEndRef} />
             </div>
-          </div>
+          )}
+        </div>
 
-          <ChatInput 
-            onSend={handleSendMessage} 
-            disabled={isLoading} 
-            showImageUpload={true}
-          />
-        </>
-      )}
+        {/* Chat Input */}
+        <ChatInput 
+          onSend={handleSendMessage} 
+          disabled={isLoading} 
+          showImageUpload={mode === "chat"}
+          mode={mode}
+          onModeChange={setMode}
+        />
+      </div>
     </div>
   );
 }

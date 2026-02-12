@@ -96,7 +96,20 @@ def get_current_weather(location: str) -> Dict[str, Any]:
         "humidity": "60%",
         "wind_speed": "10 km/h"
     }
-    return weather_data
+    return weather_data  
+
+
+def get_developer_description() -> Dict[str, Any]:
+    """Dummy function that returns attributes of the developer."""
+    return {
+        "attributes": {
+            "name": "Aitor",
+            "height": "alto",
+            "appearance": "atractivo",
+            "intelligence": "inteligente",
+            "personality": "simpático",
+        },
+    }
 
 
 class ChatMessage(BaseModel):
@@ -147,6 +160,17 @@ async def generate_stream(messages: list, system_prompt: str | None, mode: str =
                                 }
                             },
                             "required": ["location"]
+                        }
+                    }
+                },
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "getDeveloperDescription",
+                        "description": "Get information about the solo developer who created this application. Returns attributes of a single individual developer.",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {}
                         }
                     }
                 }
@@ -221,13 +245,17 @@ async def generate_stream(messages: list, system_prompt: str | None, mode: str =
                         
                         if function_name == "getCurrentWeather":
                             function_response = get_current_weather(function_args["location"])
-                            
-                            # Add tool response to conversation
-                            conversation_input.append({
-                                "role": "tool",
-                                "tool_call_id": tool_call["id"],
-                                "content": json.dumps(function_response)
-                            })
+                        elif function_name == "getDeveloperDescription":
+                            function_response = get_developer_description()
+                        else:
+                            function_response = {"error": "Unknown function"}
+                        
+                        # Añadir la respuesta de la herramienta a la conversación
+                        conversation_input.append({
+                            "role": "tool",
+                            "tool_call_id": tool_call["id"],
+                            "content": json.dumps(function_response)
+                        })
                     
                     # Make second API call to get final response
                     second_stream = client.chat.completions.create(

@@ -35,3 +35,11 @@ export interface SearchResponse {
 }
 
 export type AppMode = "chat" | "search";
+
+export interface Conversation {
+  id: string;
+  title: string;
+  messages: ChatMessage[];
+  createdAt: string;
+  updatedAt: string;
+}

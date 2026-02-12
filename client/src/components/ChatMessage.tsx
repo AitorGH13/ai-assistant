@@ -93,7 +93,7 @@ export function ChatMessage({ message, theme = 'dark' }: Props) {
             {formatTime(message.timestamp)}
           </span>
           {message.toolUsed && (
-            <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded-full">
+            <span className="flex items-center gap-1 text-xs text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 px-2 py-0.5 rounded-full">
               <Wrench size={12} />
               Tool Used
             </span>
