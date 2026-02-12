@@ -283,9 +283,6 @@ function App() {
           </h1>
         </div>
 
-        {/* Mode Selector */}
-        <ModeSelector mode={mode} onModeChange={setMode} />
-
         {/* Chat content */}
         <div className={`flex-1 p-3 sm:p-4 md:p-6 ${showSearchView ? 'overflow-hidden' : 'overflow-y-auto'}`}>
           {showSearchView ? (

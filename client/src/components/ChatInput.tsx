@@ -1,5 +1,5 @@
 import { useState, KeyboardEvent, useRef } from "react";
-import { Image, X, Search } from "lucide-react";
+import { Image, X, Search, Mic } from "lucide-react";
 import { AppMode } from "../types";
 
 interface Props {
@@ -104,6 +104,12 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
     }
   };
 
+  const handleVoiceToggle = () => {
+    if (onModeChange) {
+      onModeChange("voice");
+    }
+  };
+
   const placeholder = mode === "search" 
     ? "Buscar en la base de conocimientos..." 
     : "Escribe tu mensaje...";
@@ -144,47 +150,69 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
             }}
           />
 
-          <div className="flex items-center gap-1 pb-2">
-            {onModeChange && (
-              <button
-                type="button"
-                onClick={handleModeToggle}
-                disabled={disabled}
-                className={`p-2 rounded-lg transition-all flex-shrink-0 ${
-                  mode === "search"
-                    ? "bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400"
-                    : "text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400"
-                }`}
-                aria-label={mode === "search" ? "Cambiar a modo chat" : "Cambiar a modo búsqueda"}
-                title={mode === "search" ? "Modo chat" : "Modo búsqueda semántica"}
-              >
-                <Search size={20} />
-              </button>
-            )}
-
-            {showImageUpload && mode !== "search" && (
-              <>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageSelect}
-                  className="hidden"
-                  disabled={disabled}
-                />
+          <div className="flex items-center justify-between pb-2">
+            {/* Left side buttons - Search and Image */}
+            <div className="flex items-center gap-1">
+              {onModeChange && (
                 <button
                   type="button"
-                  onClick={handleImageButtonClick}
+                  onClick={handleModeToggle}
                   disabled={disabled}
-                  className="p-2 text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors disabled:opacity-50 flex-shrink-0"
-                  aria-label="Añadir imagen"
-                  title="Añadir imagen"
+                  className={`p-2 rounded-lg transition-all flex-shrink-0 ${
+                    mode === "search"
+                      ? "bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400"
+                      : "text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400"
+                  }`}
+                  aria-label={mode === "search" ? "Cambiar a modo chat" : "Cambiar a modo búsqueda"}
+                  title={mode === "search" ? "Modo chat" : "Modo búsqueda semántica"}
                 >
-                  <Image size={20} />
+                  <Search size={20} />
                 </button>
-              </>
-            )}
-            
+              )}
+
+              {showImageUpload && mode !== "search" && (
+                <>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    className="hidden"
+                    disabled={disabled}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleImageButtonClick}
+                    disabled={disabled}
+                    className="p-2 text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors disabled:opacity-50 flex-shrink-0"
+                    aria-label="Añadir imagen"
+                    title="Añadir imagen"
+                  >
+                    <Image size={20} />
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Right side buttons - Voice AI */}
+            <div className="flex items-center gap-1">
+              {onModeChange && (
+                <button
+                  type="button"
+                  onClick={handleVoiceToggle}
+                  disabled={disabled}
+                  className={`p-2 rounded-lg transition-all flex-shrink-0 ${
+                    mode === "voice"
+                      ? "bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400"
+                      : "text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400"
+                  }`}
+                  aria-label="Voice AI mode"
+                  title="Voice AI (Text-to-Speech & Conversational AI)"
+                >
+                  <Mic size={20} />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
