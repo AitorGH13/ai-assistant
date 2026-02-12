@@ -10,3 +10,4 @@ export { Avatar } from "./ui/Avatar";
 export { Button } from "./ui/Button";
 export { IconButton } from "./ui/IconButton";
 export { ThemeToggle } from "./ui/ThemeToggle";
+export { TTSAudioList } from "./TTSAudioList";

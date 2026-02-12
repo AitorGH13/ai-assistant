@@ -1,62 +1,71 @@
-import { useState, useCallback, useEffect } from 'react';
-import { Conversation, ChatMessage } from '../types';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Conversation, ChatMessage, TTSAudio } from "../types";
 
-const CONVERSATIONS_KEY = 'ai_conversations';
+const STORAGE_KEY = "ai-assistant-conversations";
 
-interface UseConversationsReturn {
+export function useConversations(): {
   conversations: Conversation[];
   currentConversationId: string | null;
   currentMessages: ChatMessage[];
+  currentTTSHistory: TTSAudio[];
   isLoading: boolean;
+  isInitialized: boolean;
   createConversation: () => string;
   loadConversation: (id: string) => void;
   saveConversation: (id: string, messages: ChatMessage[]) => void;
   deleteConversation: (id: string) => void;
   updateCurrentMessages: (messages: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => void;
-}
-
-export function useConversations(): UseConversationsReturn {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
-  const [currentMessages, setCurrentMessages] = useState<ChatMessage[]>([]);
-  const [isLoading] = useState(false);
-
-  // Load conversations from storage on mount
-  useEffect(() => {
-    loadConversationsFromStorage();
-  }, []);
-
-  // Persist conversations whenever they change
-  useEffect(() => {
-    persistConversations(conversations);
-  }, [conversations]);
-
-  const loadConversationsFromStorage = useCallback(() => {
+  addTTSAudio: (audio: TTSAudio, conversationId?: string) => void;
+  deleteTTSAudio: (audioId: string) => void;
+  updateConversationTitle: (id: string, newTitle: string) => void;
+} {
+    // Cambiar el título de una conversación
+    const updateConversationTitle = useCallback((id: string, newTitle: string) => {
+      setConversations(prev => prev.map(conv =>
+        conv.id === id ? { ...conv, title: newTitle, updatedAt: new Date().toISOString() } : conv
+      ));
+    }, []);
+  const [conversations, setConversations] = useState<Conversation[]>(() => {
+    // Cargar conversaciones del storage en la inicialización
     try {
-      const stored = sessionStorage.getItem(CONVERSATIONS_KEY);
-      if (!stored) return;
-
-      const parsed = JSON.parse(stored);
-      
-      // Validate data structure
-      if (Array.isArray(parsed)) {
-        setConversations(parsed);
-      } else {
-        console.warn('Invalid conversations data structure');
-        sessionStorage.removeItem(CONVERSATIONS_KEY);
+      const stored = sessionStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
       }
     } catch (error) {
       console.error('Failed to load conversations:', error);
-      sessionStorage.removeItem(CONVERSATIONS_KEY);
     }
+    return [];
+  });
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [currentMessages, setCurrentMessages] = useState<ChatMessage[]>([]);
+  const [isLoading] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const isFirstMount = useRef(true);
+
+  // Marcar como inicializado después del primer render
+  useEffect(() => {
+    setIsInitialized(true);
   }, []);
+
+  // Persist conversations whenever they change (skip first mount)
+  useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
+    persistConversations(conversations);
+  }, [conversations]);
 
   const persistConversations = useCallback((convs: Conversation[]) => {
     try {
       if (convs.length > 0) {
-        sessionStorage.setItem(CONVERSATIONS_KEY, JSON.stringify(convs));
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(convs));
       } else {
-        sessionStorage.removeItem(CONVERSATIONS_KEY);
+        sessionStorage.removeItem(STORAGE_KEY);
       }
     } catch (error) {
       console.error('Failed to persist conversations:', error);
@@ -76,6 +85,18 @@ export function useConversations(): UseConversationsReturn {
 
   const createConversation = useCallback((): string => {
     const newId = crypto.randomUUID();
+    const now = new Date().toISOString();
+    
+    const newConversation: Conversation = {
+      id: newId,
+      title: 'Nueva conversación',
+      messages: [],
+      createdAt: now,
+      updatedAt: now,
+      ttsHistory: [],
+    };
+    
+    setConversations(prev => [newConversation, ...prev]);
     setCurrentConversationId(newId);
     setCurrentMessages([]);
     return newId;
@@ -132,15 +153,67 @@ export function useConversations(): UseConversationsReturn {
     }
   }, []);
 
+  const addTTSAudio = (audio: TTSAudio, conversationId?: string) => {
+    const targetConversationId = conversationId || currentConversationId;
+    
+    if (!targetConversationId) {
+      console.error('No hay conversación activa para añadir audio TTS');
+      return;
+    }
+
+    setConversations((prev) => {
+      const updated = prev.map((conv) => {
+        if (conv.id === targetConversationId) {
+          const isNewTTSConversation = !conv.ttsHistory || conv.ttsHistory.length === 0;
+          const title = isNewTTSConversation && conv.messages.length === 0
+            ? (audio.text.slice(0, 50) + (audio.text.length > 50 ? '...' : ''))
+            : conv.title;
+
+          return {
+            ...conv,
+            title,
+            ttsHistory: [audio, ...(conv.ttsHistory || [])],
+            updatedAt: new Date().toISOString(),
+          };
+        }
+        return conv;
+      });
+      return updated;
+    });
+  };
+
+  const deleteTTSAudio = (audioId: string) => {
+    if (!currentConversationId) return;
+
+    setConversations((prev) =>
+      prev.map((conv) =>
+        conv.id === currentConversationId
+          ? {
+              ...conv,
+              ttsHistory: (conv.ttsHistory || []).filter((a) => a.id !== audioId),
+            }
+          : conv
+      )
+    );
+  };
+
+  const currentTTSHistory =
+    conversations.find((c) => c.id === currentConversationId)?.ttsHistory || [];
+
   return {
     conversations,
     currentConversationId,
     currentMessages,
+    currentTTSHistory,
     isLoading,
+    isInitialized,
     createConversation,
     loadConversation,
     saveConversation,
     deleteConversation,
     updateCurrentMessages,
+    addTTSAudio,
+    deleteTTSAudio,
+    updateConversationTitle,
   };
 }

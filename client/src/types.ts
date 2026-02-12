@@ -48,6 +48,14 @@ export interface SpeakRequest {
   voiceId: string;
 }
 
+export interface TTSAudio {
+  id: string;
+  text: string;
+  audioUrl: string;
+  timestamp: number;
+  voiceId: string;
+  voiceName: string;
+}
 
 export interface Conversation {
   id: string;
@@ -55,4 +63,5 @@ export interface Conversation {
   messages: ChatMessage[];
   createdAt: string;
   updatedAt: string;
+  ttsHistory?: TTSAudio[];
 }

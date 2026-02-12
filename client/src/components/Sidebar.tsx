@@ -1,9 +1,10 @@
-import { useState } from "react";
-import { Plus, Settings, Palette, FileText, Menu, Trash2, MessageSquare, Search } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, Settings, Palette, FileText, Menu, MoreVertical, Search, Volume2, MessageSquare, Pencil, Trash2 } from "lucide-react";
 import { Theme } from "../utils/theme";
 import { Conversation } from "../types";
 
 interface Props {
+    onEditConversationTitle?: (id: string, newTitle: string) => void;
   theme: Theme;
   onToggleTheme: () => void;
   systemPrompt: string;
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export function Sidebar({
+    onEditConversationTitle,
   theme,
   onToggleTheme,
   systemPrompt,
@@ -37,6 +39,26 @@ export function Sidebar({
   onCloseSearch,
 }: Props) {
   const [showFloatingSettings, setShowFloatingSettings] = useState(false);
+  const [dropdownOpenId, setDropdownOpenId] = useState<string | null>(null);
+    // Close dropdown on outside click
+    // Only attach listener if dropdown is open
+    useEffect(() => {
+      if (!dropdownOpenId) return;
+      const handleClickOutside = (e: MouseEvent) => {
+        const dropdowns = document.querySelectorAll('.conversation-dropdown');
+        let inside = false;
+        dropdowns.forEach(dropdown => {
+          if (dropdown.contains(e.target as Node)) inside = true;
+        });
+        if (!inside) setDropdownOpenId(null);
+      };
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }, [dropdownOpenId]);
+  const [editTitleId, setEditTitleId] = useState<string | null>(null);
+  const [editTitleValue, setEditTitleValue] = useState("");
 
   const handleSettingsClick = () => {
     setShowFloatingSettings(!showFloatingSettings);
@@ -47,15 +69,17 @@ export function Sidebar({
     onNewConversation();
   };
 
-  const handleLoadConversationClick = (id: string) => {
-    onCloseSearch();
-    onLoadConversation(id);
-  };
-
   const handleMenuToggle = () => {
     setShowFloatingSettings(false);
     onToggleSidebar();
   };
+
+  const filteredConversations = conversations.filter((conversation) => {
+    const hasMessages = conversation.messages && conversation.messages.length > 0;
+    const hasTTSAudios = conversation.ttsHistory && conversation.ttsHistory.length > 0;
+    
+    return hasMessages || hasTTSAudios;
+  });
 
   return (
     <>
@@ -120,35 +144,126 @@ export function Sidebar({
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      {conversations.map((conversation) => (
-                        <div
-                          key={conversation.id}
-                          className={`group relative flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-all ${
-                            conversation.id === currentConversationId
-                              ? "bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300"
-                              : "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
-                          }`}
-                        >
-                          <MessageSquare className="h-4 w-4 flex-shrink-0" />
-                          <button
-                            onClick={() => handleLoadConversationClick(conversation.id)}
-                            className="flex-1 text-left text-sm truncate"
-                            title={conversation.title}
+                      {filteredConversations.map((conversation) => {
+                        const hasMessages = conversation.messages && conversation.messages.length > 0;
+                        const hasTTSAudios = conversation.ttsHistory && conversation.ttsHistory.length > 0;
+                        const isDropdownOpen = dropdownOpenId === conversation.id;
+                        const isEditing = editTitleId === conversation.id;
+                        return (
+                          <div
+                            key={conversation.id}
+                            className="relative group"
                           >
-                            {conversation.title}
-                          </button>
                             <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDeleteConversation(conversation.id);
-                            }}
-                            className="opacity-0 group-hover:opacity-100 p-1 rounded transition-all transform hover:scale-105 shadow-md hover:bg-primary-200 dark:hover:bg-primary-800/50"
-                            title="Eliminar conversación"
+                              onClick={() => {
+                                onLoadConversation(conversation.id);
+                                if (window.innerWidth < 768) {
+                                  onToggleSidebar();
+                                }
+                              }}
+                              className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center justify-between gap-2 ${
+                                currentConversationId === conversation.id
+                                  ? "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  : "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                              }`}
+                              style={{ position: "relative" }}
                             >
-                            <Trash2 className="h-3.5 w-3.5 text-primary-600 dark:text-primary-400" />
+                              <div className="flex items-center gap-2 min-w-0 flex-1">
+                                {hasTTSAudios && !hasMessages ? (
+                                  <Volume2 size={16} className="flex-shrink-0 text-gray-600 dark:text-gray-400" />
+                                ) : (
+                                  <MessageSquare size={16} className="flex-shrink-0 text-gray-600 dark:text-gray-400" />
+                                )}
+                                {isEditing ? (
+                                  <input
+                                    type="text"
+                                    value={editTitleValue}
+                                    onChange={e => setEditTitleValue(e.target.value)}
+                                    onClick={e => e.stopPropagation()}
+                                    className="text-sm truncate bg-transparent border border-primary-300 dark:border-primary-700 rounded px-2 py-1 focus:outline-none focus:border-primary-500 dark:focus:border-primary-400 text-gray-900 dark:text-gray-100"
+                                    autoFocus
+                                    onBlur={() => {
+                                      if (
+                                        onEditConversationTitle &&
+                                        editTitleValue.trim() &&
+                                        editTitleValue !== conversation.title
+                                      ) {
+                                        onEditConversationTitle(conversation.id, editTitleValue.trim());
+                                      }
+                                      setEditTitleId(null);
+                                    }}
+                                    onKeyDown={e => {
+                                      if (e.key === "Enter") {
+                                        if (
+                                          onEditConversationTitle &&
+                                          editTitleValue.trim() &&
+                                          editTitleValue !== conversation.title
+                                        ) {
+                                          onEditConversationTitle(conversation.id, editTitleValue.trim());
+                                        }
+                                        setEditTitleId(null);
+                                      } else if (e.key === "Escape") {
+                                        setEditTitleId(null);
+                                      }
+                                    }}
+                                  />
+                                ) : (
+                                  <span className="text-sm truncate">
+                                    {conversation.title}
+                                  </span>
+                                )}
+                              </div>
+                              {/* 3 dots icon, only visible on hover */}
+                                <button
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setDropdownOpenId(conversation.id);
+                                  setEditTitleId(null);
+                                  setEditTitleValue(conversation.title);
+                                }}
+                                className={`p-1 rounded transition-colors flex-shrink-0 focus:outline-none ${
+                                  isDropdownOpen ? "opacity-100 bg-primary-200 dark:bg-primary-800/50" : "group-hover:opacity-100 opacity-0"
+                                } hover:bg-primary-200 dark:hover:bg-primary-800/50 active:bg-primary-200 dark:active:bg-primary-800/50`}
+                                aria-label="Más opciones"
+                                style={{ zIndex: 2 }}
+                                >
+                                <MoreVertical size={16} className="text-primary-600 dark:text-primary-400" />
+                                </button>
+                              {/* Dropdown menu */}
+                              {isDropdownOpen && (
+                                <div className="absolute right-2 top-10 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 animate-slide-in-bottom conversation-dropdown">
+                                  <div className="flex flex-col py-2">
+                                    <button
+                                      onClick={e => {
+                                        e.stopPropagation();
+                                        setEditTitleId(conversation.id);
+                                        setDropdownOpenId(null);
+                                        setEditTitleValue(conversation.title);
+                                      }}
+                                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                                    >
+                                      <Pencil size={14} className="text-primary-600 dark:text-primary-400" />
+                                      Editar nombre
+                                    </button>
+                                    <button
+                                      onClick={e => {
+                                        e.stopPropagation();
+                                        if (onDeleteConversation) onDeleteConversation(conversation.id);
+                                        setDropdownOpenId(null);
+                                        setEditTitleId(null);
+                                      }}
+                                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                                    >
+                                      <Trash2 size={14} className="text-primary-600 dark:text-primary-400" />
+                                      Eliminar
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
                             </button>
-                        </div>
-                      ))}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>

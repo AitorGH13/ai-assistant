@@ -16,6 +16,7 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
   const [input, setInput] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
+  const [isTextareaFocused, setIsTextareaFocused] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -27,7 +28,7 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
         setInput("");
       }
     } else {
-      // Modo chat normal
+      // Modo chat normal o TTS
       if ((input.trim() || imageBase64) && !disabled) {
         onSend(input.trim(), imageBase64 || undefined);
         setInput("");
@@ -167,12 +168,18 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
           </div>
         )}
 
-        <div className="flex flex-col rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 shadow-sm hover:shadow-md focus-within:shadow-md focus-within:border-primary-500 dark:focus-within:border-primary-400 focus-within:ring-2 focus-within:ring-primary-500/20 transition-all duration-200">
+        <div className={`flex flex-col rounded-xl border bg-white dark:bg-gray-800 px-3 shadow-sm hover:shadow-md transition-all duration-200 ${
+          isTextareaFocused 
+            ? "border-primary-500 dark:border-primary-400 shadow-md ring-2 ring-primary-500/20" 
+            : "border-gray-300 dark:border-gray-600"
+        }`}>
           <textarea
             ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
+            onFocus={() => setIsTextareaFocused(true)}
+            onBlur={() => setIsTextareaFocused(false)}
             placeholder={placeholder}
             disabled={disabled}
             rows={1}
