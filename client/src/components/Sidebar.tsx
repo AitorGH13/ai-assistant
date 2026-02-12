@@ -137,6 +137,9 @@ export function Sidebar({
                           >
                             <button
                               onClick={() => {
+                                // No cargar la conversación si estamos editando su título
+                                if (editTitleId === conversation.id) return;
+                                
                                 onLoadConversation(conversation.id);
                                 if (window.innerWidth < 768) {
                                   onToggleSidebar();
@@ -164,7 +167,7 @@ export function Sidebar({
                                         className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
                                         aria-label="Editar nombre"
                                       >
-                                        <Pencil size={16} className="text-primary-600 dark:text-primary-400" />
+                                        <Pencil size={16} className="text-gray-600 dark:text-gray-400" />
                                       </button>
                                     </>
                                   ) : (
@@ -179,7 +182,7 @@ export function Sidebar({
                                         className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
                                         aria-label="Editar nombre"
                                       >
-                                        <Pencil size={16} className="text-primary-600 dark:text-primary-400" />
+                                        <Pencil size={16} className="text-gray-600 dark:text-gray-400 hover:text-primary-600 hover:dark:text-primary-400 transition-colors" />
                                       </button>
                                     </>
                                   )}
@@ -204,6 +207,8 @@ export function Sidebar({
                                     }}
                                     onKeyDown={e => {
                                       if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        e.stopPropagation();
                                         if (
                                           onEditConversationTitle &&
                                           editTitleValue.trim() &&
@@ -213,6 +218,7 @@ export function Sidebar({
                                         }
                                         setEditTitleId(null);
                                       } else if (e.key === "Escape") {
+                                        e.preventDefault();
                                         setEditTitleId(null);
                                       }
                                     }}
@@ -229,11 +235,11 @@ export function Sidebar({
                                   e.stopPropagation();
                                   onDeleteConversation(conversation.id);
                                 }}
-                                className="p-1 rounded transition-all duration-200 flex-shrink-0 focus:outline-none group-hover:opacity-100 opacity-0 hover:bg-primary-100 dark:hover:bg-primary-900/30"
+                                className="p-1 rounded transition-all duration-200 flex-shrink-0 focus:outline-none group-hover:opacity-100 opacity-0 bg-transparent"
                                 aria-label="Eliminar"
                                 style={{ zIndex: 2 }}
                               >
-                                <Trash2 size={16} className="text-primary-600 dark:text-primary-400" />
+                                <Trash2 size={16} className="text-gray-600 dark:text-gray-400 hover:text-primary-600 hover:dark:text-primary-400 transition-colors" />
                               </button>
                             </button>
                           </div>

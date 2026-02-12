@@ -113,19 +113,25 @@ export function useConversations(): {
   const saveConversation = useCallback((id: string, messages: ChatMessage[]) => {
     if (!id || messages.length === 0) return;
 
-    const title = generateTitle(messages);
     const now = new Date().toISOString();
-    
-    const updatedConversation: Conversation = {
-      id,
-      title,
-      messages: [...messages],
-      createdAt: conversations.find(c => c.id === id)?.createdAt || now,
-      updatedAt: now,
-    };
 
     setConversations(prev => {
       const existingIndex = prev.findIndex(c => c.id === id);
+      const existingConv = prev[existingIndex];
+      
+      // Solo genera un título automático si es una conversación nueva o tiene el título por defecto
+      const title = existingConv && existingConv.title !== 'Nueva conversación' 
+        ? existingConv.title 
+        : generateTitle(messages);
+      
+      const updatedConversation: Conversation = {
+        id,
+        title,
+        messages: [...messages],
+        createdAt: existingConv?.createdAt || now,
+        updatedAt: now,
+      };
+
       if (existingIndex >= 0) {
         const updated = [...prev];
         updated[existingIndex] = updatedConversation;
@@ -134,7 +140,7 @@ export function useConversations(): {
         return [updatedConversation, ...prev];
       }
     });
-  }, [conversations, generateTitle]);
+  }, [generateTitle]);
 
   const deleteConversation = useCallback((id: string) => {
     setConversations(prev => {
