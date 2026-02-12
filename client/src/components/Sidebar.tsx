@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Settings, Palette, FileText, Menu, Trash2, MessageSquare } from "lucide-react";
+import { Plus, Settings, Palette, FileText, Menu, Trash2, MessageSquare, Search } from "lucide-react";
 import { Theme } from "../utils/theme";
 import { Conversation } from "../types";
 
@@ -59,15 +59,26 @@ export function Sidebar({
         } overflow-hidden flex-shrink-0`}
       >
         <div className="flex flex-col h-full">
-          {/* Botón de Menú */}
+          {/* Header con botones de Menú y Búsqueda */}
           <div className="p-4">
-            <button
-              onClick={handleMenuToggle}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors rounded-lg"
-            >
-              <Menu className="h-5 w-5 text-primary-600 dark:text-primary-400  flex-shrink-0" />
-              {isOpen && <span className="font-medium text-gray-900 dark:text-gray-100">Menú</span>}
-            </button>
+            <div className="flex items-center justify-between">
+              <button
+                onClick={handleMenuToggle}
+                className="-ml-3 flex items-center justify-center gap-2 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors rounded-lg"
+              >
+                <Menu className="h-5 w-5 text-primary-600 dark:text-primary-400 flex-shrink-0" />
+              </button>
+              
+              {/* Botón de búsqueda - solo visible cuando el menú está desplegado */}
+              {isOpen && (
+                <button
+                  className="flex items-center justify-center px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors rounded-lg"
+                  title="Buscar conversaciones"
+                >
+                  <Search className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Botón de Nueva Conversación */}
