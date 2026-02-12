@@ -1,5 +1,5 @@
 import { AppMode } from "../types";
-import { MessageSquare, Search } from "lucide-react";
+import { MessageSquare, Search, Mic } from "lucide-react";
 
 interface Props {
   mode: AppMode;
@@ -10,6 +10,7 @@ export function ModeSelector({ mode, onModeChange }: Props) {
   const modes = [
     { id: "chat" as AppMode, label: "Chat", icon: MessageSquare, description: "AI Chat with Function Calling" },
     { id: "search" as AppMode, label: "Search", icon: Search, description: "Semantic Search" },
+    { id: "voice" as AppMode, label: "Voice AI", icon: Mic, description: "Text-to-Speech & Conversational AI" },
   ];
 
   return (

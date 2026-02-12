@@ -34,7 +34,20 @@ export interface SearchResponse {
   }>;
 }
 
-export type AppMode = "chat" | "search";
+export type AppMode = "chat" | "search" | "voice";
+
+export interface Voice {
+  id: string;
+  name: string;
+  category: string;
+  preview_url: string;
+}
+
+export interface SpeakRequest {
+  text: string;
+  voiceId: string;
+}
+
 
 export interface Conversation {
   id: string;

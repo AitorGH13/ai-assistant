@@ -3,6 +3,7 @@ import { ChatMessage } from "./components/ChatMessage";
 import { ChatInput } from "./components/ChatInput";
 import { Sidebar } from "./components/Sidebar";
 import { SemanticSearch } from "./components/SemanticSearch";
+import { VoiceTab } from "./components/VoiceTab";
 import { ChatMessage as ChatMessageType, AppMode, MessageContent } from "./types";
 import { useTheme } from "./utils/theme";
 import { MessageSquare } from "lucide-react";
@@ -333,6 +334,8 @@ function App() {
             </div>
           ) : mode === "search" ? (
             <SemanticSearch />
+          ) : mode === "voice" ? (
+            <VoiceTab />
           ) : (
             <div className="mx-auto max-w-4xl">
               {currentMessages.length === 0 ? (
@@ -374,8 +377,8 @@ function App() {
           )}
         </div>
 
-        {/* Chat Input - Solo visible cuando NO estamos en búsqueda de conversaciones */}
-        {!showSearchView && (
+        {/* Chat Input - Solo visible cuando NO estamos en búsqueda de conversaciones ni en modo voice */}
+        {!showSearchView && mode !== "voice" && (
           <ChatInput 
             onSend={handleSendMessage}
             onSearch={handleSemanticSearch}
