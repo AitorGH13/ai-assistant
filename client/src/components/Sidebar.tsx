@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Settings, Palette, FileText, Menu, Search, Volume2, MessageSquare, Pencil, Trash2 } from "lucide-react";
+import { Plus, Settings, Palette, FileText, Menu, Search, Volume2, MessageSquare, Pencil, Trash2, Mic } from "lucide-react";
 import { Theme } from "../utils/theme";
 import { Conversation } from "../types";
 
@@ -60,6 +60,7 @@ export function Sidebar({
     const hasMessages = conversation.messages && conversation.messages.length > 0;
     const hasTTSAudios = conversation.ttsHistory && conversation.ttsHistory.length > 0;
     
+    // Solo mostrar conversaciones con contenido
     return hasMessages || hasTTSAudios;
   });
 
@@ -129,6 +130,9 @@ export function Sidebar({
                       {filteredConversations.map((conversation) => {
                         const hasMessages = conversation.messages && conversation.messages.length > 0;
                         const hasTTSAudios = conversation.ttsHistory && conversation.ttsHistory.length > 0;
+                        const hasConversationalAudio = hasTTSAudios && conversation.ttsHistory?.some(
+                          audio => audio.voiceId === "conversational-ai"
+                        );
                         const isEditing = editTitleId === conversation.id;
                         return (
                           <div
@@ -155,7 +159,22 @@ export function Sidebar({
                               <div className="flex items-center gap-2 min-w-0 flex-1">
                                 {/* Icon that changes on hover: chat icon becomes edit icon */}
                                 <div className="flex-shrink-0 relative">
-                                  {hasTTSAudios && !hasMessages ? (
+                                  {hasConversationalAudio ? (
+                                    <>
+                                      <Mic size={16} className="text-gray-600 dark:text-gray-400 group-hover:opacity-0 transition-opacity" />
+                                      <button
+                                        onClick={e => {
+                                          e.stopPropagation();
+                                          setEditTitleId(conversation.id);
+                                          setEditTitleValue(conversation.title);
+                                        }}
+                                        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                                        aria-label="Editar nombre"
+                                      >
+                                        <Pencil size={16} className="text-gray-600 dark:text-gray-400" />
+                                      </button>
+                                    </>
+                                  ) : hasTTSAudios && !hasMessages ? (
                                     <>
                                       <Volume2 size={16} className="text-gray-600 dark:text-gray-400 group-hover:opacity-0 transition-opacity" />
                                       <button

@@ -12,6 +12,12 @@ export function TTSAudioList({ audios, onDelete }: Props) {
   const audioRefs = useRef<{ [key: string]: HTMLAudioElement }>({});
 
   const handlePlayPause = (audio: TTSAudio) => {
+    // Si no hay audioUrl, no se puede reproducir
+    if (!audio.audioUrl) {
+      alert("Este audio no está disponible para reproducción");
+      return;
+    }
+    
     const audioElement = audioRefs.current[audio.id];
     
     if (!audioElement) return;
@@ -65,7 +71,12 @@ export function TTSAudioList({ audios, onDelete }: Props) {
             {/* Play/Pause Button */}
             <button
               onClick={() => handlePlayPause(audio)}
-              className="flex-shrink-0 p-3 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-900/50 transition-colors"
+              disabled={!audio.audioUrl}
+              className={`flex-shrink-0 p-3 rounded-full transition-colors ${
+                audio.audioUrl
+                  ? "bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-900/50"
+                  : "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed"
+              }`}
             >
               {playingId === audio.id ? (
                 <Pause size={20} />
@@ -86,14 +97,16 @@ export function TTSAudioList({ audios, onDelete }: Props) {
               </div>
             </div>
 
-            {/* Delete Button */}
-            <button
-              onClick={() => onDelete(audio.id)}
-              className="flex-shrink-0 p-1 hover:bg-primary-100 dark:hover:bg-primary-900/30 rounded transition-colors"
-              aria-label="Eliminar audio"
-            >
-              <Trash2 size={16} className="text-primary-600 dark:text-primary-400" />
-            </button>
+            {/* Delete Button (hidden for conversational recordings) */}
+            {audio.voiceId !== "conversational-ai" && (
+              <button
+                onClick={() => onDelete(audio.id)}
+                className="flex-shrink-0 p-1 hover:bg-primary-100 dark:hover:bg-primary-900/30 rounded transition-colors"
+                aria-label="Eliminar audio"
+              >
+                <Trash2 size={16} className="text-primary-600 dark:text-primary-400" />
+              </button>
+            )}
           </div>
 
           {/* Hidden Audio Element */}

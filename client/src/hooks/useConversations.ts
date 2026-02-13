@@ -15,6 +15,7 @@ export function useConversations(): {
   saveConversation: (id: string, messages: ChatMessage[]) => void;
   deleteConversation: (id: string) => void;
   updateCurrentMessages: (messages: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => void;
+  addChatMessage: (message: ChatMessage, conversationId?: string) => void;
   addTTSAudio: (audio: TTSAudio, conversationId?: string) => void;
   deleteTTSAudio: (audioId: string) => void;
   updateConversationTitle: (id: string, newTitle: string) => void;
@@ -51,15 +52,6 @@ export function useConversations(): {
     setIsInitialized(true);
   }, []);
 
-  // Persist conversations whenever they change (skip first mount)
-  useEffect(() => {
-    if (isFirstMount.current) {
-      isFirstMount.current = false;
-      return;
-    }
-    persistConversations(conversations);
-  }, [conversations]);
-
   const persistConversations = useCallback((convs: Conversation[]) => {
     try {
       if (convs.length > 0) {
@@ -71,6 +63,25 @@ export function useConversations(): {
       console.error('Failed to persist conversations:', error);
     }
   }, []);
+
+  // Persist conversations whenever they change (skip first mount)
+  useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
+    persistConversations(conversations);
+  }, [conversations, persistConversations]);
+  
+  // Persistir antes de cerrar/recargar la página
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      persistConversations(conversations);
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [conversations, persistConversations]);
 
   const generateTitle = useCallback((messages: ChatMessage[]): string => {
     const firstUserMessage = messages.find(m => m.role === 'user');
@@ -130,6 +141,7 @@ export function useConversations(): {
         messages: [...messages],
         createdAt: existingConv?.createdAt || now,
         updatedAt: now,
+        ttsHistory: existingConv?.ttsHistory ? [...existingConv.ttsHistory] : [],
       };
 
       if (existingIndex >= 0) {
@@ -145,24 +157,33 @@ export function useConversations(): {
   const deleteConversation = useCallback((id: string) => {
     setConversations(prev => {
       const updated = prev.filter(c => c.id !== id);
+
       if (id === currentConversationId) {
         const deleted = prev.find(c => c.id === id);
-        const wasTTSOnly = deleted && (!deleted.messages || deleted.messages.length === 0) && deleted.ttsHistory && deleted.ttsHistory.length > 0;
-        if (wasTTSOnly) {
-          // Forzar modo chat en App
-          if (typeof window !== "undefined") {
-            window.dispatchEvent(new CustomEvent("forceChatMode"));
-          }
-        } else if (updated.length > 0) {
-          setCurrentConversationId(updated[0].id);
-          setCurrentMessages([...updated[0].messages]);
+        const wasTTSOnly = !!(deleted && (!deleted.messages || deleted.messages.length === 0) && deleted.ttsHistory && deleted.ttsHistory.length > 0);
+
+        if (wasTTSOnly && typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("forceChatMode"));
+        }
+
+        const nextConversation = updated.find(conv => {
+          const hasMessages = conv.messages && conv.messages.length > 0;
+          const hasTTSAudios = conv.ttsHistory && conv.ttsHistory.length > 0;
+          return hasMessages || hasTTSAudios;
+        }) || updated[0];
+
+        if (nextConversation) {
+          setCurrentConversationId(nextConversation.id);
+          setCurrentMessages([...nextConversation.messages]);
         } else {
-          createConversation();
+          setCurrentConversationId(null);
+          setCurrentMessages([]);
         }
       }
+
       return updated;
     });
-  }, [currentConversationId, createConversation]);
+  }, [currentConversationId]);
 
   const updateCurrentMessages = useCallback((messages: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => {
     if (typeof messages === 'function') {
@@ -172,7 +193,53 @@ export function useConversations(): {
     }
   }, []);
 
-  const addTTSAudio = (audio: TTSAudio, conversationId?: string) => {
+  const addChatMessage = useCallback((message: ChatMessage, conversationId?: string) => {
+    const targetConversationId = conversationId || currentConversationId;
+    
+    if (!targetConversationId) {
+      return;
+    }
+
+    setConversations((prev) => {
+      // Verificar si la conversación existe
+      const exists = prev.some(conv => conv.id === targetConversationId);
+      
+      if (!exists) {
+        return prev;
+      }
+      
+      const updated = prev.map((conv) => {
+        if (conv.id === targetConversationId) {
+          const newMessages = [...conv.messages, message];
+          
+          // Actualizar título si es el primer mensaje del usuario o si aún no tiene título personalizado
+          const shouldGenerateTitle = conv.title === 'Nueva conversación' || 
+            conv.title.startsWith('Conversación de voz');
+          const title = shouldGenerateTitle
+            ? generateTitle(newMessages)
+            : conv.title;
+
+          return {
+            ...conv,
+            title,
+            messages: newMessages,
+            updatedAt: new Date().toISOString(),
+          };
+        }
+        return conv;
+      });
+      
+      // Forzar nuevo array para asegurar re-render
+      return [...updated];
+    });
+
+    // Actualizar currentMessages también
+    if (targetConversationId === currentConversationId) {
+      setCurrentMessages((prev) => [...prev, message]);
+    }
+  }, [currentConversationId, generateTitle]);
+
+  const addTTSAudio = useCallback((audio: TTSAudio, conversationId?: string) => {
     const targetConversationId = conversationId || currentConversationId;
     
     if (!targetConversationId) {
@@ -181,12 +248,29 @@ export function useConversations(): {
     }
 
     setConversations((prev) => {
+      // Verificar si la conversación existe
+      const exists = prev.some(conv => conv.id === targetConversationId);
+      
+      if (!exists) {
+        console.error(`Conversación ${targetConversationId} no encontrada`);
+        return prev;
+      }
+      
       const updated = prev.map((conv) => {
         if (conv.id === targetConversationId) {
           const isNewTTSConversation = !conv.ttsHistory || conv.ttsHistory.length === 0;
-          const title = isNewTTSConversation && conv.messages.length === 0
-            ? (audio.text.slice(0, 50) + (audio.text.length > 50 ? '...' : ''))
-            : conv.title;
+          
+          // Para conversaciones de voz, generar título desde mensajes si existen
+          let title = conv.title;
+          if (isNewTTSConversation) {
+            if (audio.voiceId === "conversational-ai" && conv.messages.length > 0) {
+              // Conversación de voz con mensajes: usar título de los mensajes
+              title = generateTitle(conv.messages);
+            } else if (conv.messages.length === 0) {
+              // Solo audio TTS sin mensajes: usar texto del audio
+              title = audio.text.slice(0, 50) + (audio.text.length > 50 ? '...' : '');
+            }
+          }
 
           return {
             ...conv,
@@ -197,9 +281,11 @@ export function useConversations(): {
         }
         return conv;
       });
-      return updated;
+      
+      // Forzar nuevo array para asegurar re-render
+      return [...updated];
     });
-  };
+  }, [currentConversationId, generateTitle]);
 
   const deleteTTSAudio = (audioId: string) => {
     if (!currentConversationId) return;
@@ -231,6 +317,7 @@ export function useConversations(): {
     saveConversation,
     deleteConversation,
     updateCurrentMessages,
+    addChatMessage,
     addTTSAudio,
     deleteTTSAudio,
     updateConversationTitle,

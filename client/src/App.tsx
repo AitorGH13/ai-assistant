@@ -42,10 +42,12 @@ function App() {
     saveConversation,
     deleteConversation,
     updateCurrentMessages,
+    addChatMessage,
     addTTSAudio,
     deleteTTSAudio,
     updateConversationTitle,
   } = useConversations();
+  
   // Cambiar el título de una conversación
   const handleEditConversationTitle = (id: string, newTitle: string) => {
     if (!newTitle.trim()) return;
@@ -109,9 +111,19 @@ function App() {
       const hasTTSAudios = conversation.ttsHistory && conversation.ttsHistory.length > 0;
       const hasMessages = conversation.messages && conversation.messages.length > 0;
       
-      if (hasTTSAudios && !hasMessages) {
+      // Si tiene audios de conversational-ai, es una conversación de voz (mostrar ambos)
+      const hasConversationalAudio = hasTTSAudios && conversation.ttsHistory?.some(
+        audio => audio.voiceId === "conversational-ai"
+      );
+      
+      if (hasConversationalAudio) {
+        // Conversación de voz: tiene mensajes Y audio, mostrar en modo chat
+        setMode("chat");
+      } else if (hasTTSAudios && !hasMessages) {
+        // Solo TTS: mostrar en modo TTS
         setMode("tts");
       } else {
+        // Chat normal
         setMode("chat");
       }
     }
@@ -507,10 +519,15 @@ function App() {
               )}
             </div>
           ) : mode === "conversational" ? (
-            <ConversationalAI />
+            <ConversationalAI 
+              addTTSAudio={addTTSAudio}
+              createConversation={createConversation}
+              loadConversation={loadConversation}
+              addChatMessage={addChatMessage}
+            />
           ) : mode === "search" ? (
             <SemanticSearch />
-          ) : (
+          ) : (  
             <div className="mx-auto max-w-4xl">
               {currentMessages.length === 0 ? (
                 <div className="flex h-full items-center justify-center">
@@ -541,11 +558,32 @@ function App() {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-3 sm:space-y-4">
-                  {currentMessages.map((message) => (
-                    <ChatMessage key={message.id} message={message} theme={theme} />
-                  ))}
-                </div>
+                <>
+                  {/* Mostrar audios de conversational-ai si existen */}
+                  {currentTTSHistory.some(audio => audio.voiceId === "conversational-ai") && (
+                    <div className="mb-6">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                        <Volume2 className="h-5 w-5" />
+                        Audio de la Conversación
+                      </h3>
+                      <TTSAudioList 
+                        audios={currentTTSHistory.filter(audio => audio.voiceId === "conversational-ai")}
+                        onDelete={deleteTTSAudio}
+                      />
+                    </div>
+                  )}
+                  
+                  {/* Mostrar mensajes */}
+                  <div className="space-y-3 sm:space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                      <MessageSquare className="h-5 w-5" />
+                      Chat
+                    </h3>
+                    {currentMessages.map((message) => (
+                      <ChatMessage key={message.id} message={message} theme={theme} />
+                    ))}
+                  </div>
+                </>
               )}
               <div ref={messagesEndRef} />
             </div>
