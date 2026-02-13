@@ -1,15 +1,17 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Search, CheckCircle } from "lucide-react";
 import { SearchResponse } from "../types";
 
 export function SemanticSearch() {
   const [result, setResult] = useState<SearchResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showSuggestions, setShowSuggestions] = useState(true);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Esta función será llamada desde App.tsx a través del ChatInput
   const performSearch = async (query: string) => {
     setError(null);
-    
+    setShowSuggestions(false);
     try {
       const response = await fetch("/api/search", {
         method: "POST",
@@ -33,6 +35,21 @@ export function SemanticSearch() {
 
   // Exportar la función para que pueda ser llamada externamente
   (window as any).__performSemanticSearch = performSearch;
+
+  // Sugerencias de búsqueda semántica
+  const suggestions = [
+    "¿Cuál es el código secreto?",
+    "¿Qué tecnologías usa este proyecto?",
+    "¿Soporta modo oscuro?",
+    "¿Cómo funciona la búsqueda semántica?",
+  ];
+
+  // Manejar clic en sugerencia
+  const handleSuggestionClick = (suggestion: string) => {
+    setShowSuggestions(false);
+    performSearch(suggestion);
+  };
+
 
   return (
     <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
@@ -96,16 +113,21 @@ export function SemanticSearch() {
         </div>
       )}
 
-      <div className="mt-6 sm:mt-8 p-3 sm:p-4 rounded-lg sm:rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-        <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-2">
-          Prueba estas consultas:
-        </h4>
-        <ul className="text-xs sm:text-sm text-blue-700 dark:text-blue-400 space-y-1">
-          <li>• ¿Cuál es el código secreto?</li>
-          <li>• ¿Qué tecnologías usa este proyecto?</li>
-          <li>• ¿Soporta modo oscuro?</li>
-        </ul>
-      </div>
+      {showSuggestions && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mt-6 sm:mt-8">
+          {suggestions.map((suggestion, index) => (
+            <button
+              key={index}
+              onClick={() => handleSuggestionClick(suggestion)}
+              className="p-3 sm:p-4 text-left rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-blue-500 dark:hover:border-blue-400 hover:shadow-md transition-all duration-200 group"
+            >
+              <p className="text-xs sm:text-sm text-white group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                {suggestion}
+              </p>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
