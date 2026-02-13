@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Plus, Settings, Palette, FileText, Menu, Search, Volume2, MessageSquare, Pencil, Trash2 } from "lucide-react";
 import { Theme } from "../utils/theme";
 import { Conversation } from "../types";
@@ -196,13 +196,7 @@ export function Sidebar({
                                     className="text-sm truncate bg-transparent border border-primary-300 dark:border-primary-700 rounded px-2 py-1 focus:outline-none focus:border-primary-500 dark:focus:border-primary-400 text-gray-900 dark:text-gray-100"
                                     autoFocus
                                     onBlur={() => {
-                                      if (
-                                        onEditConversationTitle &&
-                                        editTitleValue.trim() &&
-                                        editTitleValue !== conversation.title
-                                      ) {
-                                        onEditConversationTitle(conversation.id, editTitleValue.trim());
-                                      }
+                                      // Si pierde el foco, cancelar edición sin guardar
                                       setEditTitleId(null);
                                     }}
                                     onKeyDown={e => {

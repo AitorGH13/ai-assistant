@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Search, CheckCircle } from "lucide-react";
 import { SearchResponse } from "../types";
 
@@ -6,7 +6,6 @@ export function SemanticSearch() {
   const [result, setResult] = useState<SearchResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(true);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   // Esta función será llamada desde App.tsx a través del ChatInput
   const performSearch = async (query: string) => {
