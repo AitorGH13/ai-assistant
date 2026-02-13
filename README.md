@@ -4,7 +4,7 @@ A modern, professional ChatGPT-lite clone with a beautiful UI, built with Python
 
 ## 🌟 Advanced Features
 
-### Three Powerful Modes
+### Four Powerful Modes
 
 1. **💬 Chat Mode** - AI conversation with function calling capabilities
    - Agentic tool execution (e.g., getCurrentWeather)
@@ -22,6 +22,12 @@ A modern, professional ChatGPT-lite clone with a beautiful UI, built with Python
    - Cosine similarity matching
    - Top-3 relevant results
 
+4. **🎙️ Voice AI Mode** - Text-to-Speech and Conversational AI (NEW!)
+   - **Text-to-Speech**: Convert text to natural-sounding speech with multiple voice options
+   - **Conversational AI**: Interactive voice conversations with AI agents
+   - Powered by ElevenLabs API
+   - Streaming audio playback
+
 👉 **See [FEATURES.md](FEATURES.md) for detailed documentation**
 
 ## Features
@@ -30,6 +36,7 @@ A modern, professional ChatGPT-lite clone with a beautiful UI, built with Python
 - 🤖 **Function Calling** - AI can call tools for real-time information
 - 📸 **Vision Analysis** - Upload images and ask questions about them
 - 🔎 **Semantic Search** - Find relevant information using embeddings
+- 🎙️ **Voice AI** - Text-to-speech and conversational AI with ElevenLabs
 - 🎨 **Modern UI** - Professional minimalist design with light/dark themes
 - 📱 **Fully Responsive** - Optimized for mobile, tablet, and desktop
 - 🌓 **Dark/Light Mode** - Toggle between themes with persistent preference
@@ -38,15 +45,19 @@ A modern, professional ChatGPT-lite clone with a beautiful UI, built with Python
 - 📋 **Copy Code Blocks** - One-click copy for code snippets
 - 👤 **User Avatars** - Visual distinction between user and AI messages
 - ⚙️ **Custom System Prompts** - Configure the AI's behavior/personality
-- 🔒 **Secure** - API key stays on the server, never exposed to the client
+- 🔒 **Secure** - API keys stay on the server, never exposed to the client
 - ✨ **Quick Suggestions** - Empty state with example prompts to get started
 
 ## Tech Stack
 
-- **Backend**: Python + FastAPI + Uvicorn + NumPy
+- **Backend**: 
+  - Python + FastAPI + Uvicorn + NumPy (Main API server)
+  - Bun + TypeScript (Voice AI server)
 - **Frontend**: Vite + React + TypeScript + Tailwind CSS
-- **Package Manager**: Bun (for frontend) / pip (for backend)
-- **AI**: OpenAI API (gpt-4o-mini for chat/vision, text-embedding-3-small for search)
+- **Package Manager**: Bun (for frontend) / pip (for backend) / npm (for voice server)
+- **AI**: 
+  - OpenAI API (gpt-4o-mini for chat/vision, text-embedding-3-small for search)
+  - ElevenLabs API (voice synthesis and conversational AI)
 - **UI Components**: Custom component library with lucide-react icons
 - **Markdown**: react-markdown with syntax highlighting
 - **Font**: Inter font family
@@ -56,8 +67,9 @@ A modern, professional ChatGPT-lite clone with a beautiful UI, built with Python
 ### Prerequisites
 
 - [Python 3.8+](https://www.python.org/downloads/)
-- [Bun](https://bun.sh/) installed (for frontend)
+- [Bun](https://bun.sh/) installed (for frontend and voice server)
 - OpenAI API key
+- ElevenLabs API key (optional, for Voice AI features)
 
 ### Installation
 
@@ -65,11 +77,18 @@ A modern, professional ChatGPT-lite clone with a beautiful UI, built with Python
 
 2. Install dependencies:
    ```bash
-   # Install frontend dependencies
+   # Install all dependencies at once
+   npm run install:all
+   
+   # Or install individually:
+   # Frontend dependencies
    cd client && bun install
    
-   # Install backend dependencies
+   # Backend dependencies
    cd ../server && pip install -r requirements.txt
+   
+   # Voice server dependencies
+   cd ../server && npm install
    ```
 
 3. Create a `.env` file in the root directory:
@@ -77,14 +96,16 @@ A modern, professional ChatGPT-lite clone with a beautiful UI, built with Python
    cp .env.example .env
    ```
 
-4. Add your OpenAI API key to the `.env` file:
+4. Add your API keys to the `.env` file:
    ```
    OPENAI_API_KEY=sk-your-api-key-here
+   ELEVENLABS_API_KEY=your-elevenlabs-api-key-here
+   ELEVENLABS_AGENT_ID=your-agent-id-here  # Optional, for conversational AI
    ```
 
 ### Development
 
-Run both the server and client concurrently from the root:
+Run all servers concurrently from the root:
 
 ```bash
 bun run dev
@@ -92,6 +113,7 @@ bun run dev
 
 This will start:
 - Python FastAPI backend server on `http://localhost:3001`
+- Bun Voice AI server on `http://localhost:3002`
 - Vite frontend dev server on `http://localhost:5173`
 
 ### Individual Commands
@@ -124,8 +146,9 @@ ai-assistant/
 │   │   │   ├── ui/       # Reusable UI components (Avatar, Button, etc.)
 │   │   │   ├── ChatMessage.tsx
 │   │   │   ├── ChatInput.tsx
-│   │   │   ├── ModeSelector.tsx     # NEW: Tab selector
-│   │   │   ├── SemanticSearch.tsx   # NEW: Search interface
+│   │   │   ├── ModeSelector.tsx     # Tab selector with Voice AI
+│   │   │   ├── SemanticSearch.tsx   # Search interface
+│   │   │   ├── VoiceTab.tsx         # NEW: Voice AI interface
 │   │   │   ├── SettingsPanel.tsx
 │   │   │   └── MarkdownMessage.tsx
 │   │   ├── utils/        # Utility functions (theme management)
@@ -136,14 +159,16 @@ ai-assistant/
 │   ├── vite.config.ts
 │   ├── tailwind.config.js
 │   └── package.json
-├── server/                 # Python FastAPI backend
-│   ├── main.py            # FastAPI server with API endpoints
+├── server/                 # Backend servers
+│   ├── main.py            # Python FastAPI server with API endpoints
+│   ├── index.ts           # NEW: Bun TypeScript server for Voice AI
+│   ├── tsconfig.json      # NEW: TypeScript configuration
 │   ├── requirements.txt   # Python dependencies
-│   └── package.json       # NPM scripts for convenience
+│   └── package.json       # Node/Bun dependencies and scripts
 ├── .env.example
 ├── .gitignore
 ├── cleanup-ports.ps1      # Windows script to cleanup ports
-├── FEATURES.md            # NEW: Detailed feature documentation
+├── FEATURES.md            # Detailed feature documentation
 ├── package.json           # Root scripts
 └── README.md
 ```
@@ -217,6 +242,50 @@ Semantic search using embeddings.
     { "text": "...", "similarity": 0.72 },
     { "text": "...", "similarity": 0.65 }
   ]
+}
+```
+
+### Voice AI Endpoints (Port 3002)
+
+#### GET /api/voices
+
+Fetch available ElevenLabs voices.
+
+**Response:**
+```json
+[
+  {
+    "id": "voice-id-1",
+    "name": "Rachel",
+    "category": "premade",
+    "preview_url": "https://..."
+  },
+  ...
+]
+```
+
+#### POST /api/speak
+
+Convert text to speech with streaming audio.
+
+**Request Body:**
+```json
+{
+  "text": "Hello, this is a test message.",
+  "voiceId": "voice-id-1"
+}
+```
+
+**Response:** Audio stream (audio/mpeg)
+
+#### GET /api/conversation-signature
+
+Get configuration for conversational AI agents.
+
+**Response:**
+```json
+{
+  "agentId": "your-agent-id"
 }
 ```
 

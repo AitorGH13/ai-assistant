@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Plus, Settings, Palette, FileText, Menu, Trash2, MessageSquare, Search } from "lucide-react";
+import { Plus, Settings, Palette, FileText, Menu, Search, Volume2, MessageSquare, Pencil, Trash2, Mic } from "lucide-react";
 import { Theme } from "../utils/theme";
 import { Conversation } from "../types";
 
 interface Props {
+    onEditConversationTitle?: (id: string, newTitle: string) => void;
   theme: Theme;
   onToggleTheme: () => void;
   systemPrompt: string;
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export function Sidebar({
+    onEditConversationTitle,
   theme,
   onToggleTheme,
   systemPrompt,
@@ -37,6 +39,8 @@ export function Sidebar({
   onCloseSearch,
 }: Props) {
   const [showFloatingSettings, setShowFloatingSettings] = useState(false);
+  const [editTitleId, setEditTitleId] = useState<string | null>(null);
+  const [editTitleValue, setEditTitleValue] = useState("");
 
   const handleSettingsClick = () => {
     setShowFloatingSettings(!showFloatingSettings);
@@ -47,15 +51,18 @@ export function Sidebar({
     onNewConversation();
   };
 
-  const handleLoadConversationClick = (id: string) => {
-    onCloseSearch();
-    onLoadConversation(id);
-  };
-
   const handleMenuToggle = () => {
     setShowFloatingSettings(false);
     onToggleSidebar();
   };
+
+  const filteredConversations = conversations.filter((conversation) => {
+    const hasMessages = conversation.messages && conversation.messages.length > 0;
+    const hasTTSAudios = conversation.ttsHistory && conversation.ttsHistory.length > 0;
+    
+    // Solo mostrar conversaciones con contenido
+    return hasMessages || hasTTSAudios;
+  });
 
   return (
     <>
@@ -120,35 +127,137 @@ export function Sidebar({
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      {conversations.map((conversation) => (
-                        <div
-                          key={conversation.id}
-                          className={`group relative flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-all ${
-                            conversation.id === currentConversationId
-                              ? "bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300"
-                              : "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
-                          }`}
-                        >
-                          <MessageSquare className="h-4 w-4 flex-shrink-0" />
-                          <button
-                            onClick={() => handleLoadConversationClick(conversation.id)}
-                            className="flex-1 text-left text-sm truncate"
-                            title={conversation.title}
+                      {filteredConversations.map((conversation) => {
+                        const hasMessages = conversation.messages && conversation.messages.length > 0;
+                        const hasTTSAudios = conversation.ttsHistory && conversation.ttsHistory.length > 0;
+                        const hasConversationalAudio = hasTTSAudios && conversation.ttsHistory?.some(
+                          audio => audio.voiceId === "conversational-ai"
+                        );
+                        const isEditing = editTitleId === conversation.id;
+                        return (
+                          <div
+                            key={conversation.id}
+                            className="relative group"
                           >
-                            {conversation.title}
-                          </button>
                             <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDeleteConversation(conversation.id);
-                            }}
-                            className="opacity-0 group-hover:opacity-100 p-1 rounded transition-all transform hover:scale-105 shadow-md hover:bg-primary-200 dark:hover:bg-primary-800/50"
-                            title="Eliminar conversación"
+                              onClick={() => {
+                                // No cargar la conversación si estamos editando su título
+                                if (editTitleId === conversation.id) return;
+                                
+                                onLoadConversation(conversation.id);
+                                if (window.innerWidth < 768) {
+                                  onToggleSidebar();
+                                }
+                              }}
+                              className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center justify-between gap-2 ${
+                                currentConversationId === conversation.id
+                                  ? "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  : "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                              }`}
+                              style={{ position: "relative" }}
                             >
-                            <Trash2 className="h-3.5 w-3.5 text-primary-600 dark:text-primary-400" />
+                              <div className="flex items-center gap-2 min-w-0 flex-1">
+                                {/* Icon that changes on hover: chat icon becomes edit icon */}
+                                <div className="flex-shrink-0 relative">
+                                  {hasConversationalAudio ? (
+                                    <>
+                                      <Mic size={16} className="text-gray-600 dark:text-gray-400 group-hover:opacity-0 transition-opacity" />
+                                      <button
+                                        onClick={e => {
+                                          e.stopPropagation();
+                                          setEditTitleId(conversation.id);
+                                          setEditTitleValue(conversation.title);
+                                        }}
+                                        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                                        aria-label="Editar nombre"
+                                      >
+                                        <Pencil size={16} className="text-gray-600 dark:text-gray-400" />
+                                      </button>
+                                    </>
+                                  ) : hasTTSAudios && !hasMessages ? (
+                                    <>
+                                      <Volume2 size={16} className="text-gray-600 dark:text-gray-400 group-hover:opacity-0 transition-opacity" />
+                                      <button
+                                        onClick={e => {
+                                          e.stopPropagation();
+                                          setEditTitleId(conversation.id);
+                                          setEditTitleValue(conversation.title);
+                                        }}
+                                        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                                        aria-label="Editar nombre"
+                                      >
+                                        <Pencil size={16} className="text-gray-600 dark:text-gray-400" />
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <MessageSquare size={16} className="text-gray-600 dark:text-gray-400 group-hover:opacity-0 transition-opacity" />
+                                      <button
+                                        onClick={e => {
+                                          e.stopPropagation();
+                                          setEditTitleId(conversation.id);
+                                          setEditTitleValue(conversation.title);
+                                        }}
+                                        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                                        aria-label="Editar nombre"
+                                      >
+                                        <Pencil size={16} className="text-gray-600 dark:text-gray-400 hover:text-primary-600 hover:dark:text-primary-400 transition-colors" />
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                                {isEditing ? (
+                                  <input
+                                    type="text"
+                                    value={editTitleValue}
+                                    onChange={e => setEditTitleValue(e.target.value)}
+                                    onClick={e => e.stopPropagation()}
+                                    className="text-sm truncate bg-transparent border border-primary-300 dark:border-primary-700 rounded px-2 py-1 focus:outline-none focus:border-primary-500 dark:focus:border-primary-400 text-gray-900 dark:text-gray-100"
+                                    autoFocus
+                                    onBlur={() => {
+                                      // Si pierde el foco, cancelar edición sin guardar
+                                      setEditTitleId(null);
+                                    }}
+                                    onKeyDown={e => {
+                                      if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        if (
+                                          onEditConversationTitle &&
+                                          editTitleValue.trim() &&
+                                          editTitleValue !== conversation.title
+                                        ) {
+                                          onEditConversationTitle(conversation.id, editTitleValue.trim());
+                                        }
+                                        setEditTitleId(null);
+                                      } else if (e.key === "Escape") {
+                                        e.preventDefault();
+                                        setEditTitleId(null);
+                                      }
+                                    }}
+                                  />
+                                ) : (
+                                  <span className="text-sm truncate">
+                                    {conversation.title}
+                                  </span>
+                                )}
+                              </div>
+                              {/* Delete button - appears on hover replacing 3 dots */}
+                              <button
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  onDeleteConversation(conversation.id);
+                                }}
+                                className="p-1 rounded transition-all duration-200 flex-shrink-0 focus:outline-none group-hover:opacity-100 opacity-0 bg-transparent"
+                                aria-label="Eliminar"
+                                style={{ zIndex: 2 }}
+                              >
+                                <Trash2 size={16} className="text-gray-600 dark:text-gray-400 hover:text-primary-600 hover:dark:text-primary-400 transition-colors" />
+                              </button>
                             </button>
-                        </div>
-                      ))}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>

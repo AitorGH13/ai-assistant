@@ -1,7 +1,7 @@
-# Script para limpiar puertos 3001 y 5173
-Write-Host "Limpiando puertos 3001 y 5173..." -ForegroundColor Cyan
+# Script para limpiar puertos 3001, 3002 y 5173
+Write-Host "Limpiando puertos 3001, 3002 y 5173..." -ForegroundColor Cyan
 
-$ports = @(3001, 5173)
+$ports = @(3001, 3002, 5173)
 $killed = $false
 
 foreach ($port in $ports) {
@@ -22,5 +22,5 @@ if ($killed) {
     Start-Sleep -Milliseconds 500
     Write-Host "Procesos eliminados!" -ForegroundColor Green
 } else {
-    Write-Host "No hay procesos usando los puertos" -ForegroundColor Green
+    Write-Host "No hay procesos usando los puertos 3001, 3002 y 5173" -ForegroundColor Green
 }

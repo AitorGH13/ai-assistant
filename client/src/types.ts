@@ -34,7 +34,28 @@ export interface SearchResponse {
   }>;
 }
 
-export type AppMode = "chat" | "search";
+export type AppMode = "chat" | "search" | "tts" | "conversational";
+
+export interface Voice {
+  id: string;
+  name: string;
+  category: string;
+  preview_url: string;
+}
+
+export interface SpeakRequest {
+  text: string;
+  voiceId: string;
+}
+
+export interface TTSAudio {
+  id: string;
+  text: string;
+  audioUrl: string;
+  timestamp: number;
+  voiceId: string;
+  voiceName: string;
+}
 
 export interface Conversation {
   id: string;
@@ -42,4 +63,5 @@ export interface Conversation {
   messages: ChatMessage[];
   createdAt: string;
   updatedAt: string;
+  ttsHistory?: TTSAudio[];
 }
