@@ -4,6 +4,7 @@ import { IconButton } from "./ui/IconButton";
 import { MarkdownMessage } from "./MarkdownMessage";
 import { Copy, Check, Wrench } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "../context/AuthProvider";
 
 interface Props {
   message: ChatMessageType;
@@ -11,8 +12,10 @@ interface Props {
 }
 
 export function ChatMessage({ message, theme = 'dark' }: Props) {
+  const { user } = useAuth();
   const [copied, setCopied] = useState(false);
   const isUser = message.role === "user";
+  const userName = user?.user_metadata?.full_name || "Tú";
 
   const handleCopy = async () => {
     const textContent = typeof message.content === 'string' 
@@ -87,7 +90,7 @@ export function ChatMessage({ message, theme = 'dark' }: Props) {
       <div className={`flex flex-col gap-1 max-w-[90%] sm:max-w-[85%] md:max-w-[75%] ${isUser ? 'items-end' : 'items-start'}`}>
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-            {isUser ? "You" : "AI Assistant"}
+            {isUser ? userName : "AI Assistant"}
           </span>
           <span className="text-xs text-gray-500 dark:text-gray-500">
             {formatTime(message.timestamp)}

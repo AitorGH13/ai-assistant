@@ -67,13 +67,32 @@ export function useConversations(): {
   }, []);
 
   const parseMessageRows = useCallback((rows: MessageRow[]): ChatMessage[] => {
-    return rows.map((row) => ({
-      id: row.id,
-      role: row.role,
-      content: row.content,
-      timestamp: row.created_at,
-      toolUsed: row.tool_used,
-    }));
+    return rows.map((row) => {
+      let content = row.content;
+
+      // Si viene como string, intentamos ver si es un JSON (multimodal)
+      if (typeof content === 'string') {
+        const trimmed = content.trim();
+        // Si parece un Array o un Objeto JSON, intentamos parsearlo
+        if ((trimmed.startsWith('[') && trimmed.endsWith(']')) || 
+            (trimmed.startsWith('{') && trimmed.endsWith('}'))) {
+          try {
+            content = JSON.parse(content);
+          } catch (e) {
+            // Si falla el parse, asumimos que es texto normal (ej: "[Hola]")
+            console.warn("Contenido parece JSON pero no lo es, se usará como texto:", e);
+          }
+        }
+      }
+
+      return {
+        id: row.id,
+        role: row.role,
+        content: content,
+        timestamp: row.created_at,
+        toolUsed: row.tool_used,
+      };
+    });
   }, []);
 
   const parseTTSAudioRows = useCallback((rows: TTSAudioRow[]): TTSAudio[] => {

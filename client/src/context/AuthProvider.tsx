@@ -9,6 +9,7 @@ type AuthContextType = {
   signIn: (email: string, password: string) => Promise<string | null>;
   signUp: (email: string, password: string, userData?: { [key: string]: any}) => Promise<string | null>;
   signOut: () => Promise<void>;
+  updateProfile: (data: { full_name: string }) => Promise<string | null>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -67,6 +68,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async signOut() {
         await supabase.auth.signOut();
       },
+      async updateProfile(data: { full_name: string }) {
+        if (!user) return "No hay usuario autenticado";
+
+        const { data: updateData, error: authError } = await supabase.auth.updateUser({
+          data: { full_name: data.full_name }
+        });
+
+        if (authError) return authError.message;
+
+        const { error: dbError } = await supabase
+          .from('profiles')
+          .update({ full_name: data.full_name })
+          .eq('id', user.id);
+
+        if (dbError) return dbError.message;
+
+        if (updateData.user) {
+          setUser(updateData.user);
+        }
+        
+        return null;
+      }
     }),
     [user, session, loading]
   );
