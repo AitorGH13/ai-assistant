@@ -30,6 +30,19 @@ type TTSAudioRow = {
   created_at: string;
 };
 
+// Función auxiliar para ordenar conversaciones
+const sortConversations = (items: Conversation[]) => {
+  return [...items].sort((a, b) => {
+    const timeA = new Date(a.updatedAt).getTime();
+    const timeB = new Date(b.updatedAt).getTime();
+    if (timeA !== timeB) return timeB - timeA;
+    
+    const createdA = new Date(a.createdAt).getTime();
+    const createdB = new Date(b.createdAt).getTime();
+    return createdB - createdA;
+  });
+};
+
 export function useConversations(): {
   conversations: Conversation[];
   currentConversationId: string | null;
@@ -57,29 +70,49 @@ export function useConversations(): {
   const generateTitle = useCallback((messages: ChatMessage[]): string => {
     const firstUserMessage = messages.find((message) => message.role === "user");
     if (!firstUserMessage) return "Nueva conversación";
+    const DEFAULT_IMAGE_PROMPT = "¿Qué hay en esta imagen?";
 
-    const content =
-      typeof firstUserMessage.content === "string"
-        ? firstUserMessage.content
-        : firstUserMessage.content.find((chunk) => chunk.type === "text")?.text || "Nueva conversación";
+    // Si es texto simple
+    if (typeof firstUserMessage.content === "string") {
+      const content = firstUserMessage.content;
+      return content.slice(0, 50) + (content.length > 50 ? "..." : "");
+    }
 
-    return content.slice(0, 50) + (content.length > 50 ? "..." : "");
+    // Si es un array (multimodal / imagen)
+    if (Array.isArray(firstUserMessage.content)) {
+      // Intentar buscar un fragmento de texto
+      const textChunk = firstUserMessage.content.find((chunk) => chunk.type === "text");
+
+      if (textChunk && textChunk.text && textChunk.text.trim().length > 0) {
+        const text = textChunk.text.trim();
+        // Si el texto es el prompt por defecto, usar un título de análisis de imagen
+        if (text === DEFAULT_IMAGE_PROMPT) {
+          return "Análisis de imagen";
+        }
+        return text.slice(0, 50) + (text.length > 50 ? "..." : "");
+      }
+
+      // Si no hay texto, comprobar si hay imagen
+      const hasImage = firstUserMessage.content.some((chunk) => chunk.type === "image_url");
+      if (hasImage) {
+        return "Análisis de imagen";
+      }
+    }
+
+    return "Nueva conversación";
   }, []);
 
   const parseMessageRows = useCallback((rows: MessageRow[]): ChatMessage[] => {
     return rows.map((row) => {
       let content = row.content;
 
-      // Si viene como string, intentamos ver si es un JSON (multimodal)
       if (typeof content === 'string') {
         const trimmed = content.trim();
-        // Si parece un Array o un Objeto JSON, intentamos parsearlo
         if ((trimmed.startsWith('[') && trimmed.endsWith(']')) || 
             (trimmed.startsWith('{') && trimmed.endsWith('}'))) {
           try {
             content = JSON.parse(content);
           } catch (e) {
-            // Si falla el parse, asumimos que es texto normal (ej: "[Hola]")
             console.warn("Contenido parece JSON pero no lo es, se usará como texto:", e);
           }
         }
@@ -139,7 +172,8 @@ export function useConversations(): {
       .from("conversations")
       .select("id, title, created_at, updated_at")
       .eq("user_id", user.id)
-      .order("updated_at", { ascending: false });
+      .order("updated_at", { ascending: false })
+      .order("created_at", { ascending: false });
 
     if (conversationError) {
       console.error("Failed to fetch conversations:", conversationError);
@@ -208,11 +242,9 @@ export function useConversations(): {
       ttsHistory: ttsMap[row.id] || [],
     }));
 
-    setConversations(parsedConversations);
-
-    const nextConversationId = parsedConversations[0]?.id ?? null;
-    setCurrentConversationId(nextConversationId);
-    setCurrentMessages(nextConversationId ? messageMap[nextConversationId] || (await fetchMessages(nextConversationId)) : []);
+    setConversations(sortConversations(parsedConversations));
+    setCurrentConversationId(null);
+    setCurrentMessages([]);
 
     setIsLoading(false);
     setIsInitialized(true);
@@ -235,24 +267,9 @@ export function useConversations(): {
       ttsHistory: [],
     };
 
-    setConversations((prev) => [newConversation, ...prev]);
+    setConversations((prev) => sortConversations([newConversation, ...prev]));
     setCurrentConversationId(newId);
     setCurrentMessages([]);
-
-    // if (user) {
-    //   void supabase
-    //     .from("conversations")
-    //     .insert({
-    //       id: newId,
-    //       user_id: user.id,
-    //       title: "Nueva conversación",
-    //     })
-    //     .then(({ error }: { error: Error | null }) => {
-    //       if (error) {
-    //         console.error("Failed to create conversation:", error);
-    //       }
-    //     });
-    // }
 
     return newId;
   }, [user]);
@@ -267,7 +284,6 @@ export function useConversations(): {
       }
 
       void fetchMessages(id).then((messages) => {
-        // Only update if we actually got messages, otherwise keep local
         if (messages.length > 0 || !localConversation?.messages.length) {
           setCurrentMessages(messages);
           setConversations((prev) =>
@@ -283,10 +299,18 @@ export function useConversations(): {
     (id: string, messages: ChatMessage[]) => {
       if (!id || !user) return;
 
+      const existing = conversations.find((c) => c.id === id);
+      const hasChanges = !existing || 
+                         existing.messages.length !== messages.length ||
+                         (messages.length > 0 && existing.messages[existing.messages.length - 1]?.id !== messages[messages.length - 1]?.id);
+      const needsTitle = existing?.title === "Nueva conversación" && messages.length > 0;
+
+      if (!hasChanges && !needsTitle) return; 
+
       const now = new Date().toISOString();
 
-      setConversations((prev) =>
-        prev.map((conversation) => {
+      setConversations((prev) => {
+        const updated = prev.map((conversation) => {
           if (conversation.id !== id) return conversation;
           const title =
             conversation.title !== "Nueva conversación" ? conversation.title : generateTitle(messages);
@@ -294,18 +318,16 @@ export function useConversations(): {
             ...conversation,
             title,
             messages: [...messages],
-            updatedAt: now,
+            updatedAt: now, 
           };
-        })
-      );
-
-      // Resolve the title using the value computed inside the state updater
-      let resolvedTitle = "";
-      setConversations((prev) => {
-        const match = prev.find((c) => c.id === id);
-        resolvedTitle = match?.title || generateTitle(messages);
-        return prev; // no-op, just reading
+        });
+        return sortConversations(updated);
       });
+
+      let resolvedTitle = "";
+      const currentConvo = conversations.find(c => c.id === id);
+      resolvedTitle = currentConvo?.title !== "Nueva conversación" ? currentConvo?.title || "" : generateTitle(messages);
+      
       if (!resolvedTitle) resolvedTitle = generateTitle(messages);
 
       void supabase
@@ -322,9 +344,7 @@ export function useConversations(): {
           }
         });
 
-      if (messages.length === 0) {
-        return;
-      }
+      if (messages.length === 0) return;
 
       const rows = messages.map((message) => ({
         id: message.id,
@@ -344,7 +364,7 @@ export function useConversations(): {
           }
         });
     },
-    [user, generateTitle]
+    [user, generateTitle, conversations] 
   );
 
   const deleteConversation = useCallback(
@@ -364,21 +384,9 @@ export function useConversations(): {
             window.dispatchEvent(new CustomEvent("forceChatMode"));
           }
 
-          const nextConversation = updated.find((conversation) => {
-            const hasMessages = conversation.messages && conversation.messages.length > 0;
-            const hasTTSAudios = conversation.ttsHistory && conversation.ttsHistory.length > 0;
-            return hasMessages || hasTTSAudios;
-          });
-
-          if (nextConversation) {
-            setCurrentConversationId(nextConversation.id);
-            setCurrentMessages([...nextConversation.messages]);
-          } else {
-            setCurrentConversationId(null);
-            setCurrentMessages([]);
-          }
+          setCurrentConversationId(null);
+          setCurrentMessages([]);
         }
-
         return updated;
       });
 
@@ -411,25 +419,27 @@ export function useConversations(): {
         const existing = prev.find((conversation) => conversation.id === targetConversationId);
 
         if (!existing) {
-          return [
-            {
-              id: targetConversationId,
-              title: generateTitle([message]),
-              messages: [message],
-              createdAt: now,
-              updatedAt: now,
-              ttsHistory: [],
-            },
-            ...prev,
-          ];
+          const newConvo = {
+            id: targetConversationId,
+            title: generateTitle([message]), // Ahora esto maneja imágenes correctamente
+            messages: [message],
+            createdAt: now,
+            updatedAt: now,
+            ttsHistory: [],
+          };
+          return sortConversations([newConvo, ...prev]);
         }
 
         const alreadyExists = existing.messages.some((item) => item.id === message.id);
         const newMessages = alreadyExists ? existing.messages : [...existing.messages, message];
+        
+        // Regenerar título si es nueva o si es "Imagen adjunta" y ahora el usuario escribe texto
         const shouldGenerateTitle =
-          existing.title === "Nueva conversación" || existing.title.startsWith("Conversación de voz");
+          existing.title === "Nueva conversación" || 
+          existing.title === "Imagen adjunta" ||
+          existing.title.startsWith("Conversación de voz");
 
-        return prev.map((conversation) =>
+        const updatedList = prev.map((conversation) =>
           conversation.id === targetConversationId
             ? {
                 ...conversation,
@@ -439,39 +449,40 @@ export function useConversations(): {
               }
             : conversation
         );
+        
+        return sortConversations(updatedList);
       });
 
       if (targetConversationId === currentConversationId) {
         setCurrentMessages((prev) => {
-          if (prev.some((item) => item.id === message.id)) {
-            return prev;
-          }
+          if (prev.some((item) => item.id === message.id)) return prev;
           return [...prev, message];
         });
       }
 
       if (!user) return;
 
-      // Use the conversation's current title from state instead of regenerating from single message
       const existingConversation = conversations.find((c) => c.id === targetConversationId);
-      const title = existingConversation?.title && existingConversation.title !== "Nueva conversación"
-        ? existingConversation.title
-        : message.role === "user" && typeof message.content === "string"
-          ? message.content.slice(0, 50) + (message.content.length > 50 ? "..." : "")
-          : "Nueva conversación";
+      
+      let titleToSave = "Nueva conversación";
+      
+      if (existingConversation && existingConversation.title !== "Nueva conversación" && existingConversation.title !== "Imagen adjunta") {
+         titleToSave = existingConversation.title;
+      } else {
+         // Usamos generateTitle pasando el mensaje actual para obtener un título válido (texto o "Imagen adjunta")
+         titleToSave = generateTitle([message]);
+      }
 
       void supabase
         .from("conversations")
         .upsert({
           id: targetConversationId,
           user_id: user.id,
-          title,
+          title: titleToSave,
           updated_at: now,
         })
         .then(({ error }: { error: Error | null }) => {
-          if (error) {
-            console.error("Failed to upsert conversation metadata:", error);
-          }
+          if (error) console.error("Failed to upsert conversation metadata:", error);
         });
 
       void supabase
@@ -480,35 +491,47 @@ export function useConversations(): {
           id: message.id,
           conversation_id: targetConversationId,
           role: message.role,
-          content: message.content,
+          content: message.content, // Supabase maneja JSONB, si tu columna es TEXT asegúrate de que esto se guarde bien
           tool_used: Boolean(message.toolUsed),
           created_at: message.timestamp,
         })
         .then(({ error }: { error: Error | null }) => {
-          if (error) {
-            console.error("Failed to persist message:", error);
-          }
+          if (error) console.error("Failed to persist message:", error);
         });
     },
     [createConversation, currentConversationId, generateTitle, user, conversations]
   );
 
   const addTTSAudio = useCallback(
-    async (audio: TTSAudio, conversationId?: string) => { // Añadido async
-      const targetConversationId = conversationId || currentConversationId;
+    async (audio: TTSAudio, conversationId?: string) => {
+      const targetConversationId = conversationId || currentConversationId || createConversation();
 
-      if (!targetConversationId) {
-        console.error("No hay conversación activa para añadir audio TTS");
-        return;
-      }
+      // (Se elimina el bloque 'if (!targetConversationId) return' que impedía guardar en chats nuevos)
 
-      // 1. Calculamos el título fuera para poder usarlo en Supabase
-      // (Lógica simplificada: si no tenemos acceso fácil al estado actual exacto aquí,
-      // usamos el texto del audio si es el primero, o mantenemos el título genérico).
       const titleToSave = audio.text.slice(0, 50) + (audio.text.length > 50 ? "..." : "");
+      const now = new Date().toISOString();
 
-      setConversations((prev) =>
-        prev.map((conversation) => {
+      const existingConvo = conversations.find(c => c.id === targetConversationId);
+      const dbTitle = existingConvo && existingConvo.title !== "Nueva conversación" 
+        ? existingConvo.title 
+        : titleToSave;
+
+      setConversations((prev) => {
+        const existing = prev.find((conversation) => conversation.id === targetConversationId);
+
+        if (!existing) {
+          const newConvo: Conversation = {
+            id: targetConversationId,
+            title: titleToSave,
+            messages: [],
+            createdAt: now,
+            updatedAt: now,
+            ttsHistory: [audio],
+          };
+          return sortConversations([newConvo, ...prev]);
+        }
+
+        const updatedList = prev.map((conversation) => {
           if (conversation.id !== targetConversationId) {
             return conversation;
           }
@@ -516,7 +539,7 @@ export function useConversations(): {
           const isNewTTSConversation = !conversation.ttsHistory || conversation.ttsHistory.length === 0;
           let title = conversation.title;
 
-          // Actualizamos el título localmente si es necesario
+          // Lógica de actualización de título en el estado local
           if (isNewTTSConversation) {
              if (conversation.messages.length === 0) {
                title = titleToSave; 
@@ -529,31 +552,28 @@ export function useConversations(): {
             ...conversation,
             title,
             ttsHistory: [audio, ...(conversation.ttsHistory || [])],
-            updatedAt: new Date().toISOString(),
+            updatedAt: now,
           };
-        })
-      );
+        });
+        return sortConversations(updatedList);
+      });
 
       if (!user) return;
 
-      // 2. PRIMERO: Aseguramos que la conversación existe en la DB
-      // Si ya existía, esto actualiza el 'updated_at'. Si no, la crea.
       const { error: convoError } = await supabase
         .from("conversations")
         .upsert({
           id: targetConversationId,
           user_id: user.id,
-          title: titleToSave, // Usamos el título generado o uno temporal
-          updated_at: new Date().toISOString(),
-        }); // Nota: Si prefieres no sobrescribir el título si ya existe, necesitarías lógica extra, 
-            // pero el upsert básico es necesario para evitar el error 42501.
+          title: dbTitle, // Usamos dbTitle para no machacar títulos existentes
+          updated_at: now,
+        });
 
       if (convoError) {
         console.error("Failed to upsert conversation for TTS:", convoError);
-        return; // Si falla crear la conversación, no intentamos meter el audio
+        return; 
       }
 
-      // 3. SEGUNDO: Insertamos el audio
       const { error } = await supabase
         .from("tts_audios")
         .insert({
@@ -570,7 +590,7 @@ export function useConversations(): {
         console.error("Failed to persist TTS audio:", error);
       }
     },
-    [currentConversationId, generateTitle, user]
+    [currentConversationId, generateTitle, user, createConversation, conversations]
   );
 
   const deleteTTSAudio = useCallback(
@@ -604,11 +624,12 @@ export function useConversations(): {
   const updateConversationTitle = useCallback((id: string, newTitle: string) => {
     const now = new Date().toISOString();
 
-    setConversations((prev) =>
-      prev.map((conversation) =>
+    setConversations((prev) => {
+      const updated = prev.map((conversation) =>
         conversation.id === id ? { ...conversation, title: newTitle, updatedAt: now } : conversation
-      )
-    );
+      );
+      return sortConversations(updated);
+    });
 
     void supabase
       .from("conversations")

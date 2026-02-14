@@ -3,7 +3,7 @@ import { Image, X, Search, Mic, Volume2 } from "lucide-react";
 import { AppMode } from "../types";
 
 interface Props {
-  onSend: (message: string, imageBase64?: string) => void;
+  onSend: (message: string, imageBase64?: string, imageName?: string) => void;
   onSearch?: (query: string) => void;
   disabled?: boolean;
   showImageUpload?: boolean;
@@ -16,6 +16,7 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
   const [input, setInput] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
+  const [imageName, setImageName] = useState<string | null>(null);
   const [isTextareaFocused, setIsTextareaFocused] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -30,10 +31,11 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
     } else {
       // Modo chat normal o TTS
       if ((input.trim() || imageBase64) && !disabled) {
-        onSend(input.trim(), imageBase64 || undefined);
+        onSend(input.trim(), imageBase64 || undefined, imageName || undefined);
         setInput("");
         setImagePreview(null);
         setImageBase64(null);
+        setImageName(null); // Limpiar nombre
       }
     }
   };
@@ -69,12 +71,14 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
       return;
     }
 
+    // Guardar el nombre del archivo
+    setImageName(file.name);
+
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64String = reader.result as string;
       setImagePreview(base64String);
       setImageBase64(base64String);
-      // Return focus to textarea after selecting image
       setTimeout(() => textareaRef.current?.focus(), 0);
     };
     reader.readAsDataURL(file);
@@ -83,6 +87,7 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
   const handleRemoveImage = () => {
     setImagePreview(null);
     setImageBase64(null);
+    setImageName(null); // Limpiar nombre al eliminar
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
