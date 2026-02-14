@@ -12,7 +12,7 @@ from typing import List, Dict, Any, Union
 from contextlib import asynccontextmanager
 
 # Load environment variables (robust path handling)
-env_path = Path(__file__).parent.parent / '.env'
+env_path = Path(__file__).parent / '.env'
 load_dotenv(dotenv_path=env_path, override=True)
 
 # Initialize OpenAI client 

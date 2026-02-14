@@ -6,7 +6,7 @@
     "dev": "bun run cleanup && concurrently --kill-others \"bun run dev:server\" \"bun run dev:voice\" \"bun run dev:client\"",
     "dev:with-ngrok": "bun run cleanup && concurrently --kill-others \"bun run dev:server\" \"bun run dev:voice\" \"bun run dev:client\" \"bun run dev:ngrok\"",
     "dev:server": "powershell -Command \"cd server; python -m uvicorn main:app --reload --port 3001\"",
-    "dev:voice": "cd server && bun run --env-file=../.env index.ts",
+    "dev:voice": "cd server && bun run --env-file=.env index.ts",
     "dev:client": "cd client && bun run dev",
     "dev:ngrok": "ngrok http 3002 --log=stdout",
     "cleanup": "powershell -ExecutionPolicy Bypass -File ./cleanup-ports.ps1",
