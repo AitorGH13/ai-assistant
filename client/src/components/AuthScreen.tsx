@@ -5,8 +5,10 @@ import { Loader2 } from "lucide-react";
 export function AuthScreen() {
   const { signIn, signUp } = useAuth();
   const [mode, setMode] = useState<"login" | "signup">("login");
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -15,8 +17,19 @@ export function AuthScreen() {
     setError(null);
 
     if (!email.trim() || !password.trim()) {
-      setError("Por favor, completa todos los campos.");
+      setError("Por favor, completa los campos obligatorios.");
       return;
+    }
+
+    if (mode === "signup") {
+      if (!fullName.trim()) {
+        setError("Por favor, ingresa tu nombre completo.");
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError("Las contraseñas no coinciden.");
+        return;
+      }
     }
 
     if (password.length < 6) {
@@ -26,17 +39,27 @@ export function AuthScreen() {
 
     setIsSubmitting(true);
     try {
-      const result =
-        mode === "login"
-          ? await signIn(email.trim(), password)
-          : await signUp(email.trim(), password);
+      let result;
+      
+      if (mode === "login") {
+        result = await signIn(email.trim(), password);
+      } else {
+        // Enviar el full_name al nuevo método signUp
+        result = await signUp(email.trim(), password, { 
+          full_name: fullName.trim() 
+        });
+      }
 
       if (result) {
         setError(result);
       } else if (mode === "signup") {
         setError(null);
         setMode("login");
-        alert("Cuenta creada exitosamente. Por favor, verifica tu email si es necesario e inicia sesión.");
+        // Limpiar formulario tras registro exitoso
+        setFullName("");
+        setPassword("");
+        setConfirmPassword("");
+        alert("Cuenta creada exitosamente. Por favor inicia sesión.");
       }
     } catch {
       setError("Ocurrió un error inesperado. Inténtalo de nuevo.");
@@ -64,24 +87,51 @@ export function AuthScreen() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-3">
+          {/* Campo Nombre Completo (Solo Signup) */}
+          {mode === "signup" && (
+            <input
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+              placeholder="Nombre completo"
+              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              disabled={isSubmitting}
+            />
+          )}
+
           <input
             className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
             placeholder="Email"
             type="email"
             autoComplete="email"
             value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            onChange={(e) => setEmail(e.target.value)}
             disabled={isSubmitting}
           />
+          
           <input
             className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
             placeholder="Contraseña"
             type="password"
             autoComplete={mode === "login" ? "current-password" : "new-password"}
             value={password}
-            onChange={(event) => setPassword(event.target.value)}
+            onChange={(e) => setPassword(e.target.value)}
             disabled={isSubmitting}
           />
+
+          {/* Campo Confirmar Contraseña (Solo Signup) */}
+          {mode === "signup" && (
+            <input
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+              placeholder="Confirmar contraseña"
+              type="password"
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              disabled={isSubmitting}
+            />
+          )}
+
           <button
             type="submit"
             disabled={isSubmitting}
@@ -104,6 +154,8 @@ export function AuthScreen() {
             onClick={() => {
               setMode(mode === "login" ? "signup" : "login");
               setError(null);
+              // Limpiar confirmar pass al cambiar de modo
+              setConfirmPassword(""); 
             }}
             className="text-primary-600 dark:text-primary-400 hover:underline font-medium"
             disabled={isSubmitting}
