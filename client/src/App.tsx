@@ -240,32 +240,24 @@ function App() {
     }
   };
 
-  const handleSendMessage = async (content: string, imageBase64?: string, imageName?: string) => {
+  const handleSendMessage = async (content: string, imageBase64?: string) => {
     let conversationId = currentConversationId;
     if (!conversationId) {
       conversationId = createConversation();
-    }
-
-    // CORRECCIÓN: Si no hay texto pero hay imagen, usar nombre de imagen como texto
-    const textContent = content.trim() || (imageBase64 ? (imageName || "¿Qué hay en esta imagen?") : "");
-    
-    // Validar que hay contenido
-    if (!textContent && !imageBase64) {
-      return; // No enviar mensajes vacíos
     }
 
     let messageContent: string | MessageContent[];
     
     if (imageBase64) {
       messageContent = [
-        // Usamos finalContent aquí, NO content
-        { type: "text" as const, text: textContent },
+        { type: "text" as const, text: content },
         { type: "image_url" as const, image_url: { url: imageBase64 } }
       ];
     } else {
-      messageContent = textContent;
+      messageContent = content;
     }
 
+    // Capturamos el momento exacto para el usuario
     const userTimestamp = new Date();
 
     const userMessage: ChatMessageType = {
@@ -293,15 +285,10 @@ function App() {
     addChatMessage(assistantMessage, conversationId);
 
     try {
-      // Preparamos los mensajes para la API
-      // Aseguramos que el contenido que va a la API también use la versión corregida
-      const apiMessages = updatedMessages.map((msg) => {
-        // Si es el mensaje que acabamos de crear, nos aseguramos de usar el contenido estructurado correcto
-        if (msg.id === userMessage.id) {
-            return { role: msg.role, content: messageContent };
-        }
-        return { role: msg.role, content: msg.content };
-      });
+      const apiMessages = updatedMessages.map(({ role, content }) => ({
+        role,
+        content,
+      }));
 
       const response = await fetch("/api/chat", {
         method: "POST",

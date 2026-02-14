@@ -70,36 +70,13 @@ export function useConversations(): {
   const generateTitle = useCallback((messages: ChatMessage[]): string => {
     const firstUserMessage = messages.find((message) => message.role === "user");
     if (!firstUserMessage) return "Nueva conversación";
-    const DEFAULT_IMAGE_PROMPT = "¿Qué hay en esta imagen?";
 
-    // Si es texto simple
-    if (typeof firstUserMessage.content === "string") {
-      const content = firstUserMessage.content;
-      return content.slice(0, 50) + (content.length > 50 ? "..." : "");
-    }
+    const content =
+      typeof firstUserMessage.content === "string"
+        ? firstUserMessage.content
+        : firstUserMessage.content.find((chunk) => chunk.type === "text")?.text || "Nueva conversación";
 
-    // Si es un array (multimodal / imagen)
-    if (Array.isArray(firstUserMessage.content)) {
-      // Intentar buscar un fragmento de texto
-      const textChunk = firstUserMessage.content.find((chunk) => chunk.type === "text");
-
-      if (textChunk && textChunk.text && textChunk.text.trim().length > 0) {
-        const text = textChunk.text.trim();
-        // Si el texto es el prompt por defecto, usar un título de análisis de imagen
-        if (text === DEFAULT_IMAGE_PROMPT) {
-          return "Análisis de imagen";
-        }
-        return text.slice(0, 50) + (text.length > 50 ? "..." : "");
-      }
-
-      // Si no hay texto, comprobar si hay imagen
-      const hasImage = firstUserMessage.content.some((chunk) => chunk.type === "image_url");
-      if (hasImage) {
-        return "Análisis de imagen";
-      }
-    }
-
-    return "Nueva conversación";
+    return content.slice(0, 50) + (content.length > 50 ? "..." : "");
   }, []);
 
   const parseMessageRows = useCallback((rows: MessageRow[]): ChatMessage[] => {
@@ -421,7 +398,7 @@ export function useConversations(): {
         if (!existing) {
           const newConvo = {
             id: targetConversationId,
-            title: generateTitle([message]), // Ahora esto maneja imágenes correctamente
+            title: generateTitle([message]),
             messages: [message],
             createdAt: now,
             updatedAt: now,
@@ -432,12 +409,8 @@ export function useConversations(): {
 
         const alreadyExists = existing.messages.some((item) => item.id === message.id);
         const newMessages = alreadyExists ? existing.messages : [...existing.messages, message];
-        
-        // Regenerar título si es nueva o si es "Imagen adjunta" y ahora el usuario escribe texto
         const shouldGenerateTitle =
-          existing.title === "Nueva conversación" || 
-          existing.title === "Imagen adjunta" ||
-          existing.title.startsWith("Conversación de voz");
+          existing.title === "Nueva conversación" || existing.title.startsWith("Conversación de voz");
 
         const updatedList = prev.map((conversation) =>
           conversation.id === targetConversationId
@@ -455,7 +428,9 @@ export function useConversations(): {
 
       if (targetConversationId === currentConversationId) {
         setCurrentMessages((prev) => {
-          if (prev.some((item) => item.id === message.id)) return prev;
+          if (prev.some((item) => item.id === message.id)) {
+            return prev;
+          }
           return [...prev, message];
         });
       }
@@ -463,26 +438,24 @@ export function useConversations(): {
       if (!user) return;
 
       const existingConversation = conversations.find((c) => c.id === targetConversationId);
-      
-      let titleToSave = "Nueva conversación";
-      
-      if (existingConversation && existingConversation.title !== "Nueva conversación" && existingConversation.title !== "Imagen adjunta") {
-         titleToSave = existingConversation.title;
-      } else {
-         // Usamos generateTitle pasando el mensaje actual para obtener un título válido (texto o "Imagen adjunta")
-         titleToSave = generateTitle([message]);
-      }
+      const title = existingConversation?.title && existingConversation.title !== "Nueva conversación"
+        ? existingConversation.title
+        : message.role === "user" && typeof message.content === "string"
+          ? message.content.slice(0, 50) + (message.content.length > 50 ? "..." : "")
+          : "Nueva conversación";
 
       void supabase
         .from("conversations")
         .upsert({
           id: targetConversationId,
           user_id: user.id,
-          title: titleToSave,
+          title,
           updated_at: now,
         })
         .then(({ error }: { error: Error | null }) => {
-          if (error) console.error("Failed to upsert conversation metadata:", error);
+          if (error) {
+            console.error("Failed to upsert conversation metadata:", error);
+          }
         });
 
       void supabase
@@ -491,12 +464,14 @@ export function useConversations(): {
           id: message.id,
           conversation_id: targetConversationId,
           role: message.role,
-          content: message.content, // Supabase maneja JSONB, si tu columna es TEXT asegúrate de que esto se guarde bien
+          content: message.content,
           tool_used: Boolean(message.toolUsed),
           created_at: message.timestamp,
         })
         .then(({ error }: { error: Error | null }) => {
-          if (error) console.error("Failed to persist message:", error);
+          if (error) {
+            console.error("Failed to persist message:", error);
+          }
         });
     },
     [createConversation, currentConversationId, generateTitle, user, conversations]
@@ -506,11 +481,11 @@ export function useConversations(): {
     async (audio: TTSAudio, conversationId?: string) => {
       const targetConversationId = conversationId || currentConversationId || createConversation();
 
-      // (Se elimina el bloque 'if (!targetConversationId) return' que impedía guardar en chats nuevos)
-
       const titleToSave = audio.text.slice(0, 50) + (audio.text.length > 50 ? "..." : "");
       const now = new Date().toISOString();
 
+      // Si la conversación ya existe y tiene un título propio, lo respetamos.
+      // Si no, usamos el texto del audio.
       const existingConvo = conversations.find(c => c.id === targetConversationId);
       const dbTitle = existingConvo && existingConvo.title !== "Nueva conversación" 
         ? existingConvo.title 
