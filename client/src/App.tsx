@@ -84,6 +84,8 @@ function App() {
     }
     createConversation();
     setMode("chat");
+    setShowSearchView(false);
+    setView("chat");
   };
 
   const handleLoadConversation = (conversationId: string) => {
@@ -94,7 +96,7 @@ function App() {
     
     // Cerrar vista de búsqueda al cargar una conversación
     handleCloseSearch();
-    
+    setView("chat");
     // Determinar el modo basado en el tipo de conversación
     const conversation = conversations.find((c: Conversation) => c.id === conversationId);
     if (conversation) {
@@ -123,10 +125,17 @@ function App() {
     deleteConversation(conversationId);
   };
 
-  const handleSearchClick = () => {
-    setShowSearchView(!showSearchView);
-    if (!showSearchView) {
-      setSearchQuery("");
+ const handleSearchClick = () => {
+    if (view === "profile") {
+      // Si estoy en perfil, fuerzo abrir el buscador y cambio la vista
+      setShowSearchView(true);
+      setView("chat");
+    } else {
+      // Si ya estoy en el chat, funciona como interruptor (abrir/cerrar)
+      setShowSearchView(!showSearchView);
+      if (!showSearchView) { // Nota: aquí la lógica invierte el valor anterior
+        setSearchQuery("");
+      }
     }
   };
 
@@ -435,17 +444,22 @@ function App() {
       {/* Main content area */}
       <div className="flex flex-col flex-1 min-w-0">
         {/* Header */}
-        <div className="bg-white dark:bg-gray-900 px-3 sm:px-4 py-2 sm:py-3 flex items-center gap-3">
-          <button
-            onClick={() => setView("profile")}
-            className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
-            title="Perfil"
-          >
-            <UserCircle2 className="h-6 w-6 text-gray-700 dark:text-gray-200" />
-          </button>
-          <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
-            Assistant AI
-          </h1>
+        <div className="bg-white dark:bg-gray-900 px-3 sm:px-4 py-2 sm:py-3 flex items-center gap-3 justify-between">
+          <div className="flex-1 flex justify-start">
+            <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
+              Assistant AI
+            </h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setView("profile")}
+              className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+              title="Perfil"
+              style={{ marginLeft: 'auto' }}
+            >
+              <UserCircle2 className="h-8 w-8 text-gray-700 dark:text-primary-400" />
+            </button>
+          </div>
         </div>
 
         {/* Chat content */}
