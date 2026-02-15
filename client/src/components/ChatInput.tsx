@@ -136,11 +136,7 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
     }
   };
 
-  const placeholder = mode === "search" 
-    ? "Buscar en la base de conocimientos..." 
-    : mode === "tts"
-    ? "Escribe el texto que quieres convertir a voz..."
-    : "Escribe tu mensaje...";
+  const placeholder = "Escribe tu mensaje...";
 
   return (
     <div className="bg-background p-3 sm:p-4">

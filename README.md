@@ -50,12 +50,12 @@ A modern, professional ChatGPT-lite clone with a beautiful UI, built with Python
 
 ## Tech Stack
 
-- **Backend**: 
+- **Backend**:
   - Python + FastAPI + Uvicorn + NumPy (Main API server)
   - Bun + TypeScript (Voice AI server)
 - **Frontend**: Vite + React + TypeScript + Tailwind CSS
-- **Package Manager**: Bun (for frontend) / pip (for backend) / npm (for voice server)
-- **AI**: 
+- **Package Manager**: Bun (for frontend and voice server) / pip (for backend)
+- **AI**:
   - OpenAI API (gpt-4o-mini for chat/vision, text-embedding-3-small for search)
   - ElevenLabs API (voice synthesis and conversational AI)
 - **UI Components**: Custom component library with lucide-react icons
@@ -76,22 +76,24 @@ A modern, professional ChatGPT-lite clone with a beautiful UI, built with Python
 1. Clone the repository
 
 2. Install dependencies:
+
    ```bash
    # Install all dependencies at once
-   npm run install:all
-   
+   bun run install:all
+
    # Or install individually:
    # Frontend dependencies
    cd client && bun install
-   
+
    # Backend dependencies
    cd ../server && pip install -r requirements.txt
-   
+
    # Voice server dependencies
-   cd ../server && npm install
+   cd ../server && bun install
    ```
 
 3. Create a `.env` file in the root directory:
+
    ```bash
    cp .env.example .env
    ```
@@ -112,6 +114,7 @@ bun run dev
 ```
 
 This will start:
+
 - Python FastAPI backend server on `http://localhost:3001`
 - Bun Voice AI server on `http://localhost:3002`
 - Vite frontend dev server on `http://localhost:5173`
@@ -180,12 +183,13 @@ ai-assistant/
 Send messages to the AI and receive streaming responses. Supports function calling and vision analysis.
 
 **Request Body:**
+
 ```json
 {
   "messages": [
-    { 
-      "role": "user", 
-      "content": "Hello!" 
+    {
+      "role": "user",
+      "content": "Hello!"
     }
   ],
   "systemPrompt": "You are a helpful assistant.", // optional
@@ -194,14 +198,18 @@ Send messages to the AI and receive streaming responses. Supports function calli
 ```
 
 **For Vision (multimodal):**
+
 ```json
 {
   "messages": [
-    { 
-      "role": "user", 
+    {
+      "role": "user",
       "content": [
         { "type": "text", "text": "What's in this image?" },
-        { "type": "image_url", "image_url": { "url": "data:image/jpeg;base64,..." }}
+        {
+          "type": "image_url",
+          "image_url": { "url": "data:image/jpeg;base64,..." }
+        }
       ]
     }
   ],
@@ -210,6 +218,7 @@ Send messages to the AI and receive streaming responses. Supports function calli
 ```
 
 **Response:** Server-Sent Events stream with chunks in format:
+
 ```
 data: {"content":"Hello"}
 
@@ -225,6 +234,7 @@ data: [DONE]
 Semantic search using embeddings.
 
 **Request Body:**
+
 ```json
 {
   "query": "What is the secret code?"
@@ -232,6 +242,7 @@ Semantic search using embeddings.
 ```
 
 **Response:**
+
 ```json
 {
   "query": "What is the secret code?",
@@ -252,6 +263,7 @@ Semantic search using embeddings.
 Fetch available ElevenLabs voices.
 
 **Response:**
+
 ```json
 [
   {
@@ -269,6 +281,7 @@ Fetch available ElevenLabs voices.
 Convert text to speech with streaming audio.
 
 **Request Body:**
+
 ```json
 {
   "text": "Hello, this is a test message.",
@@ -283,6 +296,7 @@ Convert text to speech with streaming audio.
 Get configuration for conversational AI agents.
 
 **Response:**
+
 ```json
 {
   "agentId": "your-agent-id"
@@ -294,6 +308,7 @@ Get configuration for conversational AI agents.
 Health check endpoint.
 
 **Response:**
+
 ```json
 {
   "status": "ok",
@@ -324,9 +339,11 @@ Health check endpoint.
 5. Verify protected app shell in `client/src/App.tsx` (unauthenticated users only see auth screen).
 6. Verify profile/logout view in `client/src/components/ProfileView.tsx`.
 7. Confirm persistence in `client/src/hooks/useConversations.ts`:
-  - conversations and messages load from Supabase on login
-  - user and assistant messages persist when sent/streamed
-  - TTS/conversational audio entries persist in `tts_audios`
+
+- conversations and messages load from Supabase on login
+- user and assistant messages persist when sent/streamed
+- TTS/conversational audio entries persist in `tts_audios`
+
 8. Validate RLS by logging in with two users and confirming each can only read/write their own rows.
 
 ### 🔐 About Authentication
