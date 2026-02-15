@@ -1,6 +1,9 @@
 import { Volume2, Play, Pause, Trash2 } from "lucide-react";
 import { useState, useRef } from "react";
 import { TTSAudio } from "../types";
+import { Button } from "./ui/Button";
+import { Card, CardContent } from "./ui/Card";
+import { cn } from "../lib/utils";
 
 interface Props {
   audios: TTSAudio[];
@@ -12,7 +15,6 @@ export function TTSAudioList({ audios, onDelete }: Props) {
   const audioRefs = useRef<{ [key: string]: HTMLAudioElement }>({});
 
   const handlePlayPause = (audio: TTSAudio) => {
-    // Si no hay audioUrl, no se puede reproducir
     if (!audio.audioUrl) {
       alert("Este audio no está disponible para reproducción");
       return;
@@ -26,9 +28,7 @@ export function TTSAudioList({ audios, onDelete }: Props) {
       audioElement.pause();
       setPlayingId(null);
     } else {
-      // Pausar cualquier audio que esté reproduciéndose
       Object.values(audioRefs.current).forEach(el => el.pause());
-      
       audioElement.play();
       setPlayingId(audio.id);
     }
@@ -52,7 +52,7 @@ export function TTSAudioList({ audios, onDelete }: Props) {
 
   if (audios.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-gray-500 dark:text-gray-400">
+      <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
         <Volume2 size={48} className="mb-4 opacity-50" />
         <p className="text-lg">No hay audios generados aún</p>
         <p className="text-sm mt-2">Los audios que generes aparecerán aquí</p>
@@ -63,61 +63,63 @@ export function TTSAudioList({ audios, onDelete }: Props) {
   return (
     <div className="max-w-3xl mx-auto space-y-3">
       {audios.map((audio) => (
-        <div
-          key={audio.id}
-          className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm hover:shadow-md transition-shadow"
-        >
-          <div className="flex items-start gap-3">
-            {/* Play/Pause Button */}
-            <button
-              onClick={() => handlePlayPause(audio)}
-              disabled={!audio.audioUrl}
-              className={`flex-shrink-0 p-3 rounded-full transition-colors ${
-                audio.audioUrl
-                  ? "bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-900/50"
-                  : "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed"
-              }`}
-            >
-              {playingId === audio.id ? (
-                <Pause size={20} />
-              ) : (
-                <Play size={20} />
-              )}
-            </button>
+        <Card key={audio.id} className="hover:shadow-md transition-shadow">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              {/* Play/Pause Button */}
+              <Button
+                variant={audio.audioUrl ? "secondary" : "ghost"}
+                size="icon"
+                onClick={() => handlePlayPause(audio)}
+                disabled={!audio.audioUrl}
+                className={cn(
+                  "flex-shrink-0 rounded-full h-11 w-11 min-h-[44px] min-w-[44px]",
+                  audio.audioUrl && "text-primary"
+                )}
+              >
+                {playingId === audio.id ? (
+                  <Pause size={20} />
+                ) : (
+                  <Play size={20} />
+                )}
+              </Button>
 
-            {/* Audio Info */}
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-gray-900 dark:text-gray-100 line-clamp-2 mb-1">
-                {audio.text}
-              </p>
-              <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                <span>{audio.voiceName}</span>
-                <span>•</span>
-                <span>{formatTime(audio.timestamp)}</span>
+              {/* Audio Info */}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-foreground line-clamp-2 mb-1">
+                  {audio.text}
+                </p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span>{audio.voiceName}</span>
+                  <span>•</span>
+                  <span>{formatTime(audio.timestamp)}</span>
+                </div>
               </div>
+
+              {/* Delete Button */}
+              {audio.voiceId !== "conversational-ai" && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onDelete(audio.id)}
+                  className="flex-shrink-0 h-8 w-8 min-h-[32px] min-w-[32px] text-muted-foreground hover:text-primary"
+                  aria-label="Eliminar audio"
+                >
+                  <Trash2 size={16} />
+                </Button>
+              )}
             </div>
 
-            {/* Delete Button (hidden for conversational recordings) */}
-            {audio.voiceId !== "conversational-ai" && (
-              <button
-                onClick={() => onDelete(audio.id)}
-                className="flex-shrink-0 p-1 hover:bg-primary-100 dark:hover:bg-primary-900/30 rounded transition-colors"
-                aria-label="Eliminar audio"
-              >
-                <Trash2 size={16} className="text-primary-600 dark:text-primary-400" />
-              </button>
-            )}
-          </div>
-
-          {/* Hidden Audio Element */}
-          <audio
-            ref={el => {
-              if (el) audioRefs.current[audio.id] = el;
-            }}
-            src={audio.audioUrl}
-            onEnded={handleAudioEnded}
-          />
-        </div>
+            {/* Hidden Audio Element */}
+            <audio
+              ref={el => {
+                if (el) audioRefs.current[audio.id] = el;
+              }}
+              src={audio.audioUrl}
+              onEnded={handleAudioEnded}
+            />
+          </CardContent>
+        </Card>
       ))}
     </div>
   );

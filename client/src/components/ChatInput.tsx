@@ -1,9 +1,11 @@
 import { useState, KeyboardEvent, useRef } from "react";
 import { Image, X, Search, Mic, Volume2 } from "lucide-react";
 import { AppMode } from "../types";
+import { Button } from "./ui/Button";
+import { cn } from "../lib/utils";
 
 interface Props {
-  onSend: (message: string, imageBase64?: string) => void;
+  onSend: (message: string, imageBase64?: string, imageName?: string) => void;
   onSearch?: (query: string) => void;
   disabled?: boolean;
   showImageUpload?: boolean;
@@ -16,24 +18,24 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
   const [input, setInput] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
+  const [imageName, setImageName] = useState<string | null>(null);
   const [isTextareaFocused, setIsTextareaFocused] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSubmit = () => {
     if (mode === "search" && onSearch) {
-      // Modo búsqueda semántica
       if (input.trim()) {
         onSearch(input.trim());
         setInput("");
       }
     } else {
-      // Modo chat normal o TTS
       if ((input.trim() || imageBase64) && !disabled) {
-        onSend(input.trim(), imageBase64 || undefined);
+        onSend(input.trim(), imageBase64 || undefined, imageName || undefined);
         setInput("");
         setImagePreview(null);
         setImageBase64(null);
+        setImageName(null);
       }
     }
   };
@@ -57,24 +59,22 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check file size (max 20MB)
     if (file.size > 20 * 1024 * 1024) {
       alert("Image size must be less than 20MB");
       return;
     }
 
-    // Check file type
     if (!file.type.startsWith("image/")) {
       alert("Please select an image file");
       return;
     }
 
+    setImageName(file.name);
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64String = reader.result as string;
       setImagePreview(base64String);
       setImageBase64(base64String);
-      // Return focus to textarea after selecting image
       setTimeout(() => textareaRef.current?.focus(), 0);
     };
     reader.readAsDataURL(file);
@@ -83,6 +83,7 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
   const handleRemoveImage = () => {
     setImagePreview(null);
     setImageBase64(null);
+    setImageName(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -97,15 +98,12 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
   const handleModeToggle = () => {
     if (onModeChange) {
       if (mode === "search") {
-        // Si ya estamos en search, volver a chat con nueva conversación
         onModeChange("chat");
         if (onNewConversation) {
           onNewConversation();
         }
       } else {
-        // Cambiar a search desde cualquier otro modo
         onModeChange("search");
-        // Limpiar imagen si cambiamos a modo búsqueda
         setImagePreview(null);
         setImageBase64(null);
       }
@@ -115,13 +113,11 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
   const handleTTSToggle = () => {
     if (onModeChange) {
       if (mode === "tts") {
-        // Si ya estamos en TTS, volver a chat con nueva conversación
         onModeChange("chat");
         if (onNewConversation) {
           onNewConversation();
         }
       } else {
-        // Cambiar a TTS desde cualquier otro modo
         onModeChange("tts");
       }
     }
@@ -130,13 +126,11 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
   const handleConversationalToggle = () => {
     if (onModeChange) {
       if (mode === "conversational") {
-        // Si ya estamos en conversational, volver a chat con nueva conversación
         onModeChange("chat");
         if (onNewConversation) {
           onNewConversation();
         }
       } else {
-        // Cambiar a conversational desde cualquier otro modo
         onModeChange("conversational");
       }
     }
@@ -149,30 +143,37 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
     : "Escribe tu mensaje...";
 
   return (
-    <div className="bg-white dark:bg-gray-900 p-3 sm:p-4">
+    <div className="bg-background p-3 sm:p-4">
       <div className="max-w-4xl mx-auto">
         {imagePreview && mode !== "search" && (
           <div className="mb-2 sm:mb-3 relative inline-block">
             <img
               src={imagePreview}
               alt="Preview"
-              className="max-h-32 rounded-lg border border-gray-300 dark:border-gray-600"
+              className="max-h-32 rounded-lg border border-border"
             />
-            <button
-              type="button"
+            <Button
+              variant="destructive"
+              size="icon"
               onClick={handleRemoveImage}
-              className="absolute -top-2 -right-2 p-1.5 rounded-full bg-red-500 hover:bg-red-600 text-white shadow-lg min-w-[32px] min-h-[32px] flex items-center justify-center"
+              className="absolute -top-2 -right-2 h-8 w-8 min-h-[32px] min-w-[32px] rounded-full shadow-lg"
             >
               <X size={16} />
-            </button>
+            </Button>
+            {imageName && (
+              <div className="mt-1 text-xs text-muted-foreground truncate max-w-[200px]">
+                {imageName}
+              </div>
+            )}
           </div>
         )}
 
-        <div className={`flex flex-col rounded-xl border bg-white dark:bg-gray-800 px-3 shadow-sm hover:shadow-md transition-all duration-200 ${
+        <div className={cn(
+          "flex flex-col rounded-xl border bg-background px-3 shadow-sm hover:shadow-md transition-all duration-200",
           isTextareaFocused 
-            ? "border-primary-500 dark:border-primary-400 shadow-md ring-2 ring-primary-500/20" 
-            : "border-gray-300 dark:border-gray-600"
-        }`}>
+            ? "border-primary shadow-md ring-2 ring-primary/20" 
+            : "border-border"
+        )}>
           <textarea
             ref={textareaRef}
             value={input}
@@ -183,7 +184,7 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
             placeholder={placeholder}
             disabled={disabled}
             rows={1}
-            className="flex-1 resize-none bg-transparent py-2.5 text-sm sm:text-base text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none disabled:opacity-50 min-h-[44px]"
+            className="flex-1 resize-none bg-transparent py-2.5 text-sm sm:text-base text-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50 min-h-[44px]"
             style={{
               maxHeight: "200px",
               overflowY: input.split("\n").length > 3 ? "auto" : "hidden",
@@ -194,20 +195,20 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
             {/* Left side buttons - Search and Image */}
             <div className="flex items-center gap-1">
               {onModeChange && (
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={handleModeToggle}
                   disabled={disabled}
-                  className={`p-2 rounded-lg transition-all flex-shrink-0 ${
-                    mode === "search"
-                      ? "bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400"
-                      : "text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400"
-                  }`}
+                  className={cn(
+                    "h-9 w-9 min-h-[36px] min-w-[36px]",
+                    mode === "search" && "bg-primary/10 text-primary"
+                  )}
                   aria-label={mode === "search" ? "Cambiar a modo chat" : "Cambiar a modo búsqueda"}
                   title={mode === "search" ? "Modo chat" : "Modo búsqueda semántica"}
                 >
                   <Search size={20} />
-                </button>
+                </Button>
               )}
 
               {showImageUpload && mode !== "search" && (
@@ -220,16 +221,17 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
                     className="hidden"
                     disabled={disabled}
                   />
-                  <button
-                    type="button"
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={handleImageButtonClick}
                     disabled={disabled}
-                    className="p-2 text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors disabled:opacity-50 flex-shrink-0"
+                    className="h-9 w-9 min-h-[36px] min-w-[36px]"
                     aria-label="Añadir imagen"
                     title="Añadir imagen"
                   >
                     <Image size={20} />
-                  </button>
+                  </Button>
                 </>
               )}
             </div>
@@ -238,35 +240,35 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
             <div className="flex items-center gap-1">
               {onModeChange && (
                 <>
-                  <button
-                    type="button"
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={handleConversationalToggle}
                     disabled={disabled}
-                    className={`p-2 rounded-lg transition-all flex-shrink-0 ${
-                      mode === "conversational"
-                        ? "bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400"
-                        : "text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400"
-                    }`}
+                    className={cn(
+                      "h-9 w-9 min-h-[36px] min-w-[36px]",
+                      mode === "conversational" && "bg-primary/10 text-primary"
+                    )}
                     aria-label="Conversational AI mode"
                     title="Conversational AI"
                   >
                     <Mic size={20} />
-                  </button>
+                  </Button>
                   
-                  <button
-                    type="button"
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={handleTTSToggle}
                     disabled={disabled}
-                    className={`p-2 rounded-lg transition-all flex-shrink-0 ${
-                      mode === "tts"
-                        ? "bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400"
-                        : "text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400"
-                    }`}
+                    className={cn(
+                      "h-9 w-9 min-h-[36px] min-w-[36px]",
+                      mode === "tts" && "bg-primary/10 text-primary"
+                    )}
                     aria-label="Text-to-Speech mode"
                     title="Text-to-Speech"
                   >
                     <Volume2 size={20} />
-                  </button>
+                  </Button>
                 </>
               )}
             </div>
