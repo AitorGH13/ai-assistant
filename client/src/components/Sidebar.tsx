@@ -288,10 +288,10 @@ export function Sidebar({
               variant="ghost"
               onClick={handleSettingsClick}
               className={cn(
-                "w-full justify-center gap-3 text-foreground hover:text-foreground hover:bg-accent/50",
+                "w-full justify-center gap-3 text-foreground hover:text-foreground",
                 showFloatingSettings 
-                  ? "bg-blue-200 dark:bg-blue-500/20" 
-                  : ""
+                  ? "bg-blue-200 dark:bg-blue-500/20 hover:bg-blue-200 dark:hover:bg-blue-500/20" 
+                  : "hover:bg-accent/50"
               )}
             >
               <Settings className="h-5 w-5 flex-shrink-0 text-primary" />
