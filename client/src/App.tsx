@@ -98,9 +98,14 @@ function App() {
     loadConversation(conversationId);
     handleCloseSearch();
     setView("chat");
+  };
+
+  // Sync mode based on conversation content when it's loaded or switched
+  useEffect(() => {
+    if (!currentConversationId) return;
     
-    // Logic to determine mode based on conversation type (TTS vs Chat vs Conversational)
-    const conversation = conversations.find((c: Conversation) => c.id === conversationId);
+    // Find the current conversation object (which might have been updated with details)
+    const conversation = conversations.find((c: Conversation) => c.id === currentConversationId);
     if (conversation) {
       const hasTTSAudios = conversation.ttsHistory && conversation.ttsHistory.length > 0;
       const hasMessages = conversation.messages && conversation.messages.length > 0;
@@ -108,15 +113,17 @@ function App() {
         (audio: TTSAudio) => audio.voiceId === "conversational-ai"
       );
       
+      // Determine the correct mode and update state if it differs
       if (hasConversationalAudio) {
-        setMode("conversational"); // Fixed string from 'chat' to correctly switch logic
+        if (mode !== "conversational") setMode("conversational");
       } else if (hasTTSAudios && !hasMessages) {
-        setMode("tts");
-      } else {
-        setMode("chat");
+        if (mode !== "tts") setMode("tts");
+      } else if (hasMessages) {
+        // Default to chat mode if there are messages
+        if (mode !== "chat") setMode("chat");
       }
     }
-  };
+  }, [currentConversationId, conversations, mode]); // Explicitly include mode to ensure sync logic is precise
 
   const handleDeleteConversation = (conversationId: string) => {
     deleteConversation(conversationId);
