@@ -290,4 +290,14 @@ async def add_tts_entry(
         conversation_id=conversation_id
     )
     
-    return {"status": "created", "id": result.get("id")}
+    # Get updated title to return to frontend
+    updated_title = None
+    if not conversation:
+        # We just created it, we know the title we gave it
+        updated_title = audio.text[:30] + "..." if len(audio.text) > 30 else audio.text
+    
+    return {
+        "status": "created", 
+        "id": result.get("id"),
+        "title": updated_title
+    }

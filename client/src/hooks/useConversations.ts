@@ -213,11 +213,15 @@ export function useConversations(): {
       });
 
       try {
-          await api.post(`/chat/${targetId}/tts`, audio);
+          const res = await api.post(`/chat/${targetId}/tts`, audio);
           
-          // If successful, mark as not local (synced)
+          // If successful, mark as not local (synced) and update title if provided
           setConversations(prev => prev.map(c => 
-               c.id === targetId ? { ...c, isLocal: false } : c
+               c.id === targetId ? { 
+                   ...c, 
+                   isLocal: false, 
+                   title: res.data.title || c.title 
+               } : c
           ));
           
       } catch (e) {
