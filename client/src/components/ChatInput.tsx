@@ -1,4 +1,4 @@
-import { useState, KeyboardEvent, useRef } from "react";
+import { useState, KeyboardEvent, useRef, useEffect } from "react";
 import { Image, X, Search, Mic, Volume2 } from "lucide-react";
 import { AppMode } from "../types";
 import { Button } from "./ui/Button";
@@ -22,6 +22,16 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
   const [isTextareaFocused, setIsTextareaFocused] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-focus textarea when disabled state changes to false (e.g. after sending a message)
+  useEffect(() => {
+    if (!disabled && textareaRef.current) {
+      // Small timeout to ensure DOM update is complete
+      setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 10);
+    }
+  }, [disabled]);
 
   const handleSubmit = () => {
     if (mode === "search" && onSearch) {
