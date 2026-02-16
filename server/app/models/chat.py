@@ -9,9 +9,18 @@ class Message(BaseModel):
     content: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
-    # For now, let's keep it simple and match the requested JSONB structure
-    # [ { "id": 0, "msg": "...", "date": "..." } ]
-    # But for API request/response we might want standard fields
+class Message(BaseModel):
+    """
+    Standard API Message model.
+    Decoupled from the internal DB JSONB structure.
+    """
+    id: Optional[str] = None # UUID from frontend or generated
+    role: str # user, assistant, system
+    content: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    # We can add validators here if needed to ensure role is valid
+
 
 class ChatMessage(BaseModel):
     role: str
@@ -25,7 +34,10 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     response: str
     conversation_id: UUID
-    history: List[Dict[str, Any]]
+class ChatResponse(BaseModel):
+    response: str
+    conversation_id: UUID
+    history: List[Message] # Return clean Message objects, not raw dicts
 
 class JSONBMessage(BaseModel):
     id: int # 0=User, 1=AI

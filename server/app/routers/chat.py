@@ -144,9 +144,44 @@ async def send_message(
 
     return StreamingResponse(stream_generator(), media_type="text/event-stream")
 
-@router.get("/{conversation_id}")
+@router.get("/{conversation_id}", response_model=ChatResponse)
 async def get_conversation(conversation_id: UUID, user_id: UUID = Depends(get_current_user_id)):
     conversation = supabase_service.get_conversation(conversation_id)
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
-    return conversation
+    
+    history_data = conversation.get("history", [])
+    messages = []
+    
+    for item in history_data:
+        # Map legacy 0/1 IDs to roles if 'role' is missing
+        role = "user" if item.get("id") == 0 else "assistant"
+        if "role" in item:
+            role = item["role"]
+        
+        content = item.get("msg", "")
+        
+        # Parse timestamp
+        date_str = item.get("date")
+        try:
+            timestamp = datetime.fromisoformat(date_str) if date_str else datetime.utcnow()
+        except ValueError:
+            timestamp = datetime.utcnow()
+        
+        # Generate stable-ish ID or use Random UUID to ensure frontend keys are unique
+        # (Internal ID 0/1 is not unique)
+        import uuid
+        msg_id = str(uuid.uuid4())
+        
+        messages.append(Message(
+            id=msg_id,
+            role=role,
+            content=content,
+            created_at=timestamp
+        ))
+        
+    return ChatResponse(
+        response="OK",
+        conversation_id=conversation_id,
+        history=messages
+    )

@@ -87,13 +87,13 @@ export function useConversations(): {
         const response = await api.get(`/chat/${id}`);
         const data = response.data;
         
-        // Map backend history (JSONB) to ChatMessage[]
-        // Backend: { history: [{id: 0, msg: "...", date: "..."}] }
+        // Map backend history (Clean Message objects) to ChatMessage[]
+        // Backend: { history: [{id: "uuid", role: "...", content: "...", created_at: "..."}] }
         const messages: ChatMessage[] = (data.history || []).map((m: any) => ({
-            id: m.id.toString() + "-" + m.date, // Unique ID generation
-            role: m.id === 0 ? "user" : "assistant",
-            content: m.msg,
-            timestamp: m.date
+            id: m.id,
+            role: m.role,
+            content: m.content,
+            timestamp: m.created_at
         }));
 
         setCurrentMessages(messages);
