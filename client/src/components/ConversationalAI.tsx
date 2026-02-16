@@ -87,18 +87,22 @@ export function ConversationalAI({
                 voiceName: "ElevenLabs Agent",
               };
               
-              // Guardar la transcripción completa como mensaje en el historial
-              if (transcription && convId) {
-                const chatMessage = {
-                  id: crypto.randomUUID(),
-                  role: 'assistant' as const,
-                  content: transcription,
-                  timestamp: new Date().toISOString(),
-                };
-                addChatMessage(chatMessage, convId);
-              }
+                // Guardar la transcripción completa como mensaje en el historial
+                if (transcription && convId) {
+                  const chatMessage = {
+                    id: crypto.randomUUID(),
+                    role: 'assistant' as const,
+                    content: transcription,
+                    timestamp: new Date().toISOString(),
+                  };
+                  await addChatMessage(chatMessage, convId);
+                }
 
-              addTTSAudio(audioEntry, convId);
+                await addTTSAudio(audioEntry, convId);
+                
+                // Forzar actualización del título al final para asegurar que prevalece sobre cualquier
+                // título generado automáticamente por addChatMessage o addTTSAudio
+                updateConversationTitle(convId, `Conversación - ${durationString}`);
               } else {
                 setTimeout(() => tryFetchAudio(attempts + 1, maxAttempts), 3000);
               }

@@ -444,7 +444,7 @@ export function useConversations(): {
           ? message.content.slice(0, 50) + (message.content.length > 50 ? "..." : "")
           : "Nueva conversación";
 
-      void supabase
+      return supabase
         .from("conversations")
         .upsert({
           id: targetConversationId,
@@ -455,7 +455,7 @@ export function useConversations(): {
         .then(({ error }: { error: Error | null }) => {
           if (error) {
             console.error("Failed to upsert conversation metadata:", error);
-            return;
+            throw error;
           }
 
           // Solo insertar el mensaje DESPUÉS de que la conversación exista en DB
@@ -472,6 +472,7 @@ export function useConversations(): {
             .then(({ error }: { error: Error | null }) => {
               if (error) {
                 console.error("Failed to persist message:", error);
+                throw error;
               }
             });
         });
