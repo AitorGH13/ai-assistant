@@ -33,6 +33,7 @@ export function useConversations(): {
   addTTSAudio: (audio: TTSAudio, conversationId?: string) => void; // TODO: Implement Voice API
   deleteTTSAudio: (audioId: string) => void;
   updateConversationTitle: (id: string, newTitle: string) => void; // TODO: API endpoint?
+  fetchConversations: () => Promise<void>;
 } {
   const { user } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -55,10 +56,10 @@ export function useConversations(): {
       const apiConversations = response.data.map((c: any) => ({
         id: c.id,
         title: c.title,
-        messages: [], // We accept list doesn't have messages initially
+        messages: [], 
         createdAt: c.created_at,
         updatedAt: c.updated_at,
-        ttsHistory: [],
+        ttsHistory: c.tts_history || [], // Map backend snake_case to frontend camelCase
       }));
       setConversations(apiConversations);
     } catch (error) {
@@ -88,7 +89,6 @@ export function useConversations(): {
         const data = response.data;
         
         // Map backend history (Clean Message objects) to ChatMessage[]
-        // Backend: { history: [{id: "uuid", role: "...", content: "...", created_at: "..."}] }
         const messages: ChatMessage[] = (data.history || []).map((m: any) => ({
             id: m.id,
             role: m.role,
@@ -98,9 +98,11 @@ export function useConversations(): {
 
         setCurrentMessages(messages);
         
-        // Update local cache
+        const ttsHistory = data.ttsHistory || [];
+        
+        // Update local cache with BOTH messages and TTS history
         setConversations(prev => prev.map(c => 
-            c.id === id ? { ...c, messages: messages } : c
+            c.id === id ? { ...c, messages: messages, ttsHistory: ttsHistory } : c
         ));
     } catch (error) {
         console.error("Failed to load conversation:", error);
@@ -123,7 +125,8 @@ export function useConversations(): {
           messages: [],
           createdAt: now,
           updatedAt: now,
-          isTemporary
+          isTemporary,
+          isLocal: true // Mark as draft
       };
       
       if (isTemporary) temporaryConversationIds.current.add(newId);
@@ -142,35 +145,19 @@ export function useConversations(): {
       // Optimistic Update
       setCurrentMessages(prev => [...prev, message]);
       
-      // If authentic "new" conversation (not in DB), we might need to POST /chat/new
-      // If existing, POST /chat/{id}/message
-      
-      // Check if it's a temporary local-only ID or real backend ID?
-      // For now, assume we try to create it on backend if it doesn't exist?
-      // Backend handles upsert? No, API implementation split /new and /{id}/message.
-      
-      // Logic: 
-      // If conversation is "fresh" (no messages), call /new.
-      // Else call /message.
-      
       try {
-          const isNew = conversations.find(c => c.id === targetId)?.messages.length === 0;
+          const conversation = conversations.find(c => c.id === targetId);
+          const isLocal = conversation?.isLocal ?? false;
           
-          if (isNew) {
+          if (isLocal) {
               const res = await api.post('/chat/new', {
                   messages: [{ role: message.role, content: message.content }]
               });
-              // Update ID if backend returned a different one? 
-              // Our setup uses UUIDs. If backend generates one, we should swap.
-              // For simplicity, let's assume we can't easily swap IDs in React state without flicker.
-              // Ideally, we wait for response.
               
-              // Backend /chat/new returns the created conversation object.
               const validId = res.data.id;
-              // If validId != targetId, we need to replace in state.
               
               setConversations(prev => sortConversations(prev.map(c => 
-                  c.id === targetId ? { ...c, id: validId, title: res.data.title } : c
+                  c.id === targetId ? { ...c, id: validId, title: res.data.title, isLocal: false } : c
               )));
               setCurrentConversationId(validId);
               targetId = validId;
@@ -181,22 +168,12 @@ export function useConversations(): {
               });
           }
           
-          // Note: The StreamingResponse handling usually happens in the Component 
-          // that calls this, using fetch/EventSource. 
-          // Axios is not great for streaming. 
-          // If we use axios here, we might block UI.
-          // RECOMMENDATION: The `App.tsx` probably handles the streaming reader.
-          // If `addChatMessage` is just for local state update + fire and forget?
-          // The Prompt says: "Send to backend... Do not generate TS... Use server response".
-          
-          // We will leave the specific stream handling to the caller (App.tsx) 
-          // OR implement it here if we want to centralize.
-          // Given `addChatMessage` signature returning Promise<void>, maybe caller handles stream?
-          
+          void fetchConversations();
+
       } catch (e) {
           console.error("Failed to send message", e);
       }
-  }, [currentConversationId, createConversation, conversations]);
+  }, [currentConversationId, createConversation, conversations, fetchConversations]);
 
   // 5. Delete
   const deleteConversation = useCallback(async (id: string) => {
@@ -212,17 +189,69 @@ export function useConversations(): {
       }
   }, [currentConversationId]);
 
-  // Placeholder for others
+  // 6. TTS History Management
+  const addTTSAudio = useCallback(async (audio: TTSAudio, conversationId?: string) => {
+      const targetId = conversationId || currentConversationId;
+      if (!targetId) return;
+
+      // Optimistic Update
+      setConversations(prev => prev.map(c => {
+          if (c.id === targetId) {
+              const newHistory = [...(c.ttsHistory || []), audio];
+              // We don't verify verified state here immediately, but api call will confirm.
+              return { ...c, ttsHistory: newHistory };
+          }
+          return c;
+      }));
+
+      try {
+          await api.post(`/chat/${targetId}/tts`, audio);
+          
+          // If successful, mark as not local (synced)
+          setConversations(prev => prev.map(c => 
+               c.id === targetId ? { ...c, isLocal: false } : c
+          ));
+          
+      } catch (e) {
+          console.error("Failed to save TTS audio", e);
+      }
+  }, [currentConversationId]);
+
+  const deleteTTSAudio = useCallback((audioId: string) => {
+      if (!currentConversationId) return;
+
+      setConversations(prev => prev.map(c => {
+          if (c.id === currentConversationId) {
+              const newHistory = (c.ttsHistory || []).filter(a => a.id !== audioId);
+              return { ...c, ttsHistory: newHistory };
+          }
+          return c;
+      }));
+  }, [currentConversationId]);
+
   const updateCurrentMessages = useCallback((messages: any) => setCurrentMessages(messages), []);
-  const addTTSAudio = useCallback(() => {}, []);
-  const deleteTTSAudio = useCallback(() => {}, []);
-  const updateConversationTitle = useCallback(() => {}, []);
+
+  const updateConversationTitle = useCallback(async (id: string, newTitle: string) => {
+      try {
+          // Optimistic update
+          setConversations(prev => prev.map(c => 
+              c.id === id ? { ...c, title: newTitle } : c
+          ));
+          
+          await api.patch(`/chat/${id}/title`, { title: newTitle });
+      } catch (e) {
+          console.error("Failed to update title", e);
+      }
+  }, []);
+
+  // Derived state for currentTTSHistory
+  const currentTTSHistory = conversations.find(c => c.id === currentConversationId)?.ttsHistory || [];
 
   return {
     conversations,
     currentConversationId,
     currentMessages,
-    currentTTSHistory: [],
+    currentTTSHistory,
     isLoading,
     isInitialized,
     createConversation,
@@ -233,5 +262,6 @@ export function useConversations(): {
     addTTSAudio,
     deleteTTSAudio,
     updateConversationTitle,
+    fetchConversations
   };
 }

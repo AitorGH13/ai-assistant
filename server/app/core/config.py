@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     SUPABASE_URL: str
     SUPABASE_SERVICE_KEY: str 
     
+    # ElevenLabs
+    ELEVENLABS_API_KEY: str
+    
     # Cors
     BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:5173"]
 

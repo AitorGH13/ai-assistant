@@ -63,9 +63,20 @@ export function Sidebar({
   };
 
   const filteredConversations = conversations.filter((conversation) => {
-    const hasMessages = conversation.messages && conversation.messages.length > 0;
-    const hasTTSAudios = conversation.ttsHistory && conversation.ttsHistory.length > 0;
-    return (hasMessages || hasTTSAudios) && !conversation.isTemporary;
+    // Si es temporal, solo mostrar si tiene contenido
+    if (conversation.isTemporary) {
+      const hasMessages = conversation.messages && conversation.messages.length > 0;
+      const hasTTSAudios = conversation.ttsHistory && conversation.ttsHistory.length > 0;
+      return hasMessages || hasTTSAudios;
+    }
+    
+    // Si es un borrador local (isLocal=true), SOLO mostrar si es la activa actualmente
+    if (conversation.isLocal && conversation.messages.length === 0 && !conversation.ttsHistory?.length) {
+        return conversation.id === currentConversationId;
+    }
+
+    // Si NO es temporal y no es local (viene del backend), mostrar siempre
+    return true;
   });
 
   const currentConversation = conversations.find(c => c.id === currentConversationId);

@@ -105,12 +105,14 @@ create trigger update_conversations_updated_at
 create table if not exists public.voice_sessions (
     id uuid primary key default uuid_generate_v4(),
     user_id uuid not null references auth.users(id) on delete cascade,
+    conversation_id uuid references public.conversations(id) on delete cascade, -- Link to conversation
     transcript jsonb not null default '[]'::jsonb, -- [{id: 0|1, text: text, timestamp: number}]
     audio_url text, -- URL pública del archivo en Supabase Storage
     created_at timestamptz not null default now()
 );
 
 create index if not exists idx_voice_sessions_user_id on public.voice_sessions(user_id);
+create index if not exists idx_voice_sessions_conversation_id on public.voice_sessions(conversation_id);
 
 -- ============================================
 -- ROW LEVEL SECURITY (RLS)

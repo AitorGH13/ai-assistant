@@ -1,31 +1,33 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException, BackgroundTasks, Request
+from fastapi.responses import Response, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import List, Optional
+import io
+import asyncio
+
 from app.core.config import settings
-from app.routers import chat, voice, auth
-import uvicorn
+from app.routers import chat, voice  # Import voice router
 
-app = FastAPI(
-    title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json"
-)
+app = FastAPI(title="AI Assistant API")
 
-# CORS configuration
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.BACKEND_CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"], 
+    allow_headers=["*"],
 )
 
-# Include Routers
-app.include_router(chat.router, prefix="/api")
-app.include_router(voice.router, prefix="/api")
+@app.get("/api/health")
+async def health_check():
+    return {"status": "ok"}
 
-@app.get("/")
-async def root():
-    return {"status": "ok", "message": "AI Assistant API (Refactored)"}
+# Include routers
+app.include_router(chat.router, prefix="/api")
+app.include_router(voice.router, prefix="/api") # Include voice router with /api prefix so it becomes /api/voice
 
 if __name__ == "__main__":
-    print("[INFO] Server running at http://localhost:3001")
+    import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=3001)

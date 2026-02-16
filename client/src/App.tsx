@@ -68,6 +68,7 @@ function App() {
     addTTSAudio,
     deleteTTSAudio,
     updateConversationTitle,
+    fetchConversations,
   } = useConversations();
 
   const handleEditConversationTitle = (id: string, newTitle: string) => {
@@ -210,7 +211,7 @@ function App() {
       // For now, let's keep local loading state for UI feedback but separating it from messages loading
       
       try {
-        const response = await fetch("/api/speak", {
+        const response = await fetch("/api/voice/speak", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text: text.trim(), voiceId: selectedVoiceId }),
@@ -255,7 +256,7 @@ function App() {
             
             // Note: We might want a separate loading state or toast here?
             // "Uploading image..."
-            const uploadRes = await fetch(`${import.meta.env.VITE_API_URL || ''}/chat/upload`, {
+            const uploadRes = await fetch(`/api/chat/upload`, {
                  method: 'POST',
                  headers: {
                     // Content-Type header must be undefined for FormData to set boundary
@@ -327,7 +328,7 @@ function App() {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
         
-        const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/chat/${conversationId}/message`, {
+        const response = await fetch(`/api/chat/${conversationId}/message`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -340,6 +341,9 @@ function App() {
         });
 
         if (!response.ok) throw new Error("Network response was not ok");
+        
+        // Refresh conversation list so the new chat (and its title) appears in sidebar
+        void fetchConversations();
         
         const reader = response.body?.getReader();
         const decoder = new TextDecoder();

@@ -31,6 +31,7 @@ export interface Conversation {
   updatedAt: string; // Changed to camelCase to match hook mapping and usage
   ttsHistory?: TTSAudio[];
   isTemporary?: boolean;
+  isLocal?: boolean; // True if created client-side but not yet persisted (no messages)
 }
 
 export interface TTSAudio {
