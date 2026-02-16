@@ -95,13 +95,15 @@ export function TTSAudioList({ audios, onDelete }: Props) {
 
               {/* Play/Pause Button */}
               <Button
-                variant={audio.audioUrl ? "secondary" : "ghost"}
+                variant="ghost"
                 size="icon"
                 onClick={() => handlePlayPause(audio)}
                 disabled={!audio.audioUrl}
                 className={cn(
                   "flex-shrink-0 rounded-full h-11 w-11 min-h-[44px] min-w-[44px]",
-                  audio.audioUrl && "text-primary"
+                  audio.audioUrl 
+                    ? "bg-blue-100 dark:bg-blue-900/50 text-primary" 
+                    : "text-muted-foreground"
                 )}
               >
                 {playingId === audio.id ? (
