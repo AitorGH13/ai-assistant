@@ -371,11 +371,6 @@ export function Sidebar({
                 rows={3}
                 className="resize-none"
               />
-              {systemPrompt && (
-                <p className="mt-1 text-xs text-primary">
-                  Instrucciones personalizadas activas
-                </p>
-              )}
             </div>
           </div>
         </div>
