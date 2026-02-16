@@ -184,10 +184,13 @@ export function useConversations(): {
       try {
           await api.delete(`/chat/${id}`);
           setConversations(prev => prev.filter(c => c.id !== id));
-          if (currentConversationId === id) {
-              setCurrentConversationId(null);
-              setCurrentMessages([]);
-          }
+          setCurrentConversationId(prev => prev === id ? null : prev);
+          setCurrentMessages(prev => {
+              // Only clear if the current messages actually belong to the deleted conversation
+              // (This is a bit tricky since we don't store the ID in the messages array, 
+              // but currentConversationId should be enough)
+              return (currentConversationId === id) ? [] : prev;
+          });
       } catch (e) {
           console.error("Failed to delete", e);
       }

@@ -120,6 +120,9 @@ function App() {
 
   const handleDeleteConversation = (conversationId: string) => {
     deleteConversation(conversationId);
+    if (conversationId === currentConversationId) {
+      handleNewConversation();
+    }
   };
 
   const handleSearchClick = () => {
