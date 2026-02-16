@@ -8,10 +8,11 @@ import { cn } from "../lib/utils";
 
 interface ConversationalAIProps {
   addTTSAudio: (audio: TTSAudio, conversationId?: string) => void;
-  createConversation: () => string;
+  createConversation: (isTemporary?: boolean) => string;
   loadConversation: (id: string) => void;
   addChatMessage: (message: ChatMessage, conversationId?: string) => void;
   updateConversationTitle: (id: string, newTitle: string) => void;
+  isTemporary?: boolean;
 }
 
 export function ConversationalAI({
@@ -20,6 +21,7 @@ export function ConversationalAI({
   loadConversation,
   addChatMessage,
   updateConversationTitle,
+  isTemporary = false,
 }: ConversationalAIProps) {
   const [agentId, setAgentId] = useState<string>("");
   const conversationIdRef = useRef<string | null>(null);
@@ -182,7 +184,7 @@ export function ConversationalAI({
     try {
       setConversationMessages([]);
       
-      const newConvId = createConversation();
+      const newConvId = createConversation(isTemporary);
       conversationIdRef.current = newConvId;
       
       loadConversation(newConvId);

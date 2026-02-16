@@ -51,7 +51,7 @@ export function SemanticSearch() {
   return (
     <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
       <div className="text-center">
-        <div className="mb-3 sm:mb-4 inline-flex p-3 sm:p-4 rounded-full bg-gradient-to-br from-primary/10 to-accent/10">
+        <div className="mb-3 sm:mb-4 inline-flex p-3 sm:p-4 rounded-full bg-primary/20 dark:bg-primary/20 ring-8 ring-primary/10 shadow-inner">
           <Search className="h-10 w-10 sm:h-12 sm:w-12 text-primary" />
         </div>
         <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-2">

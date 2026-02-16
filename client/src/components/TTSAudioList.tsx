@@ -65,10 +65,12 @@ export function TTSAudioList({ audios, onDelete }: Props) {
 
   if (audios.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-        <Volume2 size={48} className="mb-4 opacity-50" />
-        <p className="text-lg">No hay audios generados aún</p>
-        <p className="text-sm mt-2">Los audios que generes aparecerán aquí</p>
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <div className="mb-4 sm:mb-6 inline-flex p-3 sm:p-4 rounded-full bg-primary/20 dark:bg-primary/20 ring-8 ring-primary/10 shadow-inner">
+          <Volume2 className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-primary" />
+        </div>
+        <p className="text-lg font-semibold text-foreground">No hay audios generados aún</p>
+        <p className="text-sm text-muted-foreground mt-2">Los audios que generes aparecerán aquí</p>
       </div>
     );
   }

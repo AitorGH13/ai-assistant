@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Settings, Palette, FileText, Menu, Search, Volume2, MessageSquare, Pencil, Trash2, Mic } from "lucide-react";
+import { Plus, Settings, Palette, FileText, Menu, Search, Volume2, MessageSquare, Pencil, Trash2, Mic, MessageSquareDashed } from "lucide-react";
 import { Theme } from "../utils/theme";
 import { Conversation } from "../types";
 import { Button } from "./ui/Button";
@@ -15,6 +15,7 @@ interface Props {
   systemPrompt: string;
   onSystemPromptChange: (prompt: string) => void;
   onNewConversation: () => void;
+  onNewTemporaryConversation: () => void;
   onToggleSidebar: () => void;
   isOpen: boolean;
   conversations: Conversation[];
@@ -33,6 +34,7 @@ export function Sidebar({
   systemPrompt,
   onSystemPromptChange,
   onNewConversation,
+  onNewTemporaryConversation,
   onToggleSidebar,
   isOpen,
   conversations,
@@ -64,8 +66,11 @@ export function Sidebar({
   const filteredConversations = conversations.filter((conversation) => {
     const hasMessages = conversation.messages && conversation.messages.length > 0;
     const hasTTSAudios = conversation.ttsHistory && conversation.ttsHistory.length > 0;
-    return hasMessages || hasTTSAudios;
+    return (hasMessages || hasTTSAudios) && !conversation.isTemporary;
   });
+
+  const currentConversation = conversations.find(c => c.id === currentConversationId);
+  const isTemporaryActive = currentConversation?.isTemporary;
 
   return (
     <>
@@ -107,15 +112,42 @@ export function Sidebar({
           </div>
 
           {/* Botón de Nueva Conversación */}
-          <div className="p-4">
+          <div className="p-4 flex gap-2">
             <Button
               variant="ghost"
               onClick={handleNewConversationClick}
-              className="w-full justify-center gap-2 hover:bg-accent/50 hover:text-foreground"
+              className={cn(
+                "justify-center gap-2 hover:bg-accent/50 hover:text-foreground",
+                isOpen ? "flex-1" : "w-full"
+              )}
             >
               <Plus className="h-5 w-5 text-primary flex-shrink-0" />
               {isOpen && <span className="font-medium whitespace-nowrap overflow-hidden">Nueva Conversación</span>}
             </Button>
+
+            {isOpen && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                   onCloseSearch();
+                   if (isTemporaryActive) {
+                     onNewConversation();
+                   } else {
+                     onNewTemporaryConversation();
+                   }
+                }}
+                className={cn(
+                  "shrink-0 transition-colors",
+                  isTemporaryActive 
+                    ? "bg-blue-200 dark:bg-blue-500/20 hover:bg-blue-200 dark:hover:bg-blue-500/20" 
+                    : "hover:bg-accent/50"
+                )}
+                title="Chat Temporal (no se guarda)"
+              >
+                <MessageSquareDashed className="h-5 w-5 text-primary" />
+              </Button>
+            )}
           </div>
 
           {/* Historial de Conversaciones */}

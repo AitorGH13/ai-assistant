@@ -11,10 +11,9 @@ interface Props {
   showImageUpload?: boolean;
   mode?: AppMode;
   onModeChange?: (mode: AppMode) => void;
-  onNewConversation?: () => void;
 }
 
-export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false, mode = "chat", onModeChange, onNewConversation }: Props) {
+export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false, mode = "chat", onModeChange }: Props) {
   const [input, setInput] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
@@ -142,9 +141,6 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
     if (onModeChange) {
       if (mode === "search") {
         onModeChange("chat");
-        if (onNewConversation) {
-          onNewConversation();
-        }
       } else {
         onModeChange("search");
         setImagePreview(null);
@@ -157,9 +153,6 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
     if (onModeChange) {
       if (mode === "tts") {
         onModeChange("chat");
-        if (onNewConversation) {
-          onNewConversation();
-        }
       } else {
         onModeChange("tts");
       }
@@ -170,9 +163,6 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
     if (onModeChange) {
       if (mode === "conversational") {
         onModeChange("chat");
-        if (onNewConversation) {
-          onNewConversation();
-        }
       } else {
         onModeChange("conversational");
       }
