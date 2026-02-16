@@ -50,7 +50,7 @@ export function useConversations(): {
   currentTTSHistory: TTSAudio[];
   isLoading: boolean;
   isInitialized: boolean;
-  createConversation: () => string;
+  createConversation: (isTemporary?: boolean) => string;
   loadConversation: (id: string) => void;
   saveConversation: (id: string, messages: ChatMessage[]) => void;
   deleteConversation: (id: string) => void;
@@ -231,17 +231,18 @@ export function useConversations(): {
     void fetchConversations();
   }, [fetchConversations]);
 
-  const createConversation = useCallback((): string => {
+  const createConversation = useCallback((isTemporary: boolean = false): string => {
     const newId = crypto.randomUUID();
     const now = new Date().toISOString();
 
     const newConversation: Conversation = {
       id: newId,
-      title: "Nueva conversación",
+      title: isTemporary ? "Chat Temporal" : "Nueva conversación",
       messages: [],
       createdAt: now,
       updatedAt: now,
       ttsHistory: [],
+      isTemporary,
     };
 
     setConversations((prev) => sortConversations([newConversation, ...prev]));
@@ -274,9 +275,40 @@ export function useConversations(): {
 
   const saveConversation = useCallback(
     (id: string, messages: ChatMessage[]) => {
+      // If no ID or no user, do nothing (unless it's a temporary chat, but for temporary we just update local state if needed)
+      // But actually, for temporary chat, we might want to update the title locally if it's "Chat Temporal" -> specific title
+      // However, usually we don't save temporary chats to DB. 
+      // Let's check if it's temporary first.
+      const existing = conversations.find((c) => c.id === id);
+      if (existing?.isTemporary) {
+         // It's temporary, so we ONLY update local state.
+         
+         const hasChanges = existing.messages.length !== messages.length ||
+                           (messages.length > 0 && existing.messages[existing.messages.length - 1]?.id !== messages[messages.length - 1]?.id);
+         
+         if (!hasChanges) return;
+
+         const now = new Date().toISOString();
+         setConversations((prev) => {
+            const updated = prev.map((conversation) => {
+              if (conversation.id !== id) return conversation;
+              const title =
+                conversation.title !== "Chat Temporal" ? conversation.title : generateTitle(messages);
+              return {
+                ...conversation,
+                title,
+                messages: [...messages],
+                updatedAt: now, 
+              };
+            });
+            return sortConversations(updated);
+         });
+         return;
+      }
+
+
       if (!id || !user) return;
 
-      const existing = conversations.find((c) => c.id === id);
       const hasChanges = !existing || 
                          existing.messages.length !== messages.length ||
                          (messages.length > 0 && existing.messages[existing.messages.length - 1]?.id !== messages[messages.length - 1]?.id);
@@ -437,6 +469,11 @@ export function useConversations(): {
 
       if (!user) return;
 
+      // START CHECK FOR TEMPORARY
+      const convoToCheck = conversations.find(c => c.id === targetConversationId);
+      if (convoToCheck?.isTemporary) return;
+      // END CHECK FOR TEMPORARY
+
       const existingConversation = conversations.find((c) => c.id === targetConversationId);
       const title = existingConversation?.title && existingConversation.title !== "Nueva conversación"
         ? existingConversation.title
@@ -541,6 +578,12 @@ export function useConversations(): {
       });
 
       if (!user) return;
+
+      // START CHECK FOR TEMPORARY
+      const convoToCheck = conversations.find(c => c.id === targetConversationId);
+      if (convoToCheck?.isTemporary) return;
+      // END CHECK FOR TEMPORARY
+
 
       const { error: convoError } = await supabase
         .from("conversations")

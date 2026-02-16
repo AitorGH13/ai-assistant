@@ -11,7 +11,7 @@ import { Input } from "./components/ui/Input";
 import { Button } from "./components/ui/Button";
 import { ChatMessage as ChatMessageType, AppMode, MessageContent, TTSAudio, Conversation } from "./types";
 import { useTheme } from "./utils/theme";
-import { MessageSquare, Volume2, Mic, Trash2, UserCircle2, Pencil } from "lucide-react";
+import { MessageSquare, Volume2, Mic, Trash2, UserCircle2, Pencil, MessageSquareDashed } from "lucide-react";
 import { useConversations } from "./hooks/useConversations";
 import { useAuth } from "./context/AuthProvider";
 import { cn } from "./lib/utils";
@@ -105,6 +105,14 @@ function App() {
       saveConversation(currentConversationId, currentMessages);
     }
     createConversation();
+    setMode("chat");
+    setShowSearchView(false);
+    setView("chat");
+    setView("chat");
+  };
+
+  const handleNewTemporaryConversation = () => {
+    createConversation(true);
     setMode("chat");
     setShowSearchView(false);
     setView("chat");
@@ -477,6 +485,7 @@ function App() {
         onSearchClick={handleSearchClick}
         showSearchView={showSearchView}
         onCloseSearch={handleCloseSearch}
+        onNewTemporaryConversation={handleNewTemporaryConversation}
         onEditConversationTitle={handleEditConversationTitle}
       />
 
@@ -686,6 +695,7 @@ function App() {
               loadConversation={loadConversation}
               addChatMessage={addChatMessage}
               updateConversationTitle={updateConversationTitle}
+              isTemporary={conversations.find(c => c.id === currentConversationId)?.isTemporary}
             />
           ) : mode === "search" ? (
             <SemanticSearch />
@@ -695,29 +705,38 @@ function App() {
                 <div className="flex h-full items-center justify-center">
                   <div className="text-center max-w-2xl px-3 sm:px-4">
                     <div className="mb-4 sm:mb-6 inline-flex p-3 sm:p-4 rounded-full bg-gradient-to-br from-primary/10 to-accent/10">
-                      <MessageSquare className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-primary" />
+                      {conversations.find(c => c.id === currentConversationId)?.isTemporary ? (
+                        <MessageSquareDashed className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-primary" />
+                      ) : (
+                        <MessageSquare className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-primary" />
+                      )}
                     </div>
                     <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-2">
-                      Inicia una conversación
+                       {conversations.find(c => c.id === currentConversationId)?.isTemporary ? "Chat Temporal" : "Inicia una conversación"}
                     </h2>
                     <p className="text-sm sm:text-base text-muted-foreground mb-6 sm:mb-8">
-                      Escribe un mensaje abajo o prueba una de estas sugerencias
+                       {conversations.find(c => c.id === currentConversationId)?.isTemporary 
+                         ? "Este chat es efímero. Los mensajes no se guardarán en tu historial y desaparecerán al recargar la página o cambiar de conversación." 
+                         : "Escribe un mensaje abajo o prueba una de estas sugerencias"}
                     </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-                      {suggestions.map((suggestion, index) => (
-                        <Button
-                          key={index}
-                          variant="outline"
-                          onClick={() => handleSuggestionClick(suggestion)}
-                          disabled={!isInitialized}
-                          className="p-3 sm:p-4 h-auto text-left justify-start hover:border-primary hover:shadow-md transition-all duration-200"
-                        >
-                          <p className="text-xs sm:text-sm">
-                            {suggestion}
-                          </p>
-                        </Button>
-                      ))}
-                    </div>
+                    
+                    {!conversations.find(c => c.id === currentConversationId)?.isTemporary && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                        {suggestions.map((suggestion, index) => (
+                          <Button
+                            key={index}
+                            variant="outline"
+                            onClick={() => handleSuggestionClick(suggestion)}
+                            disabled={!isInitialized}
+                            className="p-3 sm:p-4 h-auto text-left justify-start hover:border-primary hover:shadow-md transition-all duration-200"
+                          >
+                            <p className="text-xs sm:text-sm">
+                              {suggestion}
+                            </p>
+                          </Button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -725,10 +744,26 @@ function App() {
                   
                   {/* Mostrar mensajes */}
                   <div className="space-y-3 sm:space-y-4">
-                    <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                      <MessageSquare className="h-5 w-5" />
-                      Chat
-                    </h3>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                        {conversations.find(c => c.id === currentConversationId)?.isTemporary ? (
+                          <>
+                            <MessageSquareDashed className="h-5 w-5 text-muted-foreground" />
+                            Chat Temporal
+                          </>
+                        ) : (
+                          <>
+                            <MessageSquare className="h-5 w-5" />
+                            Chat
+                          </>
+                        )}
+                      </h3>
+                      {conversations.find(c => c.id === currentConversationId)?.isTemporary && (
+                        <span className="text-xs text-muted-foreground bg-accent/50 px-2 py-1 rounded-md">
+                          No se guarda en el historial
+                        </span>
+                      )}
+                    </div>
                     {currentMessages.map((message: ChatMessageType) => (
                       <ChatMessage key={message.id} message={message} theme={theme} />
                     ))}
@@ -764,7 +799,6 @@ function App() {
               showImageUpload={mode === "chat"}
               mode={mode}
               onModeChange={setMode}
-              onNewConversation={handleNewConversation}
             />
           )
         )}

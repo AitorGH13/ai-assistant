@@ -64,4 +64,5 @@ export interface Conversation {
   createdAt: string;
   updatedAt: string;
   ttsHistory?: TTSAudio[];
+  isTemporary?: boolean;
 }
