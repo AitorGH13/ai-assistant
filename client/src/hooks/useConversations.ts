@@ -149,6 +149,7 @@ export function useConversations(): {
           const conversation = conversations.find(c => c.id === targetId);
           const isLocal = conversation?.isLocal ?? false;
           
+          const now = new Date().toISOString();
           if (isLocal) {
               const res = await api.post('/chat/new', {
                   messages: [{ role: message.role, content: message.content }]
@@ -157,13 +158,16 @@ export function useConversations(): {
               const validId = res.data.id;
               
               setConversations(prev => sortConversations(prev.map(c => 
-                  c.id === targetId ? { ...c, id: validId, title: res.data.title, isLocal: false } : c
+                  c.id === targetId ? { ...c, id: validId, title: res.data.title, isLocal: false, updatedAt: now } : c
               )));
               setCurrentConversationId(validId);
               targetId = validId;
           } else {
               // Existing conversation
-             await api.post(`/chat/${targetId}/message`, {
+              setConversations(prev => sortConversations(prev.map(c => 
+                c.id === targetId ? { ...c, updatedAt: now } : c
+              )));
+              await api.post(`/chat/${targetId}/message`, {
                   messages: [{ role: message.role, content: message.content }]
               });
           }
@@ -194,15 +198,19 @@ export function useConversations(): {
       const targetId = conversationId || currentConversationId;
       if (!targetId) return;
 
+      const now = new Date().toISOString();
       // Optimistic Update
-      setConversations(prev => prev.map(c => {
-          if (c.id === targetId) {
-              const newHistory = [...(c.ttsHistory || []), audio];
-              // We don't verify verified state here immediately, but api call will confirm.
-              return { ...c, ttsHistory: newHistory };
-          }
-          return c;
-      }));
+      setConversations(prev => {
+          const updated = prev.map(c => {
+              if (c.id === targetId) {
+                  const newHistory = [...(c.ttsHistory || []), audio];
+                  // We don't verify verified state here immediately, but api call will confirm.
+                  return { ...c, ttsHistory: newHistory, updatedAt: now };
+              }
+              return c;
+          });
+          return sortConversations(updated);
+      });
 
       try {
           await api.post(`/chat/${targetId}/tts`, audio);
@@ -233,10 +241,14 @@ export function useConversations(): {
 
   const updateConversationTitle = useCallback(async (id: string, newTitle: string) => {
       try {
+          const now = new Date().toISOString();
           // Optimistic update
-          setConversations(prev => prev.map(c => 
-              c.id === id ? { ...c, title: newTitle } : c
-          ));
+          setConversations(prev => {
+              const updated = prev.map(c => 
+                  c.id === id ? { ...c, title: newTitle, updatedAt: now } : c
+              );
+              return sortConversations(updated);
+          });
           
           await api.patch(`/chat/${id}/title`, { title: newTitle });
       } catch (e) {
