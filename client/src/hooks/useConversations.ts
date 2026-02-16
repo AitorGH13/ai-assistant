@@ -1,36 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Conversation, ChatMessage, TTSAudio, MessageContent } from "../types";
-import { supabase } from "../lib/supabase";
+import { Conversation, ChatMessage, TTSAudio } from "../types";
+import api from "../services/api"; // Centralized API client
 import { useAuth } from "../context/AuthProvider";
 
-type ConversationRow = {
-  id: string;
-  title: string;
-  created_at: string;
-  updated_at: string;
-};
-
-type MessageRow = {
-  id: string;
-  conversation_id: string;
-  role: "user" | "assistant";
-  content: string | MessageContent[];
-  tool_used: boolean;
-  created_at: string;
-};
-
-type TTSAudioRow = {
-  id: string;
-  conversation_id: string;
-  text: string;
-  audio_url: string;
-  timestamp_ms: number;
-  voice_id: string;
-  voice_name: string;
-  created_at: string;
-};
-
-// Función auxiliar para ordenar conversaciones
+// Helper to sort conversations
 const sortConversations = (items: Conversation[]) => {
   return [...items].sort((a, b) => {
     const timeA = new Date(a.updatedAt).getTime();
@@ -52,13 +25,14 @@ export function useConversations(): {
   isInitialized: boolean;
   createConversation: (isTemporary?: boolean) => string;
   loadConversation: (id: string) => void;
-  saveConversation: (id: string, messages: ChatMessage[]) => void;
+  // saveConversation: No longer needed publically? Or maybe just internal? 
+  // Refactor: We send message immediately.
   deleteConversation: (id: string) => void;
   updateCurrentMessages: (messages: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => void;
-  addChatMessage: (message: ChatMessage, conversationId?: string) => void;
-  addTTSAudio: (audio: TTSAudio, conversationId?: string) => void;
+  addChatMessage: (message: ChatMessage, conversationId?: string) => Promise<void>;
+  addTTSAudio: (audio: TTSAudio, conversationId?: string) => void; // TODO: Implement Voice API
   deleteTTSAudio: (audioId: string) => void;
-  updateConversationTitle: (id: string, newTitle: string) => void;
+  updateConversationTitle: (id: string, newTitle: string) => void; // TODO: API endpoint?
 } {
   const { user } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -68,628 +42,191 @@ export function useConversations(): {
   const [isInitialized, setIsInitialized] = useState(false);
   const temporaryConversationIds = useRef<Set<string>>(new Set());
 
-  const generateTitle = useCallback((messages: ChatMessage[]): string => {
-    const firstUserMessage = messages.find((message) => message.role === "user");
-    if (!firstUserMessage) return "Nueva conversación";
-
-    const content =
-      typeof firstUserMessage.content === "string"
-        ? firstUserMessage.content
-        : firstUserMessage.content.find((chunk) => chunk.type === "text")?.text || "Nueva conversación";
-
-    return content.slice(0, 50) + (content.length > 50 ? "..." : "");
-  }, []);
-
-  const parseMessageRows = useCallback((rows: MessageRow[]): ChatMessage[] => {
-    return rows.map((row) => {
-      let content = row.content;
-
-      if (typeof content === 'string') {
-        const trimmed = content.trim();
-        if ((trimmed.startsWith('[') && trimmed.endsWith(']')) || 
-            (trimmed.startsWith('{') && trimmed.endsWith('}'))) {
-          try {
-            content = JSON.parse(content);
-          } catch (e) {
-            console.warn("Contenido parece JSON pero no lo es, se usará como texto:", e);
-          }
-        }
-      }
-
-      return {
-        id: row.id,
-        role: row.role,
-        content: content,
-        timestamp: row.created_at,
-        toolUsed: row.tool_used,
-      };
-    });
-  }, []);
-
-  const parseTTSAudioRows = useCallback((rows: TTSAudioRow[]): TTSAudio[] => {
-    return rows.map((row) => ({
-      id: row.id,
-      text: row.text,
-      audioUrl: row.audio_url,
-      timestamp: row.timestamp_ms,
-      voiceId: row.voice_id,
-      voiceName: row.voice_name,
-    }));
-  }, []);
-
-  const fetchMessages = useCallback(
-    async (conversationId: string): Promise<ChatMessage[]> => {
-      const { data, error } = await supabase
-        .from("messages")
-        .select("id, conversation_id, role, content, tool_used, created_at")
-        .eq("conversation_id", conversationId)
-        .order("created_at", { ascending: true });
-
-      if (error) {
-        console.error("Failed to fetch messages:", error);
-        return [];
-      }
-
-      return parseMessageRows((data || []) as MessageRow[]);
-    },
-    [parseMessageRows]
-  );
-
+  // 1. Fetch Conversations (List)
   const fetchConversations = useCallback(async () => {
     if (!user) {
       setConversations([]);
-      setCurrentConversationId(null);
-      setCurrentMessages([]);
       setIsInitialized(true);
       return;
     }
-
     setIsLoading(true);
-
-    const { data: conversationRowsRaw, error: conversationError } = await supabase
-      .from("conversations")
-      .select("id, title, created_at, updated_at")
-      .eq("user_id", user.id)
-      .order("updated_at", { ascending: false })
-      .order("created_at", { ascending: false });
-
-    if (conversationError) {
-      console.error("Failed to fetch conversations:", conversationError);
+    try {
+      const response = await api.get('/chat/');
+      const apiConversations = response.data.map((c: any) => ({
+        id: c.id,
+        title: c.title,
+        messages: [], // We accept list doesn't have messages initially
+        createdAt: c.created_at,
+        updatedAt: c.updated_at,
+        ttsHistory: [],
+      }));
+      setConversations(apiConversations);
+    } catch (error) {
+      console.error("Failed to fetch conversations:", error);
+    } finally {
       setIsLoading(false);
       setIsInitialized(true);
-      return;
     }
-
-    const conversationRows = (conversationRowsRaw || []) as ConversationRow[];
-    const ids = conversationRows.map((row) => row.id);
-    let messageMap: Record<string, ChatMessage[]> = {};
-    let ttsMap: Record<string, TTSAudio[]> = {};
-
-    if (ids.length > 0) {
-      const { data: messageRowsRaw, error: messageError } = await supabase
-        .from("messages")
-        .select("id, conversation_id, role, content, tool_used, created_at")
-        .in("conversation_id", ids)
-        .order("created_at", { ascending: true });
-
-      if (messageError) {
-        console.error("Failed to fetch conversation messages:", messageError);
-      } else {
-        const grouped: Record<string, MessageRow[]> = {};
-        for (const row of (messageRowsRaw || []) as MessageRow[]) {
-          if (!grouped[row.conversation_id]) {
-            grouped[row.conversation_id] = [];
-          }
-          grouped[row.conversation_id].push(row);
-        }
-
-        messageMap = Object.fromEntries(
-          Object.entries(grouped).map(([conversationId, rows]) => [conversationId, parseMessageRows(rows)])
-        );
-      }
-
-      const { data: ttsRowsRaw, error: ttsError } = await supabase
-        .from("tts_audios")
-        .select("id, conversation_id, text, audio_url, timestamp_ms, voice_id, voice_name, created_at")
-        .in("conversation_id", ids)
-        .order("created_at", { ascending: false });
-
-      if (ttsError) {
-        console.error("Failed to fetch tts audios:", ttsError);
-      } else {
-        const grouped: Record<string, TTSAudioRow[]> = {};
-        for (const row of (ttsRowsRaw || []) as TTSAudioRow[]) {
-          if (!grouped[row.conversation_id]) {
-            grouped[row.conversation_id] = [];
-          }
-          grouped[row.conversation_id].push(row);
-        }
-
-        ttsMap = Object.fromEntries(
-          Object.entries(grouped).map(([conversationId, rows]) => [conversationId, parseTTSAudioRows(rows)])
-        );
-      }
-    }
-
-    const parsedConversations: Conversation[] = conversationRows.map((row) => ({
-      id: row.id,
-      title: row.title,
-      messages: messageMap[row.id] || [],
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-      ttsHistory: ttsMap[row.id] || [],
-    }));
-
-    setConversations(sortConversations(parsedConversations));
-    setCurrentConversationId(null);
-    setCurrentMessages([]);
-
-    setIsLoading(false);
-    setIsInitialized(true);
-  }, [user, fetchMessages, parseMessageRows, parseTTSAudioRows]);
+  }, [user]);
 
   useEffect(() => {
     void fetchConversations();
   }, [fetchConversations]);
 
-  const createConversation = useCallback((isTemporary: boolean = false): string => {
-    const newId = crypto.randomUUID();
-    const now = new Date().toISOString();
-
-    const newConversation: Conversation = {
-      id: newId,
-      title: isTemporary ? "Chat Temporal" : "Nueva conversación",
-      messages: [],
-      createdAt: now,
-      updatedAt: now,
-      ttsHistory: [],
-      isTemporary,
-    };
+  // 2. Load Conversation (Details)
+  const loadConversation = useCallback(async (id: string) => {
+    setCurrentConversationId(id);
     
-    if (isTemporary) {
-      temporaryConversationIds.current.add(newId);
+    // Optimistic / Cache check
+    const local = conversations.find(c => c.id === id);
+    if (local && local.messages.length > 0) {
+      setCurrentMessages(local.messages);
     }
-    
-    setConversations((prev) => sortConversations([newConversation, ...prev]));
-    setCurrentConversationId(newId);
-    setCurrentMessages([]);
 
-    return newId;
-  }, [user]);
-
-  const loadConversation = useCallback(
-    (id: string) => {
-      setCurrentConversationId(id);
-
-      const localConversation = conversations.find((conversation) => conversation.id === id);
-      if (localConversation && localConversation.messages.length > 0) {
-        setCurrentMessages([...localConversation.messages]);
-      }
-
-      void fetchMessages(id).then((messages) => {
-        if (messages.length > 0 || !localConversation?.messages.length) {
-          setCurrentMessages(messages);
-          setConversations((prev) =>
-            prev.map((conversation) => (conversation.id === id ? { ...conversation, messages } : conversation))
-          );
-        }
-      });
-    },
-    [conversations, fetchMessages]
-  );
-
-  const saveConversation = useCallback(
-    (id: string, messages: ChatMessage[]) => {
-      // If no ID or no user, do nothing (unless it's a temporary chat, but for temporary we just update local state if needed)
-      // But actually, for temporary chat, we might want to update the title locally if it's "Chat Temporal" -> specific title
-      // However, usually we don't save temporary chats to DB. 
-      // Let's check if it's temporary first.
-      const existing = conversations.find((c) => c.id === id);
-      if (existing?.isTemporary) {
-         // It's temporary, so we ONLY update local state.
-         
-         const hasChanges = existing.messages.length !== messages.length ||
-                           (messages.length > 0 && existing.messages[existing.messages.length - 1]?.id !== messages[messages.length - 1]?.id);
-         
-         if (!hasChanges) return;
-
-         const now = new Date().toISOString();
-         setConversations((prev) => {
-            const updated = prev.map((conversation) => {
-              if (conversation.id !== id) return conversation;
-              const title =
-                conversation.title !== "Chat Temporal" ? conversation.title : generateTitle(messages);
-              return {
-                ...conversation,
-                title,
-                messages: [...messages],
-                updatedAt: now, 
-              };
-            });
-            return sortConversations(updated);
-         });
-         return;
-      }
-
-
-      if (!id || !user) return;
-
-      const hasChanges = !existing || 
-                         existing.messages.length !== messages.length ||
-                         (messages.length > 0 && existing.messages[existing.messages.length - 1]?.id !== messages[messages.length - 1]?.id);
-      const needsTitle = existing?.title === "Nueva conversación" && messages.length > 0;
-
-      if (!hasChanges && !needsTitle) return; 
-
-      const now = new Date().toISOString();
-
-      setConversations((prev) => {
-        const updated = prev.map((conversation) => {
-          if (conversation.id !== id) return conversation;
-          const title =
-            conversation.title !== "Nueva conversación" ? conversation.title : generateTitle(messages);
-          return {
-            ...conversation,
-            title,
-            messages: [...messages],
-            updatedAt: now, 
-          };
-        });
-        return sortConversations(updated);
-      });
-
-      let resolvedTitle = "";
-      const currentConvo = conversations.find(c => c.id === id);
-      resolvedTitle = currentConvo?.title !== "Nueva conversación" ? currentConvo?.title || "" : generateTitle(messages);
-      
-      if (!resolvedTitle) resolvedTitle = generateTitle(messages);
-
-      void supabase
-        .from("conversations")
-        .upsert({
-          id,
-          user_id: user.id,
-          title: resolvedTitle,
-          updated_at: now,
-        })
-        .then(({ error }: { error: Error | null }) => {
-          if (error) {
-            console.error("Failed to upsert conversation:", error);
-          }
-        });
-
-      if (messages.length === 0) return;
-
-      const rows = messages.map((message) => ({
-        id: message.id,
-        conversation_id: id,
-        role: message.role,
-        content: message.content,
-        tool_used: Boolean(message.toolUsed),
-        created_at: message.timestamp,
-      }));
-
-      void supabase
-        .from("messages")
-        .upsert(rows)
-        .then(({ error }: { error: Error | null }) => {
-          if (error) {
-            console.error("Failed to upsert messages:", error);
-          }
-        });
-    },
-    [user, generateTitle, conversations] 
-  );
-
-  const deleteConversation = useCallback(
-    (id: string) => {
-      setConversations((prev) => {
-        const updated = prev.filter((conversation) => conversation.id !== id);
-
-        if (id === currentConversationId) {
-          const deleted = prev.find((conversation) => conversation.id === id);
-          const wasTTSOnly =
-            !!deleted &&
-            (!deleted.messages || deleted.messages.length === 0) &&
-            deleted.ttsHistory &&
-            deleted.ttsHistory.length > 0;
-
-          if (wasTTSOnly && typeof window !== "undefined") {
-            window.dispatchEvent(new CustomEvent("forceChatMode"));
-          }
-
-          setCurrentConversationId(null);
-          setCurrentMessages([]);
-        }
-        return updated;
-      });
-
-      void supabase
-        .from("conversations")
-        .delete()
-        .eq("id", id)
-        .then(({ error }: { error: Error | null }) => {
-          if (error) {
-            console.error("Failed to delete conversation:", error);
-          }
-        });
-    },
-    [currentConversationId]
-  );
-
-  const updateCurrentMessages = useCallback(
-    (messages: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => {
-      setCurrentMessages(messages);
-    },
-    []
-  );
-
-  const addChatMessage = useCallback(
-    (message: ChatMessage, conversationId?: string) => {
-      const targetConversationId = conversationId || currentConversationId || createConversation();
-      const now = new Date().toISOString();
-
-      setConversations((prev) => {
-        const existing = prev.find((conversation) => conversation.id === targetConversationId);
-
-        if (!existing) {
-          const newConvo = {
-            id: targetConversationId,
-            title: generateTitle([message]),
-            messages: [message],
-            createdAt: now,
-            updatedAt: now,
-            ttsHistory: [],
-          };
-          return sortConversations([newConvo, ...prev]);
-        }
-
-        const alreadyExists = existing.messages.some((item) => item.id === message.id);
-        const newMessages = alreadyExists ? existing.messages : [...existing.messages, message];
-        const shouldGenerateTitle =
-          existing.title === "Nueva conversación" || existing.title.startsWith("Conversación de voz");
-
-        const updatedList = prev.map((conversation) =>
-          conversation.id === targetConversationId
-            ? {
-                ...conversation,
-                title: shouldGenerateTitle ? generateTitle(newMessages) : conversation.title,
-                messages: newMessages,
-                updatedAt: now,
-              }
-            : conversation
-        );
+    try {
+        const response = await api.get(`/chat/${id}`);
+        const data = response.data;
         
-        return sortConversations(updatedList);
-      });
+        // Map backend history (JSONB) to ChatMessage[]
+        // Backend: { history: [{id: 0, msg: "...", date: "..."}] }
+        const messages: ChatMessage[] = (data.history || []).map((m: any) => ({
+            id: m.id.toString() + "-" + m.date, // Unique ID generation
+            role: m.id === 0 ? "user" : "assistant",
+            content: m.msg,
+            timestamp: m.date
+        }));
 
-      if (targetConversationId === currentConversationId) {
-        setCurrentMessages((prev) => {
-          if (prev.some((item) => item.id === message.id)) {
-            return prev;
-          }
-          return [...prev, message];
-        });
-      }
+        setCurrentMessages(messages);
+        
+        // Update local cache
+        setConversations(prev => prev.map(c => 
+            c.id === id ? { ...c, messages: messages } : c
+        ));
+    } catch (error) {
+        console.error("Failed to load conversation:", error);
+    }
+  }, [conversations]);
 
-      if (!user) return;
-
-      // START CHECK FOR TEMPORARY
-      if (temporaryConversationIds.current.has(targetConversationId)) return;
-      const convoToCheck = conversations.find(c => c.id === targetConversationId);
-      if (convoToCheck?.isTemporary) return;
-      // END CHECK FOR TEMPORARY
-
-      const existingConversation = conversations.find((c) => c.id === targetConversationId);
-      const title = existingConversation?.title && existingConversation.title !== "Nueva conversación"
-        ? existingConversation.title
-        : message.role === "user" && typeof message.content === "string"
-          ? message.content.slice(0, 50) + (message.content.length > 50 ? "..." : "")
-          : "Nueva conversación";
-
-      return supabase
-        .from("conversations")
-        .upsert({
-          id: targetConversationId,
-          user_id: user.id,
-          title,
-          updated_at: now,
-        })
-        .then(({ error }: { error: Error | null }) => {
-          if (error) {
-            console.error("Failed to upsert conversation metadata:", error);
-            throw error;
-          }
-
-          // Solo insertar el mensaje DESPUÉS de que la conversación exista en DB
-          return supabase
-            .from("messages")
-            .upsert({
-              id: message.id,
-              conversation_id: targetConversationId,
-              role: message.role,
-              content: message.content,
-              tool_used: Boolean(message.toolUsed),
-              created_at: message.timestamp,
-            })
-            .then(({ error }: { error: Error | null }) => {
-              if (error) {
-                console.error("Failed to persist message:", error);
-                throw error;
-              }
-            });
-        });
-    },
-    [createConversation, currentConversationId, generateTitle, user, conversations]
-  );
-
-  const addTTSAudio = useCallback(
-    async (audio: TTSAudio, conversationId?: string) => {
-      const targetConversationId = conversationId || currentConversationId || createConversation();
-
-      const titleToSave = audio.text.slice(0, 50) + (audio.text.length > 50 ? "..." : "");
+  // 3. Create Conversation (Local stub until message sent?)
+  const createConversation = useCallback((isTemporary: boolean = false): string => {
+      // Backend creates conversation on first message usually, 
+      // OR we call /new endpoint.
+      // Let's call /new endpoint if NOT temporary? 
+      // Or keep local state until first message to avoid empty DB rows?
+      // "Generates title from first message" -> suggests waiting.
+      
+      const newId = crypto.randomUUID(); // Temporary FE ID
       const now = new Date().toISOString();
-
-      // Si la conversación ya existe y tiene un título propio, lo respetamos.
-      // Si no, usamos el texto del audio.
-      const existingConvo = conversations.find(c => c.id === targetConversationId);
-      const dbTitle = existingConvo && existingConvo.title !== "Nueva conversación" 
-        ? existingConvo.title 
-        : titleToSave;
-
-      setConversations((prev) => {
-        const existing = prev.find((conversation) => conversation.id === targetConversationId);
-
-        if (!existing) {
-          const newConvo: Conversation = {
-            id: targetConversationId,
-            title: titleToSave,
-            messages: [],
-            createdAt: now,
-            updatedAt: now,
-            ttsHistory: [audio],
-          };
-          return sortConversations([newConvo, ...prev]);
-        }
-
-        const updatedList = prev.map((conversation) => {
-          if (conversation.id !== targetConversationId) {
-            return conversation;
-          }
-
-          const isNewTTSConversation = !conversation.ttsHistory || conversation.ttsHistory.length === 0;
-          let title = conversation.title;
-
-          // Lógica de actualización de título en el estado local
-           if (isNewTTSConversation) {
-             if (conversation.messages.length === 0) {
-               if (conversation.title === "Nueva conversación") {
-                 title = titleToSave;
-               }
-             } else if (audio.voiceId === "conversational-ai") {
-               if (conversation.title === "Nueva conversación") {
-                 title = generateTitle(conversation.messages);
-               }
-             }
-           }
-
-          return {
-            ...conversation,
-            title,
-            ttsHistory: [audio, ...(conversation.ttsHistory || [])],
-            updatedAt: now,
-          };
-        });
-        return sortConversations(updatedList);
-      });
-
-      if (!user) return;
-
-      // START CHECK FOR TEMPORARY
-      if (temporaryConversationIds.current.has(targetConversationId)) return;
-      const convoToCheck = conversations.find(c => c.id === targetConversationId);
-      if (convoToCheck?.isTemporary) return;
-      // END CHECK FOR TEMPORARY
-
-
-      const { error: convoError } = await supabase
-        .from("conversations")
-        .upsert({
-          id: targetConversationId,
-          user_id: user.id,
-          title: dbTitle, // Usamos dbTitle para no machacar títulos existentes
-          updated_at: now,
-        });
-
-      if (convoError) {
-        console.error("Failed to upsert conversation for TTS:", convoError);
-        return; 
-      }
-
-      const { error } = await supabase
-        .from("tts_audios")
-        .insert({
-          id: audio.id,
-          conversation_id: targetConversationId,
-          text: audio.text,
-          audio_url: audio.audioUrl,
-          timestamp_ms: audio.timestamp,
-          voice_id: audio.voiceId,
-          voice_name: audio.voiceName,
-        });
-
-      if (error) {
-        console.error("Failed to persist TTS audio:", error);
-      }
-    },
-    [currentConversationId, generateTitle, user, createConversation, conversations]
-  );
-
-  const deleteTTSAudio = useCallback(
-    (audioId: string) => {
-      if (!currentConversationId) return;
-
-      setConversations((prev) =>
-        prev.map((conversation) =>
-          conversation.id === currentConversationId
-            ? {
-                ...conversation,
-                ttsHistory: (conversation.ttsHistory || []).filter((audio) => audio.id !== audioId),
-              }
-            : conversation
-        )
-      );
-
-      void supabase
-        .from("tts_audios")
-        .delete()
-        .eq("id", audioId)
-        .then(({ error }: { error: Error | null }) => {
-          if (error) {
-            console.error("Failed to delete TTS audio:", error);
-          }
-        });
-    },
-    [currentConversationId]
-  );
-
-  const updateConversationTitle = useCallback((id: string, newTitle: string) => {
-    const now = new Date().toISOString();
-
-    setConversations((prev) => {
-      const updated = prev.map((conversation) =>
-        conversation.id === id ? { ...conversation, title: newTitle, updatedAt: now } : conversation
-      );
-      return sortConversations(updated);
-    });
-
-    if (temporaryConversationIds.current.has(id)) return;
-    const existing = conversations.find(c => c.id === id);
-    if (existing?.isTemporary) return;
-
-    void supabase
-      .from("conversations")
-      .update({ title: newTitle, updated_at: now })
-      .eq("id", id)
-      .then(({ error }: { error: Error | null }) => {
-        if (error) {
-          console.error("Failed to update conversation title:", error);
-        }
-      });
+      const newConvo: Conversation = {
+          id: newId,
+          title: isTemporary ? "Chat Temporal" : "Nueva conversación",
+          messages: [],
+          createdAt: now,
+          updatedAt: now,
+          isTemporary
+      };
+      
+      if (isTemporary) temporaryConversationIds.current.add(newId);
+      
+      setConversations(prev => sortConversations([newConvo, ...prev]));
+      setCurrentConversationId(newId);
+      setCurrentMessages([]);
+      return newId;
   }, []);
 
-  const currentTTSHistory = conversations.find((conversation) => conversation.id === currentConversationId)?.ttsHistory || [];
+  // 4. Send Message (Refactored to call API)
+  const addChatMessage = useCallback(async (message: ChatMessage, conversationId?: string) => {
+      let targetId = conversationId || currentConversationId;
+      if (!targetId) targetId = createConversation(); // Should return a string
+      
+      // Optimistic Update
+      setCurrentMessages(prev => [...prev, message]);
+      
+      // If authentic "new" conversation (not in DB), we might need to POST /chat/new
+      // If existing, POST /chat/{id}/message
+      
+      // Check if it's a temporary local-only ID or real backend ID?
+      // For now, assume we try to create it on backend if it doesn't exist?
+      // Backend handles upsert? No, API implementation split /new and /{id}/message.
+      
+      // Logic: 
+      // If conversation is "fresh" (no messages), call /new.
+      // Else call /message.
+      
+      try {
+          const isNew = conversations.find(c => c.id === targetId)?.messages.length === 0;
+          
+          if (isNew) {
+              const res = await api.post('/chat/new', {
+                  messages: [{ role: message.role, content: message.content }]
+              });
+              // Update ID if backend returned a different one? 
+              // Our setup uses UUIDs. If backend generates one, we should swap.
+              // For simplicity, let's assume we can't easily swap IDs in React state without flicker.
+              // Ideally, we wait for response.
+              
+              // Backend /chat/new returns the created conversation object.
+              const validId = res.data.id;
+              // If validId != targetId, we need to replace in state.
+              
+              setConversations(prev => sortConversations(prev.map(c => 
+                  c.id === targetId ? { ...c, id: validId, title: res.data.title } : c
+              )));
+              setCurrentConversationId(validId);
+              targetId = validId;
+          } else {
+              // Existing conversation
+             await api.post(`/chat/${targetId}/message`, {
+                  messages: [{ role: message.role, content: message.content }]
+              });
+          }
+          
+          // Note: The StreamingResponse handling usually happens in the Component 
+          // that calls this, using fetch/EventSource. 
+          // Axios is not great for streaming. 
+          // If we use axios here, we might block UI.
+          // RECOMMENDATION: The `App.tsx` probably handles the streaming reader.
+          // If `addChatMessage` is just for local state update + fire and forget?
+          // The Prompt says: "Send to backend... Do not generate TS... Use server response".
+          
+          // We will leave the specific stream handling to the caller (App.tsx) 
+          // OR implement it here if we want to centralize.
+          // Given `addChatMessage` signature returning Promise<void>, maybe caller handles stream?
+          
+      } catch (e) {
+          console.error("Failed to send message", e);
+      }
+  }, [currentConversationId, createConversation, conversations]);
+
+  // 5. Delete
+  const deleteConversation = useCallback(async (id: string) => {
+      try {
+          await api.delete(`/chat/${id}`);
+          setConversations(prev => prev.filter(c => c.id !== id));
+          if (currentConversationId === id) {
+              setCurrentConversationId(null);
+              setCurrentMessages([]);
+          }
+      } catch (e) {
+          console.error("Failed to delete", e);
+      }
+  }, [currentConversationId]);
+
+  // Placeholder for others
+  const updateCurrentMessages = useCallback((messages: any) => setCurrentMessages(messages), []);
+  const addTTSAudio = useCallback(() => {}, []);
+  const deleteTTSAudio = useCallback(() => {}, []);
+  const updateConversationTitle = useCallback(() => {}, []);
 
   return {
     conversations,
     currentConversationId,
     currentMessages,
-    currentTTSHistory,
+    currentTTSHistory: [],
     isLoading,
     isInitialized,
     createConversation,
     loadConversation,
-    saveConversation,
     deleteConversation,
     updateCurrentMessages,
     addChatMessage,

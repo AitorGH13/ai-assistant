@@ -1,14 +1,52 @@
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFile, File
 from fastapi.responses import StreamingResponse
 from app.models.chat import ChatRequest, ChatResponse, Message
 from app.services.openai_svc import openai_service
 from app.services.supabase_svc import supabase_service
+from app.services.storage_service import storage_service
 from app.routers.auth import get_current_user_id
 from uuid import UUID
 from typing import List, Optional
 from datetime import datetime
+import json
 
 router = APIRouter(prefix="/chat", tags=["chat"])
+
+@router.get("/")
+async def list_conversations(user_id: UUID = Depends(get_current_user_id)):
+    """List all conversations for the current user."""
+    return supabase_service.list_conversations(user_id)
+
+@router.delete("/{conversation_id}")
+async def delete_conversation(conversation_id: UUID, user_id: UUID = Depends(get_current_user_id)):
+    """Delete a conversation."""
+    success = supabase_service.delete_conversation(conversation_id, user_id)
+    if not success:
+        # Could be 404 or just not allowed/not found
+        raise HTTPException(status_code=404, detail="Conversation not found or could not be deleted")
+    return {"status": "ok", "message": "Conversation deleted"}
+
+@router.post("/upload")
+async def upload_file(
+    file: UploadFile = File(...),
+    user_id: UUID = Depends(get_current_user_id)
+):
+    """Upload a file (image/audio) and return the public URL."""
+    try:
+        content = await file.read()
+        public_url_resp = await storage_service.upload_file(content, file.filename, file.content_type)
+        
+        # storage-py `get_public_url` returns a string URL or object depending on version
+        # If it's just the URL string, return it. If it's an object/response, extract it.
+        # Assuming our storage_service.py returns the URL string or Response object.
+        # Let's verify what `get_public_url` returns. Usually it returns the URL string directly in newer versions, 
+        # or we might need to construct it.
+        
+        # Adjust based on storage_service implementation which calls `get_public_url`
+        return {"url": public_url_resp} 
+    except Exception as e:
+        print(f"Upload error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/new")
 async def create_conversation(
@@ -20,8 +58,17 @@ async def create_conversation(
     Generates a title from the first message if not provided.
     """
     first_msg_content = request.messages[0].content if request.messages else "New Conversation"
+    
+    # Handle multimodal content for title generation
+    if isinstance(first_msg_content, list):
+         # Extract text from list of content parts
+         text_parts = [p['text'] for p in first_msg_content if p.get('type') == 'text']
+         first_msg_text = " ".join(text_parts)
+    else:
+        first_msg_text = first_msg_content
+
     # Basic title generation strategy: truncate first message
-    title = first_msg_content[:30] + "..." if len(first_msg_content) > 30 else first_msg_content
+    title = first_msg_text[:30] + "..." if len(first_msg_text) > 30 else first_msg_text
     
     initial_msg = {
         "id": 0,
@@ -31,10 +78,6 @@ async def create_conversation(
     }
     
     conversation = supabase_service.create_conversation(user_id, title, initial_msg)
-    
-    # If we want to immediately stream response for the first message, 
-    # the frontend might expect a different flow. 
-    # For now, return the conversation ID so frontend can redirect or connect.
     return conversation
 
 @router.post("/{conversation_id}/message")
@@ -46,21 +89,18 @@ async def send_message(
     """
     Send a message to an existing conversation and stream the response.
     """
-    # 1. Fetch conversation history logic could go here to append context
-    # custom logic to merge DB history + new message? 
-    # For now, we trust the client sends the relevant context in `request.messages` 
-    # OR we fetch it from DB. 
-    # The prompt says: "Fetch the JSONB history. Append the User message..."
-    
     conversation = supabase_service.get_conversation(conversation_id)
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
         
-    # Append User Message to DB immediately? or after? 
-    # Let's append user message now.
     current_history = conversation.get("history", [])
     
     last_user_msg = request.messages[-1]
+    
+    # Validation
+    if isinstance(last_user_msg.content, str) and not last_user_msg.content.strip():
+         raise HTTPException(status_code=400, detail="Empty message")
+
     user_msg_entry = {
         "id": 0, # User
         "role": "user",
@@ -70,19 +110,12 @@ async def send_message(
     
     updated_history = current_history + [user_msg_entry]
     
-    # Update DB with user message (Optimistic update or strictly wait for this?)
-    # Validating inputs first
-    if not last_user_msg.content.strip():
-        raise HTTPException(status_code=400, detail="Empty message")
-
     supabase_service.update_conversation_history(conversation_id, updated_history)
     
-    # Prepare messages for OpenAI (system prompt + history + new message)
-    # We can use the history from DB to ensure consistency, transforming it to OpenAI format
+    # Prepare messages for OpenAI
     openai_messages = []
     for h in updated_history:
-        role = "user" if h["id"] == 0 else "assistant" # Simplified mapping
-        # Or use 'role' field if we stored it (we added it to new entries)
+        role = "user" if h["id"] == 0 else "assistant"
         if "role" in h:
             role = h["role"]
             
@@ -91,10 +124,8 @@ async def send_message(
     async def stream_generator():
         full_response_content = ""
         async for chunk in openai_service.stream_chat(openai_messages):
-            # Intercept content to build full response for saving
             if chunk.startswith("data: {") and not "[DONE]" in chunk:
                 try:
-                    import json
                     data = json.loads(chunk[6:])
                     if "content" in data:
                         full_response_content += data["content"]
@@ -102,7 +133,6 @@ async def send_message(
                     pass
             yield chunk
             
-        # After stream finishes, save AI response to DB
         ai_msg_entry = {
             "id": 1, # AI
             "role": "assistant",

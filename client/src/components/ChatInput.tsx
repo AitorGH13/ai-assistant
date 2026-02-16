@@ -5,7 +5,7 @@ import { Button } from "./ui/Button";
 import { cn } from "../lib/utils";
 
 interface Props {
-  onSend: (message: string, imageBase64?: string, imageName?: string) => void;
+  onSend: (message: string, imageBase64?: string, imageName?: string, imageFile?: File) => void;
   onSearch?: (query: string) => void;
   disabled?: boolean;
   showImageUpload?: boolean;
@@ -18,6 +18,7 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [imageName, setImageName] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [isTextareaFocused, setIsTextareaFocused] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -44,11 +45,12 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
       }
     } else {
       if ((input.trim() || imageBase64) && !disabled) {
-        onSend(input.trim(), imageBase64 || undefined, imageName || undefined);
+        onSend(input.trim(), imageBase64 || undefined, imageName || undefined, imageFile || undefined);
         setInput("");
         setImagePreview(null);
         setImageBase64(null);
         setImageName(null);
+        setImageFile(null);
       }
     }
   };
@@ -112,6 +114,7 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
     }
 
     setImageName(file.name);
+    setImageFile(file);
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64String = reader.result as string;
@@ -126,6 +129,7 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
     setImagePreview(null);
     setImageBase64(null);
     setImageName(null);
+    setImageFile(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }

@@ -21,6 +21,21 @@ class SupabaseService:
         if not response.data:
             return None
         return response.data[0]
+        
+    def list_conversations(self, user_id: UUID) -> List[Dict[str, Any]]:
+        response = self.client.table("conversations").select("id, title, created_at, updated_at")\
+            .eq("user_id", str(user_id))\
+            .order("updated_at", desc=True)\
+            .execute()
+        return response.data
+
+    def delete_conversation(self, conversation_id: UUID, user_id: UUID) -> bool:
+        # Verify ownership implicitly by filter
+        response = self.client.table("conversations").delete()\
+            .eq("id", str(conversation_id))\
+            .eq("user_id", str(user_id))\
+            .execute()
+        return len(response.data) > 0
 
     def update_conversation_history(self, conversation_id: UUID, history: List[Dict[str, Any]]) -> Dict[str, Any]:
         response = self.client.table("conversations").update({"history": history}).eq("id", str(conversation_id)).execute()

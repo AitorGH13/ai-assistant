@@ -1,14 +1,13 @@
 -- ============================================
 -- EXTENSIONES
 -- ============================================
+create extension if not exists "uuid-ossp";
 create extension if not exists pgcrypto;
 
 -- ============================================
 -- TABLA: profiles
 -- ============================================
 -- Complementa la información de auth.users (gestionada por Supabase)
--- auth.users contiene: email, password (encriptado), email_confirmed_at, etc.
--- Esta tabla profiles permite agregar campos personalizados del usuario
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text unique not null,
@@ -21,8 +20,6 @@ create table if not exists public.profiles (
 -- ============================================
 -- TRIGGER: Sincronizar auth.users con profiles
 -- ============================================
--- Cuando se crea un usuario en auth.users, automáticamente se crea su perfil
--- Actualizamos la función para que capture el full_name y avatar_url desde los metadatos
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -70,258 +67,110 @@ before update on public.profiles
 for each row execute function public.touch_profile_updated_at();
 
 -- ============================================
--- TABLA: conversations
+-- TABLA: conversations (REFACTORED)
 -- ============================================
--- Agrupa mensajes de chat y audios TTS por conversación
+-- Ahora almacena el historial completo en JSONB para optimizar fetching
+-- Estrategia: Row per Conversation
 create table if not exists public.conversations (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
-  title text not null default 'Nueva conversación',
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+    id uuid primary key default uuid_generate_v4(),
+    user_id uuid not null references auth.users(id) on delete cascade,
+    title text not null,
+    history jsonb not null default '[]'::jsonb, -- Estructura estricta: [{id: 0|1, msg: text, date: iso_string}]
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now()
 );
 
--- ============================================
--- TABLA: messages
--- ============================================
--- Almacena mensajes de chat (usuario y asistente)
-create table if not exists public.messages (
-  id uuid primary key default gen_random_uuid(),
-  conversation_id uuid not null references public.conversations(id) on delete cascade,
-  role text not null check (role in ('user', 'assistant', 'system')),
-  content jsonb not null,
-  tool_used boolean not null default false,
-  created_at timestamptz not null default now()
-);
+-- Index para búsquedas rápidas por usuario
+create index if not exists idx_conversations_user_id on public.conversations(user_id);
+create index if not exists idx_conversations_updated_at on public.conversations(updated_at desc);
 
--- ============================================
--- TABLA: tts_audios
--- ============================================
--- Almacena audios generados con Text-to-Speech
-create table if not exists public.tts_audios (
-  id uuid primary key default gen_random_uuid(),
-  conversation_id uuid not null references public.conversations(id) on delete cascade,
-  text text not null,
-  audio_url text not null,
-  timestamp_ms bigint not null,
-  voice_id text not null,
-  voice_name text not null,
-  created_at timestamptz not null default now()
-);
-
--- ============================================
--- ÍNDICES
--- ============================================
-create index if not exists conversations_user_id_idx on public.conversations(user_id);
-create index if not exists conversations_updated_at_idx on public.conversations(updated_at desc);
-create index if not exists messages_conversation_id_idx on public.messages(conversation_id);
-create index if not exists messages_created_at_idx on public.messages(created_at);
-create index if not exists tts_audios_conversation_id_idx on public.tts_audios(conversation_id);
-create index if not exists tts_audios_created_at_idx on public.tts_audios(created_at);
-create index if not exists profiles_email_idx on public.profiles(email);
-
--- ============================================
--- TRIGGER: updated_at para conversations
--- ============================================
-create or replace function public.touch_updated_at()
-returns trigger
-language plpgsql
-as $$
+-- Trigger para updated_at en conversations
+create or replace function public.update_updated_at_column()
+returns trigger as $$
 begin
-  new.updated_at = now();
-  return new;
+    new.updated_at = now();
+    return new;
 end;
-$$;
+$$ language 'plpgsql';
 
-drop trigger if exists conversations_touch_updated_at on public.conversations;
-create trigger conversations_touch_updated_at
-before update on public.conversations
-for each row execute function public.touch_updated_at();
+create trigger update_conversations_updated_at
+    before update on public.conversations
+    for each row
+    execute function update_updated_at_column();
+
+-- ============================================
+-- TABLA: voice_sessions (NEW)
+-- ============================================
+-- Para sesiones de voz e historial de transcripciones
+create table if not exists public.voice_sessions (
+    id uuid primary key default uuid_generate_v4(),
+    user_id uuid not null references auth.users(id) on delete cascade,
+    transcript jsonb not null default '[]'::jsonb, -- [{id: 0|1, text: text, timestamp: number}]
+    audio_url text, -- URL pública del archivo en Supabase Storage
+    created_at timestamptz not null default now()
+);
+
+create index if not exists idx_voice_sessions_user_id on public.voice_sessions(user_id);
 
 -- ============================================
 -- ROW LEVEL SECURITY (RLS)
 -- ============================================
 alter table public.profiles enable row level security;
 alter table public.conversations enable row level security;
-alter table public.messages enable row level security;
-alter table public.tts_audios enable row level security;
+alter table public.voice_sessions enable row level security;
 
--- ============================================
--- ROW LEVEL SECURITY (RLS)
--- ============================================
-alter table public.profiles enable row level security;
-alter table public.conversations enable row level security;
-alter table public.messages enable row level security;
-alter table public.tts_audios enable row level security;
-
--- ============================================
--- RLS POLICIES: profiles
--- ============================================
--- Los usuarios solo pueden ver y editar su propio perfil
-drop policy if exists profiles_select_own on public.profiles;
-create policy profiles_select_own
+-- POLICIES: profiles
+create policy "Users can select own profile"
 on public.profiles for select
 to authenticated
 using (id = auth.uid());
 
-drop policy if exists profiles_insert_own on public.profiles;
-create policy profiles_insert_own
-on public.profiles for insert
-to authenticated
-with check (id = auth.uid());
-
-drop policy if exists profiles_update_own on public.profiles;
-create policy profiles_update_own
+create policy "Users can update own profile"
 on public.profiles for update
 to authenticated
-using (id = auth.uid())
-with check (id = auth.uid());
+using (id = auth.uid());
 
--- ============================================
--- RLS POLICIES: conversations
--- ============================================
--- Los usuarios solo pueden acceder a sus propias conversaciones
-drop policy if exists conversations_select_own on public.conversations;
-create policy conversations_select_own
+-- POLICIES: conversations
+create policy "Users can select own conversations"
 on public.conversations for select
-to authenticated
-using (user_id = auth.uid());
+using (auth.uid() = user_id);
 
-drop policy if exists conversations_insert_own on public.conversations;
-create policy conversations_insert_own
+create policy "Users can insert own conversations"
 on public.conversations for insert
-to authenticated
-with check (user_id = auth.uid());
+with check (auth.uid() = user_id);
 
-drop policy if exists conversations_update_own on public.conversations;
-create policy conversations_update_own
+create policy "Users can update own conversations"
 on public.conversations for update
-to authenticated
-using (user_id = auth.uid())
-with check (user_id = auth.uid());
+using (auth.uid() = user_id);
 
-drop policy if exists conversations_delete_own on public.conversations;
-create policy conversations_delete_own
+create policy "Users can delete own conversations"
 on public.conversations for delete
-to authenticated
-using (user_id = auth.uid());
+using (auth.uid() = user_id);
+
+-- POLICIES: voice_sessions
+create policy "Users can select own voice sessions"
+on public.voice_sessions for select
+using (auth.uid() = user_id);
+
+create policy "Users can insert own voice sessions"
+on public.voice_sessions for insert
+with check (auth.uid() = user_id);
 
 -- ============================================
--- RLS POLICIES: messages
+-- STORAGE (Chat Assets)
 -- ============================================
--- Los usuarios solo pueden acceder a mensajes de sus propias conversaciones
+-- Asegurar que el bucket existe para uploads
+insert into storage.buckets (id, name, public)
+values ('chat-assets', 'chat-assets', true)
+on conflict (id) do nothing;
 
-drop policy if exists messages_select_own on public.messages;
-create policy messages_select_own
-on public.messages for select
+-- Policies para Storage
+create policy "Authenticated users can upload chat assets"
+on storage.objects for insert
 to authenticated
-using (
-  exists (
-    select 1 from public.conversations c
-    where c.id = messages.conversation_id
-      and c.user_id = auth.uid()
-  )
-);
+with check (bucket_id = 'chat-assets');
 
-drop policy if exists messages_insert_own on public.messages;
-create policy messages_insert_own
-on public.messages for insert
-to authenticated
-with check (
-  exists (
-    select 1 from public.conversations c
-    where c.id = messages.conversation_id
-      and c.user_id = auth.uid()
-  )
-);
-
-drop policy if exists messages_update_own on public.messages;
-create policy messages_update_own
-on public.messages for update
-to authenticated
-using (
-  exists (
-    select 1 from public.conversations c
-    where c.id = messages.conversation_id
-      and c.user_id = auth.uid()
-  )
-)
-with check (
-  exists (
-    select 1 from public.conversations c
-    where c.id = messages.conversation_id
-      and c.user_id = auth.uid()
-  )
-);
-
-drop policy if exists messages_delete_own on public.messages;
-create policy messages_delete_own
-on public.messages for delete
-to authenticated
-using (
-  exists (
-    select 1 from public.conversations c
-    where c.id = messages.conversation_id
-      and c.user_id = auth.uid()
-  )
-);
-
--- ============================================
--- RLS POLICIES: tts_audios
--- ============================================
--- Los usuarios solo pueden acceder a audios TTS de sus propias conversaciones
-
-drop policy if exists tts_audios_select_own on public.tts_audios;
-create policy tts_audios_select_own
-on public.tts_audios for select
-to authenticated
-using (
-  exists (
-    select 1 from public.conversations c
-    where c.id = tts_audios.conversation_id
-      and c.user_id = auth.uid()
-  )
-);
-
-drop policy if exists tts_audios_insert_own on public.tts_audios;
-create policy tts_audios_insert_own
-on public.tts_audios for insert
-to authenticated
-with check (
-  exists (
-    select 1 from public.conversations c
-    where c.id = tts_audios.conversation_id
-      and c.user_id = auth.uid()
-  )
-);
-
-drop policy if exists tts_audios_update_own on public.tts_audios;
-create policy tts_audios_update_own
-on public.tts_audios for update
-to authenticated
-using (
-  exists (
-    select 1 from public.conversations c
-    where c.id = tts_audios.conversation_id
-      and c.user_id = auth.uid()
-  )
-)
-with check (
-  exists (
-    select 1 from public.conversations c
-    where c.id = tts_audios.conversation_id
-      and c.user_id = auth.uid()
-  )
-);
-
-drop policy if exists tts_audios_delete_own on public.tts_audios;
-create policy tts_audios_delete_own
-on public.tts_audios for delete
-to authenticated
-using (
-  exists (
-    select 1 from public.conversations c
-    where c.id = tts_audios.conversation_id
-      and c.user_id = auth.uid()
-  )
-);
+create policy "Public can view chat assets"
+on storage.objects for select
+to public
+using (bucket_id = 'chat-assets');
