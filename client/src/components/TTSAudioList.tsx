@@ -116,10 +116,8 @@ export function TTSAudioList({ audios, onDelete }: Props) {
                 <p className="text-sm text-foreground line-clamp-2 mb-1">
                   {audio.text}
                 </p>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span>{audio.voiceName}</span>
-                  <span>•</span>
-                  <span>{formatTime(audio.timestamp)}</span>
+                <div className="text-xs text-muted-foreground">
+                  {formatTime(audio.timestamp)}
                 </div>
               </div>
 
