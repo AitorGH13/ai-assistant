@@ -179,10 +179,10 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
         )}
 
         <div className={cn(
-          "flex flex-col rounded-xl border bg-background px-3 shadow-sm hover:shadow-md transition-all duration-200",
+          "flex flex-col rounded-xl bg-slate-200 dark:bg-slate-900 px-3 shadow-sm hover:shadow-md transition-all duration-200",
           isTextareaFocused 
-            ? "border-primary shadow-md ring-2 ring-primary/20" 
-            : "border-border"
+            ? "shadow-md ring-2 ring-primary/20" 
+            : ""
         )}>
           <textarea
             ref={textareaRef}
@@ -211,8 +211,8 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
                   onClick={handleModeToggle}
                   disabled={disabled}
                   className={cn(
-                    "h-9 w-9 min-h-[36px] min-w-[36px]",
-                    mode === "search" && "text-primary"
+                    "h-9 w-9 min-h-[36px] min-w-[36px] hover:bg-accent/50",
+                    mode === "search" ? "text-primary" : "text-foreground hover:text-foreground"
                   )}
                   aria-label={mode === "search" ? "Cambiar a modo chat" : "Cambiar a modo búsqueda"}
                   title={mode === "search" ? "Modo chat" : "Modo búsqueda semántica"}
@@ -236,7 +236,7 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
                     size="icon"
                     onClick={handleImageButtonClick}
                     disabled={disabled}
-                    className="h-9 w-9 min-h-[36px] min-w-[36px]"
+                    className="h-9 w-9 min-h-[36px] min-w-[36px] hover:bg-accent/50 text-foreground hover:text-foreground"
                     aria-label="Añadir imagen"
                     title="Añadir imagen"
                   >
@@ -256,8 +256,8 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
                     onClick={handleConversationalToggle}
                     disabled={disabled}
                     className={cn(
-                      "h-9 w-9 min-h-[36px] min-w-[36px]",
-                      mode === "conversational" && "bg-primary/10 text-primary"
+                      "h-9 w-9 min-h-[36px] min-w-[36px] hover:bg-accent/50",
+                      mode === "conversational" ? "bg-primary/10 text-primary" : "text-foreground hover:text-foreground"
                     )}
                     aria-label="Conversational AI mode"
                     title="Conversational AI"
@@ -271,8 +271,8 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
                     onClick={handleTTSToggle}
                     disabled={disabled}
                     className={cn(
-                      "h-9 w-9 min-h-[36px] min-w-[36px]",
-                      mode === "tts" && "text-primary"
+                      "h-9 w-9 min-h-[36px] min-w-[36px] hover:bg-accent/50",
+                      mode === "tts" ? "text-primary" : "text-foreground hover:text-foreground"
                     )}
                     aria-label="Text-to-Speech mode"
                     title="Text-to-Speech"

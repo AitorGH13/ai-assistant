@@ -483,7 +483,7 @@ function App() {
       {/* Main content area */}
       <div className="flex flex-col flex-1 min-w-0">
         {/* Header */}
-        <div className="bg-background px-3 sm:px-4 py-2 sm:py-3 flex items-center gap-3 justify-between border-b border-border">
+        <div className="bg-background px-3 sm:px-4 py-2 sm:py-3 flex items-center gap-3 justify-between">
           <div className="flex-1 flex justify-start">
             <h1 className="text-lg sm:text-xl font-bold text-foreground">
               AI Assistant
