@@ -156,18 +156,27 @@ function App() {
   };
 
   const filteredConversations = conversations.filter((conv: Conversation) => {
-    const hasMessages = conv.messages && conv.messages.length > 0;
-    const hasTTSAudios = conv.ttsHistory && conv.ttsHistory.length > 0;
+    // If it's a local draft (not yet in DB), only show if it has content
+    if (conv.isLocal) {
+      const hasContent = (conv.messages && conv.messages.length > 0) || (conv.ttsHistory && conv.ttsHistory.length > 0);
+      if (!hasContent) return false;
+    }
     
-    if (!hasMessages && !hasTTSAudios) return false;
+    // For persisted conversations (non-local), they already have content in DB,
+    // so we want to search them by title at least.
     
     const titleMatch = normalizeText(conv.title).includes(normalizeText(searchQuery));
     
+    const messageMatch = conv.messages?.some((msg: ChatMessageType) => {
+      const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
+      return normalizeText(content).includes(normalizeText(searchQuery));
+    }) || false;
+
     const audioMatch = conv.ttsHistory?.some((audio: TTSAudio) => 
       normalizeText(audio.text).includes(normalizeText(searchQuery))
     ) || false;
     
-    return titleMatch || audioMatch;
+    return titleMatch || messageMatch || audioMatch;
   });
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
