@@ -187,13 +187,29 @@ function App() {
     return titleMatch || audioMatch;
   });
 
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const scrollToTop = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+    }
+  };
+
   useEffect(() => {
-    scrollToBottom();
-  }, [currentMessages]);
+    const isConversational = currentTTSHistory?.some(
+      (audio: TTSAudio) => audio.voiceId === "conversational-ai"
+    );
+
+    if (mode === 'tts' || isConversational) {
+      scrollToTop();
+    } else {
+      scrollToBottom();
+    }
+  }, [currentMessages, mode, currentTTSHistory]);
 
   const handleTTSGenerate = async (text: string) => {
     if (!text.trim()) {
@@ -490,7 +506,7 @@ function App() {
         {view === "profile" ? (
           <ProfileView onBack={() => setView("chat")} />
         ) : (
-        <div className={cn(
+        <div ref={scrollContainerRef} className={cn(
           "flex-1 p-3 sm:p-4 md:p-6",
           mode === 'conversational' ? 'flex flex-col overflow-hidden p-0 sm:p-0 md:p-0' : 'overflow-y-auto',
           mode === 'tts' && 'scrollbar-hide',
