@@ -49,84 +49,100 @@ export function SemanticSearch() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
-      <div className="text-center">
-        <div className="mb-3 sm:mb-4 inline-flex p-3 sm:p-4 rounded-full bg-primary/20 dark:bg-primary/20 ring-8 ring-primary/10 shadow-inner">
-          <Search className="h-10 w-10 sm:h-12 sm:w-12 text-primary" />
-        </div>
-        <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-2">
-          Búsqueda Semántica
-        </h2>
-        <p className="text-sm sm:text-base text-muted-foreground mb-4 sm:mb-6 px-2">
-          Usa el cuadro de búsqueda inferior para buscar en la base de conocimientos usando IA
-        </p>
-      </div>
-
-      {error && (
-        <Card className="border-destructive bg-destructive/10">
-          <CardContent className="p-3 sm:p-4">
-            <p className="text-sm sm:text-base text-destructive">{error}</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {result && (
-        <div className="space-y-3 sm:space-y-4">
-          <Card className="shadow-lg">
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex items-start gap-2 sm:gap-3 mb-3">
-                <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 text-green-500 flex-shrink-0 mt-1" />
-                <div>
-                  <h3 className="text-base sm:text-lg font-semibold text-foreground mb-2">
-                    Resultado Más Relevante
-                  </h3>
-                  <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
-                    {result.result}
+    <div className="mx-auto max-w-4xl">
+      {showSuggestions ? (
+        <div className="flex h-full items-center justify-center">
+          <div className="text-center max-w-2xl px-3 sm:px-4">
+            <div className="mb-4 sm:mb-6 inline-flex p-3 sm:p-4 rounded-full bg-primary/20 dark:bg-primary/20 ring-8 ring-primary/10 shadow-inner">
+              <Search className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-primary" />
+            </div>
+            <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-2">
+              Búsqueda Semántica
+            </h2>
+            <p className="text-sm sm:text-base text-muted-foreground mb-6 sm:mb-8">
+              Busca en la base de conocimientos usando IA
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+              {suggestions.map((suggestion, index) => (
+                <Button
+                  key={index}
+                  variant="outline"
+                  onClick={() => handleSuggestionClick(suggestion)}
+                  className="p-3 sm:p-4 h-auto text-left justify-start hover:border-primary hover:shadow-md transition-all duration-200"
+                >
+                  <p className="text-xs sm:text-sm">
+                    {suggestion}
                   </p>
-                  <Badge variant="secondary" className="mt-2">
-                    Similarity: {(result.similarity * 100).toFixed(1)}%
-                  </Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {result.all_results.length > 1 && (
-            <div className="space-y-2">
-              <h4 className="text-sm font-semibold text-foreground px-1">
-                Otros resultados relevantes:
-              </h4>
-              {result.all_results.slice(1).map((item, index) => (
-                <Card key={index} className="bg-muted/50">
-                  <CardContent className="p-3 sm:p-4">
-                    <p className="text-sm text-foreground">
-                      {item.text}
-                    </p>
-                    <Badge variant="outline" className="mt-1 text-xs">
-                      Similarity: {(item.similarity * 100).toFixed(1)}%
-                    </Badge>
-                  </CardContent>
-                </Card>
+                </Button>
               ))}
             </div>
-          )}
+          </div>
         </div>
-      )}
+      ) : (
+        <div className="space-y-4 sm:space-y-6">
+          <div className="text-center">
+            <div className="mb-4 sm:mb-6 inline-flex p-2 rounded-full bg-primary/10">
+              <Search className="h-6 w-6 text-primary" />
+            </div>
+            <h2 className="text-xl font-bold text-foreground">Resultados</h2>
+          </div>
+          
+          {error && (
+            <Card className="border-destructive bg-destructive/10">
+              <CardContent className="p-3 sm:p-4">
+                <p className="text-sm sm:text-base text-destructive">{error}</p>
+              </CardContent>
+            </Card>
+          )}
 
-      {showSuggestions && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mt-6 sm:mt-8">
-          {suggestions.map((suggestion, index) => (
-            <Button
-              key={index}
-              variant="outline"
-              onClick={() => handleSuggestionClick(suggestion)}
-              className="p-3 sm:p-4 h-auto text-left justify-start hover:border-primary hover:shadow-md transition-all duration-200"
-            >
-              <p className="text-xs sm:text-sm">
-                {suggestion}
-              </p>
+          {result && (
+            <div className="space-y-3 sm:space-y-4">
+              <Card className="shadow-lg">
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex items-start gap-2 sm:gap-3 mb-3">
+                    <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 text-green-500 flex-shrink-0 mt-1" />
+                    <div>
+                      <h3 className="text-base sm:text-lg font-semibold text-foreground mb-2">
+                        Resultado Más Relevante
+                      </h3>
+                      <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
+                        {result.result}
+                      </p>
+                      <Badge variant="secondary" className="mt-2">
+                        Similarity: {(result.similarity * 100).toFixed(1)}%
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {result.all_results.length > 1 && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-semibold text-foreground px-1">
+                    Otros resultados relevantes:
+                  </h4>
+                  {result.all_results.slice(1).map((item, index) => (
+                    <Card key={index} className="bg-muted/50">
+                      <CardContent className="p-3 sm:p-4">
+                        <p className="text-sm text-foreground">
+                          {item.text}
+                        </p>
+                        <Badge variant="outline" className="mt-1 text-xs">
+                          Similarity: {(item.similarity * 100).toFixed(1)}%
+                        </Badge>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          
+          <div className="flex justify-center mt-4">
+            <Button variant="ghost" onClick={() => setShowSuggestions(true)}>
+              Nueva búsqueda
             </Button>
-          ))}
+          </div>
         </div>
       )}
     </div>

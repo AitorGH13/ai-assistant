@@ -235,10 +235,10 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
                   disabled={disabled}
                   className={cn(
                     "h-9 w-9 min-h-[36px] min-w-[36px] hover:bg-accent/50",
-                    mode === "search" ? "text-primary" : "text-foreground hover:text-foreground"
+                    mode === "search" ? "text-primary hover:text-primary" : "text-muted-foreground hover:text-muted-foreground"
                   )}
                   aria-label={mode === "search" ? "Cambiar a modo chat" : "Cambiar a modo búsqueda"}
-                  title={mode === "search" ? "Modo chat" : "Modo búsqueda semántica"}
+                  title={mode === "search" ? "Modo chat" : "Búsqueda semántica"}
                 >
                   <Search size={20} />
                 </Button>
@@ -259,7 +259,7 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
                     size="icon"
                     onClick={handleImageButtonClick}
                     disabled={disabled}
-                    className="h-9 w-9 min-h-[36px] min-w-[36px] hover:bg-accent/50 text-foreground hover:text-foreground"
+                    className="h-9 w-9 min-h-[36px] min-w-[36px] hover:bg-accent/50 text-muted-foreground hover:text-muted-foreground"
                     aria-label="Añadir imagen"
                     title="Añadir imagen"
                   >
@@ -280,10 +280,10 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
                     disabled={disabled}
                     className={cn(
                       "h-9 w-9 min-h-[36px] min-w-[36px] hover:bg-accent/50",
-                      mode === "conversational" ? "bg-primary/10 text-primary" : "text-foreground hover:text-foreground"
+                      mode === "conversational" ? "bg-primary/10 text-primary hover:text-primary" : "text-muted-foreground hover:text-muted-foreground"
                     )}
-                    aria-label="Conversational AI mode"
-                    title="Conversational AI"
+                    aria-label="Modo IA conversacional"
+                    title="IA conversacional"
                   >
                     <Mic size={20} />
                   </Button>
@@ -295,10 +295,10 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
                     disabled={disabled}
                     className={cn(
                       "h-9 w-9 min-h-[36px] min-w-[36px] hover:bg-accent/50",
-                      mode === "tts" ? "text-primary" : "text-foreground hover:text-foreground"
+                      mode === "tts" ? "text-primary hover:text-primary" : "text-muted-foreground hover:text-muted-foreground"
                     )}
-                    aria-label="Text-to-Speech mode"
-                    title="Text-to-Speech"
+                    aria-label="Modo texto a voz"
+                    title="Texto a voz"
                   >
                     <Volume2 size={20} />
                   </Button>

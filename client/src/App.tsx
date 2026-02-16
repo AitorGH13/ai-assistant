@@ -594,7 +594,7 @@ function App() {
                       <Volume2 className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-primary" />
                     </div>
                     <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-2">
-                      Text-to-Speech
+                      Texto a voz
                     </h2>
                     <p className="text-sm sm:text-base text-muted-foreground mb-6 sm:mb-8 text-center">
                       Escribe un mensaje abajo o prueba una de estas sugerencias

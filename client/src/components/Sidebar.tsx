@@ -59,7 +59,6 @@ export function Sidebar({
   };
 
   const handleMenuToggle = () => {
-    setShowFloatingSettings(false);
     onToggleSidebar();
   };
 
@@ -77,7 +76,7 @@ export function Sidebar({
       <div
         className={cn(
           "h-full bg-slate-200 dark:bg-slate-900 transition-all duration-300 ease-in-out overflow-hidden flex-shrink-0",
-          isOpen ? "w-80" : "w-16"
+          isOpen ? "w-88" : "w-16"
         )}
       >
         <div className="flex flex-col h-full">
@@ -153,13 +152,13 @@ export function Sidebar({
           {/* Historial de Conversaciones */}
           <ScrollArea className="flex-1 w-full">
             {isOpen && (
-              <div className="px-4 space-y-2 w-full overflow-hidden">
+              <div className="px-4 space-y-2 w-full overflow-hidden animate-in fade-in duration-300">
                 <div className="w-full overflow-hidden">
                   <h3 className="text-sm font-semibold text-muted-foreground mb-3 px-2 whitespace-nowrap overflow-hidden transition-opacity duration-300">
                     Historial
                   </h3>
                   {conversations.length === 0 ? (
-                    <div className="text-sm text-muted-foreground text-center py-8">
+                    <div className="text-sm text-muted-foreground text-center py-8 px-2 whitespace-nowrap overflow-hidden">
                       No hay conversaciones previas
                     </div>
                   ) : (
@@ -339,7 +338,10 @@ export function Sidebar({
 
       {/* Panel flotante de configuración */}
       {showFloatingSettings && (
-        <div className="absolute bottom-20 left-20 w-80 bg-slate-200 dark:bg-slate-900 rounded-lg shadow-xl border border-border z-50 animate-slide-in-bottom">
+        <div className={cn(
+          "absolute bottom-20 w-80 bg-slate-200 dark:bg-slate-900 rounded-lg shadow-xl border border-border z-50 animate-slide-in-bottom transition-all duration-300",
+          isOpen ? "left-4" : "left-20"
+        )}>
           <div className="p-4 space-y-3">
             {/* Cambiar Tema */}
             <Button
