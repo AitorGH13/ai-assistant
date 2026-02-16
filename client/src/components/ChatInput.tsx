@@ -1,4 +1,4 @@
-import { useState, KeyboardEvent, useRef, useEffect } from "react";
+import { useState, KeyboardEvent, ClipboardEvent, useRef, useEffect } from "react";
 import { Image, X, Search, Mic, Volume2 } from "lucide-react";
 import { AppMode } from "../types";
 import { Button } from "./ui/Button";
@@ -66,6 +66,35 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
           handleSubmit();
         }
       }
+    }
+  };
+
+  const handlePaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
+    if (mode === "search" || !showImageUpload) return;
+    
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf("image") !== -1) {
+            e.preventDefault();
+            const file = items[i].getAsFile();
+            if (file) {
+                 if (file.size > 20 * 1024 * 1024) {
+                    alert("Image size must be less than 20MB");
+                    return;
+                }
+                
+                setImageName("pasted-image.png");
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const base64String = reader.result as string;
+                    setImagePreview(base64String);
+                    setImageBase64(base64String);
+                    setTimeout(() => textareaRef.current?.focus(), 0);
+                };
+                reader.readAsDataURL(file);
+                return;
+            }
+        }
     }
   };
 
@@ -163,10 +192,9 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
               className="max-h-32 rounded-lg border border-border"
             />
             <Button
-              variant="destructive"
               size="icon"
               onClick={handleRemoveImage}
-              className="absolute -top-2 -right-2 h-8 w-8 min-h-[32px] min-w-[32px] rounded-full shadow-lg"
+              className="absolute -top-2 -right-2 h-8 w-8 min-h-[32px] min-w-[32px] rounded-full shadow-lg bg-primary text-primary-foreground hover:bg-primary transition-none"
             >
               <X size={16} />
             </Button>
@@ -189,6 +217,7 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
             onFocus={() => setIsTextareaFocused(true)}
             onBlur={() => setIsTextareaFocused(false)}
             placeholder={placeholder}
