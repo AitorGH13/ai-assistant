@@ -198,7 +198,7 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
                   disabled={disabled}
                   className={cn(
                     "h-9 w-9 min-h-[36px] min-w-[36px]",
-                    mode === "search" && "bg-primary/10 text-primary"
+                    mode === "search" && "text-primary"
                   )}
                   aria-label={mode === "search" ? "Cambiar a modo chat" : "Cambiar a modo búsqueda"}
                   title={mode === "search" ? "Modo chat" : "Modo búsqueda semántica"}
@@ -258,7 +258,7 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
                     disabled={disabled}
                     className={cn(
                       "h-9 w-9 min-h-[36px] min-w-[36px]",
-                      mode === "tts" && "bg-primary/10 text-primary"
+                      mode === "tts" && "text-primary"
                     )}
                     aria-label="Text-to-Speech mode"
                     title="Text-to-Speech"

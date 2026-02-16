@@ -1,4 +1,4 @@
-import { Volume2, Play, Pause, Trash2 } from "lucide-react";
+import { Volume2, Play, Pause, Download, Trash2 } from "lucide-react";
 import { useState, useRef } from "react";
 import { TTSAudio } from "../types";
 import { Button } from "./ui/Button";
@@ -38,6 +38,19 @@ export function TTSAudioList({ audios, onDelete }: Props) {
     setPlayingId(null);
   };
 
+  const handleDownload = (audio: TTSAudio) => {
+    if (!audio.audioUrl) return;
+    
+    // Create a temporary link element to trigger the download
+    const link = document.createElement('a');
+    link.href = audio.audioUrl;
+    // Use a timestamp-based filename
+    link.download = `audio-${audio.timestamp}.mp3`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const formatTime = (timestamp: number) => {
     const date = new Date(timestamp);
     const today = new Date();
@@ -65,7 +78,21 @@ export function TTSAudioList({ audios, onDelete }: Props) {
       {audios.map((audio) => (
         <Card key={audio.id} className="hover:shadow-md transition-shadow">
           <CardContent className="p-4">
-            <div className="flex items-start gap-3">
+            <div className="flex items-center gap-3">
+              {/* Left Side Download Button - Only for TTS */}
+              {audio.voiceId !== "conversational-ai" && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleDownload(audio)}
+                  disabled={!audio.audioUrl}
+                  className="flex-shrink-0 h-10 w-10 min-h-[40px] min-w-[40px] text-primary"
+                  title="Descargar audio"
+                >
+                  <Download size={20} />
+                </Button>
+              )}
+
               {/* Play/Pause Button */}
               <Button
                 variant={audio.audioUrl ? "secondary" : "ghost"}
@@ -96,16 +123,32 @@ export function TTSAudioList({ audios, onDelete }: Props) {
                 </div>
               </div>
 
+
+
               {/* Delete Button */}
               {audio.voiceId !== "conversational-ai" && (
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => onDelete(audio.id)}
-                  className="flex-shrink-0 h-8 w-8 min-h-[32px] min-w-[32px] text-muted-foreground hover:text-primary"
+                  className="flex-shrink-0 h-8 w-8 min-h-[32px] min-w-[32px] text-primary"
                   aria-label="Eliminar audio"
                 >
                   <Trash2 size={16} />
+                </Button>
+              )}
+
+              {/* Right Side Download Button - Only for Conversational AI */}
+              {audio.voiceId === "conversational-ai" && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleDownload(audio)}
+                  disabled={!audio.audioUrl}
+                  className="flex-shrink-0 h-10 w-10 min-h-[40px] min-w-[40px] text-primary"
+                  title="Descargar audio"
+                >
+                  <Download size={20} />
                 </Button>
               )}
             </div>
