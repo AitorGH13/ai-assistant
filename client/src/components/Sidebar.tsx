@@ -70,9 +70,9 @@ export function Sidebar({
       return hasMessages || hasTTSAudios;
     }
     
-    // Si es un borrador local (isLocal=true), SOLO mostrar si es la activa actualmente
+    // Si es un borrador local (isLocal=true), NO mostrar hasta que tenga contenido
     if (conversation.isLocal && conversation.messages.length === 0 && !conversation.ttsHistory?.length) {
-        return conversation.id === currentConversationId;
+        return false;
     }
 
     // Si NO es temporal y no es local (viene del backend), mostrar siempre

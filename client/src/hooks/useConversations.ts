@@ -111,12 +111,13 @@ export function useConversations(): {
 
   // 3. Create Conversation (Local stub until message sent?)
   const createConversation = useCallback((isTemporary: boolean = false): string => {
-      // Backend creates conversation on first message usually, 
-      // OR we call /new endpoint.
-      // Let's call /new endpoint if NOT temporary? 
-      // Or keep local state until first message to avoid empty DB rows?
-      // "Generates title from first message" -> suggests waiting.
-      
+      // If we are already in an empty local conversation of the same type, just reuse it
+      const current = conversations.find(c => c.id === currentConversationId);
+      const isEmpty = !current?.messages?.length && !current?.ttsHistory?.length;
+      if (current && current.isLocal && isEmpty && !!current.isTemporary === isTemporary) {
+          return current.id;
+      }
+
       const newId = crypto.randomUUID(); // Temporary FE ID
       const now = new Date().toISOString();
       const newConvo: Conversation = {
@@ -135,7 +136,7 @@ export function useConversations(): {
       setCurrentConversationId(newId);
       setCurrentMessages([]);
       return newId;
-  }, []);
+  }, [conversations, currentConversationId]);
 
   // 4. Send Message (Refactored to call API)
   const addChatMessage = useCallback(async (message: ChatMessage, conversationId?: string) => {
