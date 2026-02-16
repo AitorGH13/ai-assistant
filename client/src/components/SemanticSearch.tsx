@@ -138,11 +138,6 @@ export function SemanticSearch() {
             </div>
           )}
           
-          <div className="flex justify-center mt-4">
-            <Button variant="ghost" onClick={() => setShowSuggestions(true)}>
-              Nueva búsqueda
-            </Button>
-          </div>
         </div>
       )}
     </div>

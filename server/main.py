@@ -7,7 +7,7 @@ import io
 import asyncio
 
 from app.core.config import settings
-from app.routers import chat, voice  # Import voice router
+from app.routers import chat, voice, search # Import routers including search
 
 app = FastAPI(title="AI Assistant API")
 
@@ -27,6 +27,7 @@ async def health_check():
 # Include routers
 app.include_router(chat.router, prefix="/api")
 app.include_router(voice.router, prefix="/api") # Include voice router with /api prefix so it becomes /api/voice
+app.include_router(search.router, prefix="/api") # Include search router
 
 if __name__ == "__main__":
     import uvicorn
