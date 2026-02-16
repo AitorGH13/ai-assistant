@@ -370,6 +370,11 @@ function App() {
                                 m.id === assistantMessageId ? { ...m, content: assistantContent } : m
                             ));
                         }
+                        if (parsed.tool_used) {
+                            updateCurrentMessages(prev => prev.map(m => 
+                                m.id === assistantMessageId ? { ...m, toolUsed: true } : m
+                            ));
+                        }
                     } catch (e) {
                          // Ignore parse errors for partial chunks
                     }
