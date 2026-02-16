@@ -232,19 +232,27 @@ function App() {
         if (!response.ok) throw new Error("Error al generar el audio");
 
         const audioBlob = await response.blob();
-        const audioUrl = URL.createObjectURL(audioBlob); // Use ObjectURL instead of Base64 for performance?
-        // Or keep Base64 consistency
+        const audioUrl = URL.createObjectURL(audioBlob); 
+        
+        // Transform the blob to Base64 to ensure it's persistent across refreshes
+        // (Blob URLs are temporary and die on page reload)
+        const reader = new FileReader();
+        const base64Audio = await new Promise<string>((resolve) => {
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(audioBlob);
+        });
         
         const ttsAudio: TTSAudio = {
           id: crypto.randomUUID(),
           text: text.trim(),
-          audioUrl: audioUrl, // NOTE: This URL might be temporary blob or base64
+          audioUrl: base64Audio, // Use base64 instead of temporary blob URL
           timestamp: Date.now(),
           voiceId: selectedVoiceId,
           voiceName: "Roger - Laid-Back, Casual, Resonant",
         };
         
         addTTSAudio(ttsAudio, conversationId);
+        // Play using the temporary URL for immediate response
         new Audio(audioUrl).play();
       } catch (error) {
         console.error("Error generating speech:", error);
