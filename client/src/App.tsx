@@ -11,7 +11,7 @@ import { Input } from "./components/ui/Input";
 import { Button } from "./components/ui/Button";
 import { ChatMessage as ChatMessageType, AppMode, MessageContent, TTSAudio, Conversation } from "./types";
 import { useTheme } from "./utils/theme";
-import { MessageSquare, Volume2, Mic, Trash2, UserCircle2 } from "lucide-react";
+import { MessageSquare, Volume2, Mic, Trash2, UserCircle2, Pencil } from "lucide-react";
 import { useConversations } from "./hooks/useConversations";
 import { useAuth } from "./context/AuthProvider";
 import { cn } from "./lib/utils";
@@ -34,6 +34,8 @@ function App() {
   const [showSearchView, setShowSearchView] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [view, setView] = useState<"chat" | "profile">("chat");
+  const [editTitleId, setEditTitleId] = useState<string | null>(null);
+  const [editTitleValue, setEditTitleValue] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { theme, toggleTheme } = useTheme();
   const { user, loading: authLoading } = useAuth();
@@ -463,7 +465,7 @@ function App() {
         <div className="bg-background px-3 sm:px-4 py-2 sm:py-3 flex items-center gap-3 justify-between border-b border-border">
           <div className="flex-1 flex justify-start">
             <h1 className="text-lg sm:text-xl font-bold text-foreground">
-              Assistant AI
+              AI Assistant
             </h1>
           </div>
           <div className="flex items-center gap-3">
@@ -522,36 +524,81 @@ function App() {
                         IconComponent = MessageSquare;
                       }
 
+                      const isEditing = editTitleId === conversation.id;
+
                       return (
                         <div
                           key={conversation.id}
-                          className="group relative flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all hover:bg-accent text-foreground bg-card"
+                          className="group relative flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all hover:bg-accent text-foreground bg-card overflow-hidden"
+                          onClick={() => {
+                            if (isEditing) return;
+                            handleLoadConversation(conversation.id);
+                            setShowSearchView(false);
+                          }}
                         >
-                          <IconComponent className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
-                          <button
-                            onClick={() => {
-                              handleLoadConversation(conversation.id);
-                              setShowSearchView(false);
-                            }}
-                            className="flex-1 text-left truncate"
-                            title={conversation.title}
-                          >
-                            <div className="font-medium">{conversation.title}</div>
-                            <div className="text-xs text-muted-foreground mt-1">
-                              {new Date(conversation.updatedAt).toLocaleDateString('es-ES', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </div>
-                          </button>
+                          <div className="flex-shrink-0 relative">
+                            <IconComponent className="h-5 w-5 text-muted-foreground group-hover:opacity-0 transition-opacity" />
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditTitleId(conversation.id);
+                                setEditTitleValue(conversation.title);
+                              }}
+                              className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                              aria-label="Editar nombre"
+                            >
+                              <Pencil size={16} className="text-muted-foreground hover:text-primary transition-colors" />
+                            </button>
+                          </div>
+                          
+                          <div className="flex-1 min-w-0 flex flex-col justify-center">
+                            {isEditing ? (
+                              <Input
+                                type="text"
+                                value={editTitleValue}
+                                onChange={(e) => setEditTitleValue(e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-sm h-8 px-2 py-1"
+                                autoFocus
+                                onBlur={() => setEditTitleId(null)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    if (editTitleValue.trim() && editTitleValue !== conversation.title) {
+                                      handleEditConversationTitle(conversation.id, editTitleValue.trim());
+                                    }
+                                    setEditTitleId(null);
+                                  } else if (e.key === "Escape") {
+                                    e.preventDefault();
+                                    setEditTitleId(null);
+                                  }
+                                }}
+                              />
+                            ) : (
+                              <>
+                                <div className="font-medium truncate">{conversation.title}</div>
+                                <div className="text-xs text-muted-foreground mt-1 truncate">
+                                  {new Date(conversation.updatedAt).toLocaleDateString('es-ES', {
+                                    year: 'numeric',
+                                    month: 'short',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}
+                                </div>
+                              </>
+                            )}
+                          </div>
+
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleDeleteConversation(conversation.id)}
-                            className="h-8 w-8 min-h-[32px] min-w-[32px] text-muted-foreground hover:text-primary"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteConversation(conversation.id);
+                            }}
+                            className="h-8 w-8 min-h-[32px] min-w-[32px] text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-all duration-200"
                             title="Eliminar conversación"
                           >
                             <Trash2 size={16} />
