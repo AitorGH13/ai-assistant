@@ -7,11 +7,14 @@ import { ConversationalAI } from "./components/ConversationalAI";
 import { TTSAudioList } from "./components/TTSAudioList";
 import { AuthScreen } from "./components/AuthScreen";
 import { ProfileView } from "./components/ProfileView";
+import { Input } from "./components/ui/Input";
+import { Button } from "./components/ui/Button";
 import { ChatMessage as ChatMessageType, AppMode, MessageContent, TTSAudio, Conversation } from "./types";
 import { useTheme } from "./utils/theme";
 import { MessageSquare, Volume2, Mic, Trash2, UserCircle2 } from "lucide-react";
 import { useConversations } from "./hooks/useConversations";
 import { useAuth } from "./context/AuthProvider";
+import { cn } from "./lib/utils";
 
 function App() {
     useEffect(() => {
@@ -34,6 +37,24 @@ function App() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { theme, toggleTheme } = useTheme();
   const { user, loading: authLoading } = useAuth();
+  
+  // Reset view to chat when user changes (login/logout)
+  // Reset view to chat ONLY when user logs in (or user ID changes)
+  // We use a ref to track if we already had a user, to avoid resetting on profile updates
+  const prevUserIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (user && user.id !== prevUserIdRef.current) {
+      // New user logged in (or first load with user)
+      setView("chat");
+      setMode("chat");
+      setShowSearchView(false);
+      prevUserIdRef.current = user.id;
+    } else if (!user) {
+      // User logged out
+      prevUserIdRef.current = null;
+    }
+  }, [user]);
 
   const {
     conversations,
@@ -55,7 +76,6 @@ function App() {
   // Cambiar el título de una conversación
   const handleEditConversationTitle = (id: string, newTitle: string) => {
     if (!newTitle.trim()) return;
-    // Actualiza solo el título, manteniendo el resto igual
     updateConversationTitle(id, newTitle.trim());
   };
 
@@ -94,28 +114,22 @@ function App() {
     }
     loadConversation(conversationId);
     
-    // Cerrar vista de búsqueda al cargar una conversación
     handleCloseSearch();
     setView("chat");
-    // Determinar el modo basado en el tipo de conversación
     const conversation = conversations.find((c: Conversation) => c.id === conversationId);
     if (conversation) {
       const hasTTSAudios = conversation.ttsHistory && conversation.ttsHistory.length > 0;
       const hasMessages = conversation.messages && conversation.messages.length > 0;
       
-      // Si tiene audios de conversational-ai, es una conversación de voz (mostrar ambos)
       const hasConversationalAudio = hasTTSAudios && conversation.ttsHistory?.some(
         (audio: TTSAudio) => audio.voiceId === "conversational-ai"
       );
       
       if (hasConversationalAudio) {
-        // Conversación de voz: tiene mensajes Y audio, mostrar en modo chat
         setMode("chat");
       } else if (hasTTSAudios && !hasMessages) {
-        // Solo TTS: mostrar en modo TTS
         setMode("tts");
       } else {
-        // Chat normal
         setMode("chat");
       }
     }
@@ -127,13 +141,11 @@ function App() {
 
  const handleSearchClick = () => {
     if (view === "profile") {
-      // Si estoy en perfil, fuerzo abrir el buscador y cambio la vista
       setShowSearchView(true);
       setView("chat");
     } else {
-      // Si ya estoy en el chat, funciona como interruptor (abrir/cerrar)
       setShowSearchView(!showSearchView);
-      if (!showSearchView) { // Nota: aquí la lógica invierte el valor anterior
+      if (!showSearchView) {
         setSearchQuery("");
       }
     }
@@ -154,7 +166,6 @@ function App() {
   };
 
   const filteredConversations = conversations.filter((conv: Conversation) => {
-    // Filtrar solo conversaciones con contenido
     const hasMessages = conv.messages && conv.messages.length > 0;
     const hasTTSAudios = conv.ttsHistory && conv.ttsHistory.length > 0;
     
@@ -162,7 +173,6 @@ function App() {
     
     const titleMatch = normalizeText(conv.title).includes(normalizeText(searchQuery));
     
-    // Buscar también en los textos de los audios TTS
     const audioMatch = conv.ttsHistory?.some((audio: TTSAudio) => 
       normalizeText(audio.text).includes(normalizeText(searchQuery))
     ) || false;
@@ -184,7 +194,6 @@ function App() {
       return;
     }
 
-    // Crear conversación si no existe
     let conversationId = currentConversationId;
     if (!conversationId) {
       conversationId = createConversation();
@@ -209,14 +218,12 @@ function App() {
 
       const audioBlob = await response.blob();
       
-      // Convertir a base64 para que persista después de recargar
       const reader = new FileReader();
       const audioUrl = await new Promise<string>((resolve) => {
         reader.onloadend = () => resolve(reader.result as string);
         reader.readAsDataURL(audioBlob);
       });
 
-      // Crear objeto TTSAudio
       const ttsAudio: TTSAudio = {
         id: crypto.randomUUID(),
         text: text.trim(),
@@ -226,10 +233,8 @@ function App() {
         voiceName: "Roger - Laid-Back, Casual, Resonant",
       };
 
-      // Añadir al historial usando el conversationId correcto
       addTTSAudio(ttsAudio, conversationId);
 
-      // Reproducir automáticamente
       const audio = new Audio(audioUrl);
       audio.play();
     } catch (error) {
@@ -240,7 +245,7 @@ function App() {
     }
   };
 
-  const handleSendMessage = async (content: string, imageBase64?: string) => {
+  const handleSendMessage = async (content: string, imageBase64?: string, imageName?: string) => {
     let conversationId = currentConversationId;
     if (!conversationId) {
       conversationId = createConversation();
@@ -249,15 +254,17 @@ function App() {
     let messageContent: string | MessageContent[];
     
     if (imageBase64) {
+      const textWithFilename = imageName 
+        ? (content ? `${imageName}\n${content}` : imageName)
+        : content;
       messageContent = [
-        { type: "text" as const, text: content },
+        { type: "text" as const, text: textWithFilename },
         { type: "image_url" as const, image_url: { url: imageBase64 } }
       ];
     } else {
       messageContent = content;
     }
 
-    // Capturamos el momento exacto para el usuario
     const userTimestamp = new Date();
 
     const userMessage: ChatMessageType = {
@@ -398,7 +405,6 @@ function App() {
   };
 
   const handleSemanticSearch = async (query: string) => {
-    // Llamar a la función de búsqueda del componente SemanticSearch
     if ((window as any).__performSemanticSearch) {
       await (window as any).__performSemanticSearch(query);
     }
@@ -419,9 +425,9 @@ function App() {
 
   if (authLoading) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 gap-3">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-        <span className="text-sm text-gray-500 dark:text-gray-400">Cargando...</span>
+      <div className="h-screen flex flex-col items-center justify-center bg-background gap-3">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <span className="text-sm text-muted-foreground">Cargando...</span>
       </div>
     );
   }
@@ -431,7 +437,7 @@ function App() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+    <div className="flex h-screen bg-background transition-colors duration-200">
       {/* Sidebar */}
       <Sidebar
         theme={theme}
@@ -454,21 +460,22 @@ function App() {
       {/* Main content area */}
       <div className="flex flex-col flex-1 min-w-0">
         {/* Header */}
-        <div className="bg-white dark:bg-gray-900 px-3 sm:px-4 py-2 sm:py-3 flex items-center gap-3 justify-between">
+        <div className="bg-background px-3 sm:px-4 py-2 sm:py-3 flex items-center gap-3 justify-between border-b border-border">
           <div className="flex-1 flex justify-start">
-            <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-lg sm:text-xl font-bold text-foreground">
               Assistant AI
             </h1>
           </div>
           <div className="flex items-center gap-3">
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setView("profile")}
-              className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
               title="Perfil"
-              style={{ marginLeft: 'auto' }}
+              className="ml-auto"
             >
-              <UserCircle2 className="h-8 w-8 text-gray-700 dark:text-primary-400" />
-            </button>
+              <UserCircle2 className="h-8 w-8 text-primary" />
+            </Button>
           </div>
         </div>
 
@@ -476,26 +483,30 @@ function App() {
         {view === "profile" ? (
           <ProfileView onBack={() => setView("chat")} />
         ) : (
-        <div className={`flex-1 p-3 sm:p-4 md:p-6 overflow-y-auto ${mode === 'tts' ? 'scrollbar-hide' : ''} ${showSearchView ? '!overflow-hidden' : ''}`}>
+        <div className={cn(
+          "flex-1 p-3 sm:p-4 md:p-6",
+          mode === 'conversational' ? 'flex flex-col overflow-hidden p-0 sm:p-0 md:p-0' : 'overflow-y-auto',
+          mode === 'tts' && 'scrollbar-hide',
+          showSearchView && '!overflow-hidden'
+        )}>
           {showSearchView ? (
             <div className="mx-auto max-w-4xl h-full flex flex-col">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex-shrink-0">Buscar</h2>
-              <input
+              <h2 className="text-2xl font-bold text-foreground mb-6 flex-shrink-0">Buscar</h2>
+              <Input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Buscar conversaciones..."
-                className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:border-primary-500 dark:focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 transition-all duration-200 mb-4 flex-shrink-0"
+                className="mb-4 flex-shrink-0 h-12"
               />
               <div className="overflow-y-auto flex-1 scrollbar-hide">
                 {filteredConversations.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  <div className="text-center py-8 text-muted-foreground">
                     {searchQuery ? "No se encontraron conversaciones" : "No hay conversaciones"}
                   </div>
                 ) : (
                   <div className="space-y-2">
                     {filteredConversations.map((conversation: Conversation) => {
-                      // Determine the icon based on conversation content
                       const hasMessages = conversation.messages && conversation.messages.length > 0;
                       const hasTTSAudios = conversation.ttsHistory && conversation.ttsHistory.length > 0;
                       const hasConversationalAudio = hasTTSAudios && conversation.ttsHistory?.some(
@@ -514,9 +525,9 @@ function App() {
                       return (
                         <div
                           key={conversation.id}
-                          className="group relative flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800/50"
+                          className="group relative flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all hover:bg-accent text-foreground bg-card"
                         >
-                          <IconComponent className="h-5 w-5 flex-shrink-0" />  {/* Dynamic icon */}
+                          <IconComponent className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
                           <button
                             onClick={() => {
                               handleLoadConversation(conversation.id);
@@ -526,7 +537,7 @@ function App() {
                             title={conversation.title}
                           >
                             <div className="font-medium">{conversation.title}</div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            <div className="text-xs text-muted-foreground mt-1">
                               {new Date(conversation.updatedAt).toLocaleDateString('es-ES', {
                                 year: 'numeric',
                                 month: 'short',
@@ -536,13 +547,15 @@ function App() {
                               })}
                             </div>
                           </button>
-                          <button
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => handleDeleteConversation(conversation.id)}
-                            className="text-blue-500"
+                            className="h-8 w-8 min-h-[32px] min-w-[32px] text-muted-foreground hover:text-primary"
                             title="Eliminar conversación"
                           >
                             <Trash2 size={16} />
-                          </button>
+                          </Button>
                         </div>
                       );
                     })}
@@ -556,13 +569,13 @@ function App() {
                 <>
                   {/* TTS Header cuando no hay audios */}
                   <div className="flex flex-col items-center mb-8 mt-4">
-                    <div className="mb-4 sm:mb-6 inline-flex p-3 sm:p-4 rounded-full bg-gradient-to-br from-primary-500/10 to-accent-500/10">
-                      <Volume2 className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-primary-600 dark:text-primary-400" />
+                    <div className="mb-4 sm:mb-6 inline-flex p-3 sm:p-4 rounded-full bg-gradient-to-br from-primary/10 to-accent/10">
+                      <Volume2 className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-primary" />
                     </div>
-                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                    <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-2">
                       Text-to-Speech
                     </h2>
-                    <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-6 sm:mb-8 text-center">
+                    <p className="text-sm sm:text-base text-muted-foreground mb-6 sm:mb-8 text-center">
                       Escribe un mensaje abajo o prueba una de estas sugerencias
                     </p>
                     {/* Ejemplos cuando no hay audios */}
@@ -573,16 +586,17 @@ function App() {
                         "Hola, mi nombre es Roger y estoy aquí para ayudarte",
                         "El futuro de la comunicación está en la voz artificial"
                       ].map((example, index) => (
-                        <button
+                        <Button
                           key={index}
+                          variant="outline"
                           onClick={() => handleTTSGenerate(example)}
                           disabled={isLoading || !isInitialized}
-                          className="p-3 sm:p-4 text-left rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-primary-500 dark:hover:border-primary-400 hover:shadow-md transition-all duration-200 group disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="p-3 sm:p-4 h-auto text-left justify-start hover:border-primary hover:shadow-md transition-all duration-200"
                         >
-                          <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 group-hover:text-primary-600 dark:group-hover:text-primary-400">
+                          <p className="text-xs sm:text-sm">
                             {example}
                           </p>
-                        </button>
+                        </Button>
                       ))}
                     </div>
                   </div>
@@ -603,6 +617,7 @@ function App() {
               createConversation={createConversation}
               loadConversation={loadConversation}
               addChatMessage={addChatMessage}
+              updateConversationTitle={updateConversationTitle}
             />
           ) : mode === "search" ? (
             <SemanticSearch />
@@ -611,27 +626,28 @@ function App() {
               {currentMessages.length === 0 ? (
                 <div className="flex h-full items-center justify-center">
                   <div className="text-center max-w-2xl px-3 sm:px-4">
-                    <div className="mb-4 sm:mb-6 inline-flex p-3 sm:p-4 rounded-full bg-gradient-to-br from-primary-500/10 to-accent-500/10">
-                      <MessageSquare className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-primary-600 dark:text-primary-400" />
+                    <div className="mb-4 sm:mb-6 inline-flex p-3 sm:p-4 rounded-full bg-gradient-to-br from-primary/10 to-accent/10">
+                      <MessageSquare className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-primary" />
                     </div>
-                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                    <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-2">
                       Inicia una conversación
                     </h2>
-                    <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-6 sm:mb-8">
+                    <p className="text-sm sm:text-base text-muted-foreground mb-6 sm:mb-8">
                       Escribe un mensaje abajo o prueba una de estas sugerencias
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                       {suggestions.map((suggestion, index) => (
-                        <button
+                        <Button
                           key={index}
+                          variant="outline"
                           onClick={() => handleSuggestionClick(suggestion)}
                           disabled={!isInitialized}
-                          className="p-3 sm:p-4 text-left rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-primary-500 dark:hover:border-primary-400 hover:shadow-md transition-all duration-200 group disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="p-3 sm:p-4 h-auto text-left justify-start hover:border-primary hover:shadow-md transition-all duration-200"
                         >
-                          <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 group-hover:text-primary-600 dark:group-hover:text-primary-400">
+                          <p className="text-xs sm:text-sm">
                             {suggestion}
                           </p>
-                        </button>
+                        </Button>
                       ))}
                     </div>
                   </div>
@@ -641,7 +657,7 @@ function App() {
                   
                   {/* Mostrar mensajes */}
                   <div className="space-y-3 sm:space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
                       <MessageSquare className="h-5 w-5" />
                       Chat
                     </h3>
@@ -660,9 +676,9 @@ function App() {
         {/* Footer Area: Chat Input OR Audio Player */}
         {view === "chat" && !showSearchView && mode !== "conversational" && (
           isConversationalHistory ? (
-            <div className="bg-white dark:bg-gray-900 p-3 sm:p-4 border-t border-gray-200 dark:border-gray-800 transition-colors duration-200">
+            <div className="bg-background p-3 sm:p-4 border-t border-border transition-colors duration-200">
               <div className="max-w-4xl mx-auto">
-                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-2 uppercase tracking-wider">
+                <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2 uppercase tracking-wider">
                   <Volume2 className="h-4 w-4" />
                   Audio de la Conversación
                 </h3>

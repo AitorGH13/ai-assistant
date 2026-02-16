@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Volume2 } from "lucide-react";
+import { Label } from "./ui/Label";
 
 interface Props {
   selectedVoiceId: string;
@@ -15,7 +16,6 @@ const PREDEFINED_VOICES = [
 ];
 
 export function VoiceSelector({ selectedVoiceId, onVoiceChange }: Props) {
-  // Establecer voz por defecto (Roger) si no hay ninguna seleccionada
   useEffect(() => {
     if (!selectedVoiceId) {
       onVoiceChange(PREDEFINED_VOICES[0].id);
@@ -23,18 +23,18 @@ export function VoiceSelector({ selectedVoiceId, onVoiceChange }: Props) {
   }, [selectedVoiceId, onVoiceChange]);
 
   return (
-    <div className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 p-3 sm:p-4">
+    <div className="bg-background border-t border-border p-3 sm:p-4">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+          <div className="flex items-center gap-2 text-muted-foreground">
             <Volume2 size={18} className="flex-shrink-0" />
-            <span className="text-sm font-medium hidden sm:inline">Voz:</span>
+            <Label className="hidden sm:inline">Voz:</Label>
           </div>
           
           <select
             value={selectedVoiceId || PREDEFINED_VOICES[0].id}
             onChange={(e) => onVoiceChange(e.target.value)}
-            className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:focus:border-primary-400 transition-all cursor-pointer"
+            className="flex-1 flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all cursor-pointer"
           >
             {PREDEFINED_VOICES.map((voice) => (
               <option key={voice.id} value={voice.id}>

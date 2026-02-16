@@ -2,6 +2,11 @@ import { useState } from "react";
 import { Plus, Settings, Palette, FileText, Menu, Search, Volume2, MessageSquare, Pencil, Trash2, Mic } from "lucide-react";
 import { Theme } from "../utils/theme";
 import { Conversation } from "../types";
+import { Button } from "./ui/Button";
+import { Input } from "./ui/Input";
+import { Textarea } from "./ui/Textarea";
+import { ScrollArea } from "./ui/ScrollArea";
+import { cn } from "../lib/utils";
 
 interface Props {
     onEditConversationTitle?: (id: string, newTitle: string) => void;
@@ -59,74 +64,73 @@ export function Sidebar({
   const filteredConversations = conversations.filter((conversation) => {
     const hasMessages = conversation.messages && conversation.messages.length > 0;
     const hasTTSAudios = conversation.ttsHistory && conversation.ttsHistory.length > 0;
-    
-    // Solo mostrar conversaciones con contenido
     return hasMessages || hasTTSAudios;
   });
 
   return (
     <>
       <div
-        className={`h-full bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out ${
+        className={cn(
+          "h-full bg-background border-r border-border transition-all duration-300 ease-in-out overflow-hidden flex-shrink-0",
           isOpen ? "w-80" : "w-16"
-        } overflow-hidden flex-shrink-0`}
+        )}
       >
         <div className="flex flex-col h-full">
           {/* Header con botones de Menú y Búsqueda */}
           <div className="p-4">
             <div className="flex items-center justify-between">
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={handleMenuToggle}
-                className="-ml-3 flex items-center justify-center gap-2 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors rounded-lg"
+                className="-ml-1"
               >
-                <Menu className="h-5 w-5 text-primary-600 dark:text-primary-400 flex-shrink-0" />
-              </button>
+                <Menu className="h-5 w-5 text-primary" />
+              </Button>
               
-              {/* Botón de búsqueda - solo visible cuando el menú está desplegado */}
               {isOpen && (
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={onSearchClick}
                   disabled={showSearchView}
-                  className={`flex items-center justify-center px-4 py-3 transition-all rounded-lg ${
-                    !showSearchView&&!showSearchView && "hover:bg-gray-50 dark:hover:bg-gray-800 hover:scale-105"
-                  }`}
                   title={showSearchView ? "Búsqueda activa" : "Buscar conversaciones"}
                 >
-                  <Search className={`h-5 w-5 ${
-                    showSearchView
-                      ? "text-gray-400 dark:text-gray-500"
-                      : "text-primary-600 dark:text-primary-400"
-                  }`} />
-                </button>
+                  <Search className={cn(
+                    "h-5 w-5",
+                    showSearchView ? "text-muted-foreground" : "text-primary"
+                  )} />
+                </Button>
               )}
             </div>
           </div>
 
           {/* Botón de Nueva Conversación */}
           <div className="p-4">
-            <button
+            <Button
+              variant="ghost"
               onClick={handleNewConversationClick}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors rounded-lg"
+              className="w-full justify-center gap-2 hover:bg-accent hover:text-foreground"
             >
-              <Plus className="h-5 w-5 text-primary-600 dark:text-primary-400  flex-shrink-0" />
-              {isOpen && <span className="font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap overflow-hidden">Nueva Conversación</span>}
-            </button>
+              <Plus className="h-5 w-5 text-primary flex-shrink-0" />
+              {isOpen && <span className="font-medium whitespace-nowrap overflow-hidden">Nueva Conversación</span>}
+            </Button>
           </div>
 
           {/* Historial de Conversaciones */}
-          <div className="flex-1 overflow-y-auto scrollbar-stable" style={{ scrollbarGutter: 'stable' }}>
+          <ScrollArea className="flex-1 w-full">
             {isOpen && (
-              <div className="px-4 space-y-2">
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 px-2 whitespace-nowrap overflow-hidden transition-opacity duration-300">
+              <div className="px-4 space-y-2 w-full overflow-hidden">
+                <div className="w-full overflow-hidden">
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-3 px-2 whitespace-nowrap overflow-hidden transition-opacity duration-300">
                     Historial
                   </h3>
                   {conversations.length === 0 ? (
-                    <div className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">
+                    <div className="text-sm text-muted-foreground text-center py-8">
                       No hay conversaciones previas
                     </div>
                   ) : (
-                    <div className="space-y-1">
+                    <div className="space-y-1 w-full overflow-hidden">
                       {filteredConversations.map((conversation) => {
                         const hasMessages = conversation.messages && conversation.messages.length > 0;
                         const hasTTSAudios = conversation.ttsHistory && conversation.ttsHistory.length > 0;
@@ -137,22 +141,22 @@ export function Sidebar({
                         return (
                           <div
                             key={conversation.id}
-                            className="relative group"
+                            className="relative group w-full overflow-hidden"
                           >
                             <div
                               onClick={() => {
                                 if (editTitleId === conversation.id) return;
-
                                 onLoadConversation(conversation.id);
                                 if (window.innerWidth < 768) {
                                   onToggleSidebar();
                                 }
                               }}
-                              className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center justify-between gap-2 cursor-pointer ${
+                              className={cn(
+                                "w-full text-left px-2 py-2 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer overflow-hidden",
                                 currentConversationId === conversation.id
-                                  ? "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                                  : "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
-                              }`}
+                                  ? "bg-accent text-accent-foreground"
+                                  : "hover:bg-accent/50 text-foreground"
+                              )}
                               style={{ position: "relative" }}
                               role="button"
                               tabIndex={0}
@@ -167,12 +171,12 @@ export function Sidebar({
                                 }
                               }}
                             >
-                              <div className="flex items-center gap-2 min-w-0 flex-1">
-                                {/* Icon that changes on hover: chat icon becomes edit icon */}
+                              <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+                                {/* Icon that changes on hover */}
                                 <div className="flex-shrink-0 relative">
                                   {hasConversationalAudio ? (
                                     <>
-                                      <Mic size={16} className="text-gray-600 dark:text-gray-400 group-hover:opacity-0 transition-opacity" />
+                                      <Mic size={16} className="text-muted-foreground group-hover:opacity-0 transition-opacity" />
                                       <button
                                         onClick={e => {
                                           e.stopPropagation();
@@ -182,12 +186,12 @@ export function Sidebar({
                                         className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
                                         aria-label="Editar nombre"
                                       >
-                                        <Pencil size={16} className="text-gray-600 dark:text-gray-400" />
+                                        <Pencil size={16} className="text-muted-foreground hover:text-primary transition-colors" />
                                       </button>
                                     </>
                                   ) : hasTTSAudios && !hasMessages ? (
                                     <>
-                                      <Volume2 size={16} className="text-gray-600 dark:text-gray-400 group-hover:opacity-0 transition-opacity" />
+                                      <Volume2 size={16} className="text-muted-foreground group-hover:opacity-0 transition-opacity" />
                                       <button
                                         onClick={e => {
                                           e.stopPropagation();
@@ -197,12 +201,12 @@ export function Sidebar({
                                         className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
                                         aria-label="Editar nombre"
                                       >
-                                        <Pencil size={16} className="text-gray-600 dark:text-gray-400" />
+                                        <Pencil size={16} className="text-muted-foreground hover:text-primary transition-colors" />
                                       </button>
                                     </>
                                   ) : (
                                     <>
-                                      <MessageSquare size={16} className="text-gray-600 dark:text-gray-400 group-hover:opacity-0 transition-opacity" />
+                                      <MessageSquare size={16} className="text-muted-foreground group-hover:opacity-0 transition-opacity" />
                                       <button
                                         onClick={e => {
                                           e.stopPropagation();
@@ -212,21 +216,20 @@ export function Sidebar({
                                         className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
                                         aria-label="Editar nombre"
                                       >
-                                        <Pencil size={16} className="text-gray-600 dark:text-gray-400 hover:text-primary-600 hover:dark:text-primary-400 transition-colors" />
+                                        <Pencil size={16} className="text-muted-foreground hover:text-primary transition-colors" />
                                       </button>
                                     </>
                                   )}
                                 </div>
                                 {isEditing ? (
-                                  <input
+                                  <Input
                                     type="text"
                                     value={editTitleValue}
                                     onChange={e => setEditTitleValue(e.target.value)}
                                     onClick={e => e.stopPropagation()}
-                                    className="text-sm truncate bg-transparent border border-primary-300 dark:border-primary-700 rounded px-2 py-1 focus:outline-none focus:border-primary-500 dark:focus:border-primary-400 text-gray-900 dark:text-gray-100"
+                                    className="text-sm h-7 px-2 py-1"
                                     autoFocus
                                     onBlur={() => {
-                                      // Si pierde el foco, cancelar edición sin guardar
                                       setEditTitleId(null);
                                     }}
                                     onKeyDown={e => {
@@ -248,23 +251,25 @@ export function Sidebar({
                                     }}
                                   />
                                 ) : (
-                                  <span className="text-sm truncate">
+                                  <span className="text-sm truncate block">
                                     {conversation.title}
                                   </span>
                                 )}
                               </div>
-                              {/* Delete button - appears on hover replacing 3 dots */}
-                              <button
+                              {/* Delete button */}
+                              <Button
+                                variant="ghost"
+                                size="icon"
                                 onClick={e => {
                                   e.stopPropagation();
                                   onDeleteConversation(conversation.id);
                                 }}
-                                className="p-1 rounded transition-all duration-200 flex-shrink-0 focus:outline-none group-hover:opacity-100 opacity-0 bg-transparent"
+                                className="p-1 h-7 w-7 min-h-[28px] min-w-[28px] flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-200"
                                 aria-label="Eliminar"
                                 style={{ zIndex: 2 }}
                               >
-                                <Trash2 size={16} className="text-gray-600 dark:text-gray-400 hover:text-primary-600 hover:dark:text-primary-400 transition-colors" />
-                              </button>
+                                <Trash2 size={14} className="text-muted-foreground hover:text-primary transition-colors" />
+                              </Button>
                             </div>
                           </div>
                         );
@@ -274,62 +279,60 @@ export function Sidebar({
                 </div>
               </div>
             )}
-          </div>
+          </ScrollArea>
 
           {/* Configuración */}
           <div className="p-4">
-            <button
+            <Button
+              variant={showFloatingSettings ? "secondary" : "ghost"}
               onClick={handleSettingsClick}
-              className={`w-full flex items-center gap-3 px-4 py-3 transition-all duration-500 ease-in-out justify-center rounded-lg shadow-md ${
-                showFloatingSettings
-                  ? "bg-primary-200 dark:bg-primary-800/50"
-                  : "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
-              }`}
+              className="w-full justify-center gap-3 shadow-md hover:bg-accent hover:text-foreground"
             >
-              <Settings className="h-5 w-5 text-primary-600 dark:text-primary-400 flex-shrink-0" />
+              <Settings className="h-5 w-5 text-primary flex-shrink-0" />
               {isOpen && (
-              <span className="font-medium text-gray-900 dark:text-gray-100">
+              <span className="font-medium">
               Configuración
               </span>
               )}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
 
       {/* Panel flotante de configuración */}
       {showFloatingSettings && (
-        <div className="absolute bottom-20 left-20 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 animate-slide-in-bottom">
+        <div className="absolute bottom-20 left-20 w-80 bg-popover rounded-lg shadow-xl border border-border z-50 animate-slide-in-bottom">
           <div className="p-4 space-y-3">
             {/* Cambiar Tema */}
-            <button
+            <Button
+              variant="ghost"
               onClick={onToggleTheme}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left"
+              className="w-full justify-start gap-3 hover:bg-accent hover:text-foreground"
             >
-              <Palette className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-              <span className="text-sm text-gray-900 dark:text-gray-100">Cambiar Tema</span>
-              <span className="ml-auto text-xs text-gray-500 dark:text-gray-400 capitalize">
+              <Palette className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm">Cambiar Tema</span>
+              <span className="ml-auto text-xs text-muted-foreground capitalize">
                 {theme}
               </span>
-            </button>
+            </Button>
 
             {/* Instrucciones del Chat */}
             <div className="px-3 py-2">
               <div className="flex items-center gap-2 mb-2">
-                <FileText className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                <label className="text-sm font-medium text-foreground">
                   Instrucciones del Chat
                 </label>
               </div>
-              <textarea
+              <Textarea
                 value={systemPrompt}
                 onChange={(e) => onSystemPromptChange(e.target.value)}
                 placeholder="Por ejemplo: Eres un asistente útil..."
                 rows={3}
-                className="w-full resize-none rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:border-primary-500 dark:focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 transition-all duration-200"
+                className="resize-none"
               />
               {systemPrompt && (
-                <p className="mt-1 text-xs text-primary-600 dark:text-primary-400">
+                <p className="mt-1 text-xs text-primary">
                   Instrucciones personalizadas activas
                 </p>
               )}

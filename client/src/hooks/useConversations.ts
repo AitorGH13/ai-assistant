@@ -455,23 +455,25 @@ export function useConversations(): {
         .then(({ error }: { error: Error | null }) => {
           if (error) {
             console.error("Failed to upsert conversation metadata:", error);
+            return;
           }
-        });
 
-      void supabase
-        .from("messages")
-        .upsert({
-          id: message.id,
-          conversation_id: targetConversationId,
-          role: message.role,
-          content: message.content,
-          tool_used: Boolean(message.toolUsed),
-          created_at: message.timestamp,
-        })
-        .then(({ error }: { error: Error | null }) => {
-          if (error) {
-            console.error("Failed to persist message:", error);
-          }
+          // Solo insertar el mensaje DESPUÉS de que la conversación exista en DB
+          return supabase
+            .from("messages")
+            .upsert({
+              id: message.id,
+              conversation_id: targetConversationId,
+              role: message.role,
+              content: message.content,
+              tool_used: Boolean(message.toolUsed),
+              created_at: message.timestamp,
+            })
+            .then(({ error }: { error: Error | null }) => {
+              if (error) {
+                console.error("Failed to persist message:", error);
+              }
+            });
         });
     },
     [createConversation, currentConversationId, generateTitle, user, conversations]
@@ -515,13 +517,17 @@ export function useConversations(): {
           let title = conversation.title;
 
           // Lógica de actualización de título en el estado local
-          if (isNewTTSConversation) {
+           if (isNewTTSConversation) {
              if (conversation.messages.length === 0) {
-               title = titleToSave; 
+               if (conversation.title === "Nueva conversación") {
+                 title = titleToSave;
+               }
              } else if (audio.voiceId === "conversational-ai") {
-               title = generateTitle(conversation.messages);
+               if (conversation.title === "Nueva conversación") {
+                 title = generateTitle(conversation.messages);
+               }
              }
-          }
+           }
 
           return {
             ...conversation,

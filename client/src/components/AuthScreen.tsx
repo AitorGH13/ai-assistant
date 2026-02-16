@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthProvider";
 import { Loader2 } from "lucide-react";
+import { Button } from "./ui/Button";
+import { Input } from "./ui/Input";
+import { Label } from "./ui/Label";
+import { Card, CardContent } from "./ui/Card";
 
 export function AuthScreen() {
   const { signIn, signUp } = useAuth();
@@ -44,7 +48,6 @@ export function AuthScreen() {
       if (mode === "login") {
         result = await signIn(email.trim(), password);
       } else {
-        // Enviar el full_name al nuevo método signUp
         result = await signUp(email.trim(), password, { 
           full_name: fullName.trim() 
         });
@@ -55,7 +58,6 @@ export function AuthScreen() {
       } else if (mode === "signup") {
         setError(null);
         setMode("login");
-        // Limpiar formulario tras registro exitoso
         setFullName("");
         setPassword("");
         setConfirmPassword("");
@@ -69,101 +71,113 @@ export function AuthScreen() {
   };
 
   return (
-    <div className="h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
-      <div className="w-full max-w-sm bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg">
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            AI Assistant
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {mode === "login" ? "Inicia sesión para continuar" : "Crea una cuenta nueva"}
-          </p>
-        </div>
-
-        {error && (
-          <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
-            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+    <div className="h-screen flex items-center justify-center bg-background px-4">
+      <Card className="w-full max-w-sm shadow-lg">
+        <CardContent className="p-6">
+          <div className="text-center mb-6">
+            <h1 className="text-2xl font-bold text-foreground">
+              AI Assistant
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              {mode === "login" ? "Inicia sesión para continuar" : "Crea una cuenta nueva"}
+            </p>
           </div>
-        )}
 
-        <form onSubmit={handleSubmit} className="space-y-3">
-          {/* Campo Nombre Completo (Solo Signup) */}
-          {mode === "signup" && (
-            <input
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
-              placeholder="Nombre completo"
-              type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              disabled={isSubmitting}
-            />
+          {error && (
+            <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/30">
+              <p className="text-sm text-destructive">{error}</p>
+            </div>
           )}
 
-          <input
-            className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
-            placeholder="Email"
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            disabled={isSubmitting}
-          />
-          
-          <input
-            className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
-            placeholder="Contraseña"
-            type="password"
-            autoComplete={mode === "login" ? "current-password" : "new-password"}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            disabled={isSubmitting}
-          />
-
-          {/* Campo Confirmar Contraseña (Solo Signup) */}
-          {mode === "signup" && (
-            <input
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
-              placeholder="Confirmar contraseña"
-              type="password"
-              autoComplete="new-password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              disabled={isSubmitting}
-            />
-          )}
-
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full py-2.5 rounded-lg bg-primary-800 hover:bg-primary-700 disabled:bg-primary-400 text-white font-medium transition-colors flex items-center justify-center gap-2"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 size={16} className="animate-spin" />
-                {mode === "login" ? "Iniciando sesión..." : "Creando cuenta..."}
-              </>
-            ) : (
-              mode === "login" ? "Iniciar sesión" : "Crear cuenta"
+          <form onSubmit={handleSubmit} className="space-y-3">
+            {mode === "signup" && (
+              <div className="space-y-1.5">
+                <Label htmlFor="fullName">Nombre completo</Label>
+                <Input
+                  id="fullName"
+                  placeholder="Nombre completo"
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  disabled={isSubmitting}
+                />
+              </div>
             )}
-          </button>
-        </form>
 
-        <p className="mt-4 text-center text-sm text-gray-600 dark:text-gray-400">
-          {mode === "login" ? "¿No tienes cuenta?" : "¿Ya tienes cuenta?"}{" "}
-          <button
-            onClick={() => {
-              setMode(mode === "login" ? "signup" : "login");
-              setError(null);
-              // Limpiar confirmar pass al cambiar de modo
-              setConfirmPassword(""); 
-            }}
-            className="text-primary-600 dark:text-primary-400 hover:underline font-medium"
-            disabled={isSubmitting}
-          >
-            {mode === "login" ? "Crear cuenta" : "Iniciar sesión"}
-          </button>
-        </p>
-      </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                placeholder="Email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="password">Contraseña</Label>
+              <Input
+                id="password"
+                placeholder="Contraseña"
+                type="password"
+                autoComplete={mode === "login" ? "current-password" : "new-password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={isSubmitting}
+              />
+            </div>
+
+            {mode === "signup" && (
+              <div className="space-y-1.5">
+                <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
+                <Input
+                  id="confirmPassword"
+                  placeholder="Confirmar contraseña"
+                  type="password"
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  disabled={isSubmitting}
+                />
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 size={16} className="animate-spin mr-2" />
+                  {mode === "login" ? "Iniciando sesión..." : "Creando cuenta..."}
+                </>
+              ) : (
+                mode === "login" ? "Iniciar sesión" : "Crear cuenta"
+              )}
+            </Button>
+          </form>
+
+          <p className="mt-4 text-center text-sm text-muted-foreground">
+            {mode === "login" ? "¿No tienes cuenta?" : "¿Ya tienes cuenta?"}{" "}
+            <Button
+              variant="link"
+              onClick={() => {
+                setMode(mode === "login" ? "signup" : "login");
+                setError(null);
+                setConfirmPassword(""); 
+              }}
+              disabled={isSubmitting}
+              className="p-0 h-auto font-medium"
+            >
+              {mode === "login" ? "Crear cuenta" : "Iniciar sesión"}
+            </Button>
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }
