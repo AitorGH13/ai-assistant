@@ -141,13 +141,18 @@ function App() {
     deleteConversation(conversationId);
   };
 
- const handleSearchClick = () => {
+  const handleSearchClick = () => {
     if (view === "profile") {
       setShowSearchView(true);
       setView("chat");
     } else {
-      setShowSearchView(!showSearchView);
-      if (!showSearchView) {
+      const nextShowSearch = !showSearchView;
+      setShowSearchView(nextShowSearch);
+      
+      if (nextShowSearch) {
+        // Al abrir el buscador, deseleccionamos el chat actual
+        createConversation(); 
+      } else {
         setSearchQuery("");
       }
     }
