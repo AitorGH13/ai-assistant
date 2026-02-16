@@ -22,15 +22,19 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
   const [isTextareaFocused, setIsTextareaFocused] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  const prevDisabledRef = useRef(disabled);
 
-  // Auto-focus textarea when disabled state changes to false (e.g. after sending a message)
+  // Auto-focus textarea only when re-enabling (e.g. after sending a message),
+  // avoiding focus on initial mount or conversation switch
   useEffect(() => {
-    if (!disabled && textareaRef.current) {
-      // Small timeout to ensure DOM update is complete
+    // Si estaba deshabilitado y ahora está habilitado -> Foco (se completó envío del mensaje)
+    if (prevDisabledRef.current && !disabled) {
       setTimeout(() => {
         textareaRef.current?.focus();
       }, 10);
     }
+    prevDisabledRef.current = disabled;
   }, [disabled]);
 
   const handleSubmit = () => {
