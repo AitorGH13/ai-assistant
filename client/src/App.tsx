@@ -646,7 +646,7 @@ function App() {
                 <>
                   {/* TTS Header cuando no hay audios */}
                   <div className="flex flex-col items-center mb-8 mt-4">
-                    <div className="mb-4 sm:mb-6 inline-flex p-3 sm:p-4 rounded-full bg-gradient-to-br from-primary/10 to-accent/10">
+                    <div className="mb-4 sm:mb-6 inline-flex p-3 sm:p-4 rounded-full bg-primary/20 dark:bg-primary/20 ring-8 ring-primary/10 shadow-inner">
                       <Volume2 className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-primary" />
                     </div>
                     <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-2">
@@ -704,7 +704,7 @@ function App() {
               {currentMessages.length === 0 ? (
                 <div className="flex h-full items-center justify-center">
                   <div className="text-center max-w-2xl px-3 sm:px-4">
-                    <div className="mb-4 sm:mb-6 inline-flex p-3 sm:p-4 rounded-full bg-gradient-to-br from-primary/10 to-accent/10">
+                    <div className="mb-4 sm:mb-6 inline-flex p-3 sm:p-4 rounded-full bg-primary/20 dark:bg-primary/20 ring-8 ring-primary/10 shadow-inner">
                       {conversations.find(c => c.id === currentConversationId)?.isTemporary ? (
                         <MessageSquareDashed className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-primary" />
                       ) : (
@@ -716,7 +716,7 @@ function App() {
                     </h2>
                     <p className="text-sm sm:text-base text-muted-foreground mb-6 sm:mb-8">
                        {conversations.find(c => c.id === currentConversationId)?.isTemporary 
-                         ? "Este chat es efímero. Los mensajes no se guardarán en tu historial y desaparecerán al recargar la página o cambiar de conversación." 
+                         ? "Los mensajes no se guardan y se borrarán al salir o refrescar la página." 
                          : "Escribe un mensaje abajo o prueba una de estas sugerencias"}
                     </p>
                     

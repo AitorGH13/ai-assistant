@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Conversation, ChatMessage, TTSAudio, MessageContent } from "../types";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../context/AuthProvider";
@@ -66,6 +66,7 @@ export function useConversations(): {
   const [currentMessages, setCurrentMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const temporaryConversationIds = useRef<Set<string>>(new Set());
 
   const generateTitle = useCallback((messages: ChatMessage[]): string => {
     const firstUserMessage = messages.find((message) => message.role === "user");
@@ -244,7 +245,11 @@ export function useConversations(): {
       ttsHistory: [],
       isTemporary,
     };
-
+    
+    if (isTemporary) {
+      temporaryConversationIds.current.add(newId);
+    }
+    
     setConversations((prev) => sortConversations([newConversation, ...prev]));
     setCurrentConversationId(newId);
     setCurrentMessages([]);
@@ -470,6 +475,7 @@ export function useConversations(): {
       if (!user) return;
 
       // START CHECK FOR TEMPORARY
+      if (temporaryConversationIds.current.has(targetConversationId)) return;
       const convoToCheck = conversations.find(c => c.id === targetConversationId);
       if (convoToCheck?.isTemporary) return;
       // END CHECK FOR TEMPORARY
@@ -580,6 +586,7 @@ export function useConversations(): {
       if (!user) return;
 
       // START CHECK FOR TEMPORARY
+      if (temporaryConversationIds.current.has(targetConversationId)) return;
       const convoToCheck = conversations.find(c => c.id === targetConversationId);
       if (convoToCheck?.isTemporary) return;
       // END CHECK FOR TEMPORARY
@@ -655,6 +662,10 @@ export function useConversations(): {
       );
       return sortConversations(updated);
     });
+
+    if (temporaryConversationIds.current.has(id)) return;
+    const existing = conversations.find(c => c.id === id);
+    if (existing?.isTemporary) return;
 
     void supabase
       .from("conversations")
