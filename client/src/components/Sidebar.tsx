@@ -71,7 +71,7 @@ export function Sidebar({
     <>
       <div
         className={cn(
-          "h-full bg-background border-r border-border transition-all duration-300 ease-in-out overflow-hidden flex-shrink-0",
+          "h-full bg-slate-200 dark:bg-slate-900 transition-all duration-300 ease-in-out overflow-hidden flex-shrink-0",
           isOpen ? "w-80" : "w-16"
         )}
       >
@@ -83,7 +83,7 @@ export function Sidebar({
                 variant="ghost"
                 size="icon"
                 onClick={handleMenuToggle}
-                className="-ml-1"
+                className="-ml-1 hover:bg-accent/50"
               >
                 <Menu className="h-5 w-5 text-primary" />
               </Button>
@@ -95,6 +95,7 @@ export function Sidebar({
                   onClick={onSearchClick}
                   disabled={showSearchView}
                   title={showSearchView ? "Búsqueda activa" : "Buscar conversaciones"}
+                  className="hover:bg-accent/50"
                 >
                   <Search className={cn(
                     "h-5 w-5",
@@ -110,7 +111,7 @@ export function Sidebar({
             <Button
               variant="ghost"
               onClick={handleNewConversationClick}
-              className="w-full justify-center gap-2 hover:bg-accent hover:text-foreground"
+              className="w-full justify-center gap-2 hover:bg-accent/50 hover:text-foreground"
             >
               <Plus className="h-5 w-5 text-primary flex-shrink-0" />
               {isOpen && <span className="font-medium whitespace-nowrap overflow-hidden">Nueva Conversación</span>}
@@ -284,11 +285,16 @@ export function Sidebar({
           {/* Configuración */}
           <div className="p-4">
             <Button
-              variant={showFloatingSettings ? "secondary" : "ghost"}
+              variant="ghost"
               onClick={handleSettingsClick}
-              className="w-full justify-center gap-3 shadow-md hover:bg-accent hover:text-foreground"
+              className={cn(
+                "w-full justify-center gap-3 text-foreground hover:text-foreground",
+                showFloatingSettings 
+                  ? "bg-blue-200 dark:bg-blue-500/20 hover:bg-blue-200 dark:hover:bg-blue-500/20" 
+                  : "hover:bg-accent/50"
+              )}
             >
-              <Settings className="h-5 w-5 text-primary flex-shrink-0" />
+              <Settings className="h-5 w-5 flex-shrink-0 text-primary" />
               {isOpen && (
               <span className="font-medium">
               Configuración
@@ -301,7 +307,7 @@ export function Sidebar({
 
       {/* Panel flotante de configuración */}
       {showFloatingSettings && (
-        <div className="absolute bottom-20 left-20 w-80 bg-popover rounded-lg shadow-xl border border-border z-50 animate-slide-in-bottom">
+        <div className="absolute bottom-20 left-20 w-80 bg-slate-200 dark:bg-slate-900 rounded-lg shadow-xl border border-border z-50 animate-slide-in-bottom">
           <div className="p-4 space-y-3">
             {/* Cambiar Tema */}
             <Button

@@ -87,18 +87,22 @@ export function ConversationalAI({
                 voiceName: "ElevenLabs Agent",
               };
               
-              // Guardar la transcripción completa como mensaje en el historial
-              if (transcription && convId) {
-                const chatMessage = {
-                  id: crypto.randomUUID(),
-                  role: 'assistant' as const,
-                  content: transcription,
-                  timestamp: new Date().toISOString(),
-                };
-                addChatMessage(chatMessage, convId);
-              }
+                // Guardar la transcripción completa como mensaje en el historial
+                if (transcription && convId) {
+                  const chatMessage = {
+                    id: crypto.randomUUID(),
+                    role: 'assistant' as const,
+                    content: transcription,
+                    timestamp: new Date().toISOString(),
+                  };
+                  await addChatMessage(chatMessage, convId);
+                }
 
-              addTTSAudio(audioEntry, convId);
+                await addTTSAudio(audioEntry, convId);
+                
+                // Forzar actualización del título al final para asegurar que prevalece sobre cualquier
+                // título generado automáticamente por addChatMessage o addTTSAudio
+                updateConversationTitle(convId, `Conversación - ${durationString}`);
               } else {
                 setTimeout(() => tryFetchAudio(attempts + 1, maxAttempts), 3000);
               }
@@ -251,7 +255,7 @@ export function ConversationalAI({
             onClick={handleStopConversation}
             className={cn(
               "relative z-10 w-56 h-56 sm:w-72 sm:h-72 min-h-[224px] min-w-[224px] rounded-full transition-all duration-300",
-              "shadow-2xl hover:scale-105 active:scale-95",
+              "shadow-2xl hover:scale-105 active:scale-95 hover:bg-primary",
               isAiSpeaking
                 ? "shadow-[0_0_80px_rgba(77,115,255,0.4)] ring-8 ring-primary/40"
                 : "ring-8 ring-primary/20 animate-pulse"
@@ -266,7 +270,7 @@ export function ConversationalAI({
             disabled={conversationStatus === "connecting"}
             className={cn(
               "relative z-10 w-56 h-56 sm:w-72 sm:h-72 min-h-[224px] min-w-[224px] rounded-full transition-all duration-300",
-              "shadow-2xl hover:scale-105 active:scale-95 disabled:hover:scale-100"
+              "shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] dark:shadow-[0_0_60px_rgba(77,115,255,0.4)] hover:scale-105 active:scale-95 disabled:hover:scale-100 hover:bg-primary"
             )}
             aria-label="Iniciar conversación"
           >

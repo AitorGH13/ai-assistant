@@ -133,9 +133,12 @@ async def generate_stream(messages: list, system_prompt: str | None, mode: str =
         # Prepare conversation input for Chat Completions API
         conversation_input = []
         
-        # Add system message if provided
+        # Add system message if provided, or use default
         if system_prompt:
             conversation_input.append({"role": "system", "content": system_prompt})
+        else:
+            default_prompt = "Por defecto responderás siempre en español, a menos que el usuario te hable en otro idioma o te pida explícitamente lo contrario."
+            conversation_input.append({"role": "system", "content": default_prompt})
         
         # Convert messages to OpenAI format
         for m in messages:

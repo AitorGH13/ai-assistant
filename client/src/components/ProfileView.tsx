@@ -68,7 +68,7 @@ export function ProfileView({ }: ProfileViewProps) {
           <div className="space-y-4 mb-6">
             
             {/* Sección Nombre Completo */}
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted">
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-200 dark:bg-slate-900">
               <UserIcon size={18} className="text-muted-foreground flex-shrink-0" />
               
               <div className="flex-1">
@@ -123,7 +123,7 @@ export function ProfileView({ }: ProfileViewProps) {
             </div>
 
             {/* Email */}
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted">
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-200 dark:bg-slate-900">
               <Mail size={18} className="text-muted-foreground flex-shrink-0" />
               <div>
                 <p className="text-xs text-muted-foreground">Email</p>
@@ -133,7 +133,7 @@ export function ProfileView({ }: ProfileViewProps) {
 
             {/* Fecha creación */}
             {createdAt && (
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted">
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-200 dark:bg-slate-900">
                 <Calendar size={18} className="text-muted-foreground flex-shrink-0" />
                 <div>
                   <p className="text-xs text-muted-foreground">Cuenta creada</p>
