@@ -762,11 +762,6 @@ function App() {
                           <Mic className="h-5 w-5" />
                           Conversación de Voz
                         </h3>
-                        {conversations.find(c => c.id === currentConversationId)?.isTemporary && (
-                          <span className="text-xs text-muted-foreground bg-accent/50 px-2 py-1 rounded-md">
-                            No se guarda en el historial
-                          </span>
-                        )}
                       </div>
                       <TTSAudioList 
                         audios={currentTTSHistory} 
@@ -841,11 +836,6 @@ function App() {
                           </>
                         )}
                       </h3>
-                      {conversations.find(c => c.id === currentConversationId)?.isTemporary && (
-                        <span className="text-xs text-muted-foreground bg-accent/50 px-2 py-1 rounded-md">
-                          No se guarda en el historial
-                        </span>
-                      )}
                     </div>
                     {currentMessages.map((message: ChatMessageType, index: number) => (
                       <ChatMessage key={`${message.id}-${index}`} message={message} theme={theme} />
