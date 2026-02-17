@@ -11,7 +11,7 @@ import { Input } from "./components/ui/Input";
 import { Button } from "./components/ui/Button";
 import { ChatMessage as ChatMessageType, AppMode, MessageContent, TTSAudio, Conversation } from "./types";
 import { useTheme } from "./utils/theme";
-import { MessageSquare, Volume2, Mic, Trash2, UserCircle2, Pencil, MessageSquareDashed } from "lucide-react";
+import { MessageSquare, Volume2, Mic, Trash2, UserCircle2, Pencil, MessageSquareDashed, Loader2 } from "lucide-react";
 import { useConversations } from "./hooks/useConversations";
 import { useAuth } from "./context/AuthProvider";
 import { supabase } from "./lib/supabase";
@@ -94,6 +94,22 @@ function App() {
   };
 
   const handleLoadConversation = (conversationId: string) => {
+    // Sincronizar el modo inmediatamente para evitar parpadeos si ya lo tenemos en el listado
+    const conversation = conversations.find(c => c.id === conversationId);
+    if (conversation) {
+      const hasConversationalAudio = conversation.ttsHistory?.some(audio => audio.voiceId === 'conversational-ai');
+      const hasTTSAudios = conversation.ttsHistory && conversation.ttsHistory.length > 0;
+      const hasMessages = conversation.messages && conversation.messages.length > 0;
+
+      if (hasConversationalAudio) {
+        setMode("conversational");
+      } else if (hasTTSAudios) {
+        setMode("tts");
+      } else if (hasMessages) {
+        setMode("chat");
+      }
+    }
+
     loadConversation(conversationId);
     handleCloseSearch();
     setView("chat");
@@ -655,6 +671,11 @@ function App() {
                   </div>
                 )}
               </div>
+            </div>
+          ) : isMessagesLoading && currentMessages.length === 0 && currentTTSHistory.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center bg-background gap-3">
+              <Loader2 className="animate-spin h-8 w-8 text-primary" />
+              <span className="text-sm text-muted-foreground">Cargando conversación...</span>
             </div>
           ) : mode === "tts" ? (
             <div className="max-w-4xl mx-auto">

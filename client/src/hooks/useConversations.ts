@@ -87,8 +87,12 @@ export function useConversations(): {
     
     // Optimistic / Cache check
     const local = conversations.find(c => c.id === id);
-    if (local && local.messages.length > 0) {
+    if (local && (local.messages.length > 0 || (local.ttsHistory && local.ttsHistory.length > 0))) {
       setCurrentMessages(local.messages);
+      // We still fetch to ensure we have the latest, but we don't necessarily need to set global loading
+    } else {
+      setCurrentMessages([]);
+      setIsLoading(true); // Only show loader if we have NO cache
     }
 
     try {
@@ -113,6 +117,8 @@ export function useConversations(): {
         ));
     } catch (error) {
         console.error("Failed to load conversation:", error);
+    } finally {
+        setIsLoading(false);
     }
   }, [conversations]);
 
