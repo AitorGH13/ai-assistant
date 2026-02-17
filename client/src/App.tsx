@@ -11,7 +11,7 @@ import { Input } from "./components/ui/Input";
 import { Button } from "./components/ui/Button";
 import { ChatMessage as ChatMessageType, AppMode, MessageContent, TTSAudio, Conversation } from "./types";
 import { useTheme } from "./utils/theme";
-import { MessageSquare, Volume2, Mic, Trash2, UserCircle2, Pencil, MessageSquareDashed, Loader2 } from "lucide-react";
+import { MessageSquare, Volume2, Mic, Trash2, UserCircle2, Pencil, MessageSquareDashed, Loader2, Menu } from "lucide-react";
 import { useConversations } from "./hooks/useConversations";
 import { useAuth } from "./context/AuthProvider";
 import { supabase } from "./lib/supabase";
@@ -525,7 +525,17 @@ function App() {
 
       <div className="flex flex-col flex-1 min-w-0">
         <div className="bg-background px-3 sm:px-4 py-2 sm:py-3 flex items-center gap-3 justify-between">
-          <div className="flex-1 flex justify-start">
+          <div className="flex-1 flex justify-start items-center gap-2">
+            {!isSidebarOpen && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsSidebarOpen(true)}
+                className="md:hidden hover:bg-accent/50"
+              >
+                <Menu className="h-5 w-5 text-primary" />
+              </Button>
+            )}
             <h1 className="text-lg sm:text-xl font-bold text-foreground">
               AI Assistant
             </h1>

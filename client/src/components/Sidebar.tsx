@@ -56,6 +56,9 @@ export function Sidebar({
   const handleNewConversationClick = () => {
     onCloseSearch();
     onNewConversation();
+    if (window.innerWidth < 768 && isOpen) {
+      onToggleSidebar();
+    }
   };
 
   const handleMenuToggle = () => {
@@ -84,10 +87,21 @@ export function Sidebar({
 
   return (
     <>
+      {/* Backdrop for mobile */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 md:hidden animate-fade-in"
+          onClick={onToggleSidebar}
+        />
+      )}
+
       <div
         className={cn(
-          "h-full bg-slate-200 dark:bg-slate-900 transition-all duration-300 ease-in-out overflow-hidden flex-shrink-0",
-          isOpen ? "w-88" : "w-16"
+          "bg-slate-200 dark:bg-slate-900 transition-all duration-300 ease-in-out overflow-hidden flex-shrink-0 z-50",
+          "fixed inset-y-0 left-0 md:relative h-full",
+          isOpen
+            ? "w-88 translate-x-0 shadow-2xl md:shadow-none"
+            : "w-88 -translate-x-full md:translate-x-0 md:w-16"
         )}
       >
         <div className="flex flex-col h-full">
@@ -107,7 +121,12 @@ export function Sidebar({
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={onSearchClick}
+                  onClick={() => {
+                    onSearchClick();
+                    if (window.innerWidth < 768 && isOpen) {
+                      onToggleSidebar();
+                    }
+                  }}
                   disabled={showSearchView}
                   title={showSearchView ? "Búsqueda activa" : "Buscar conversaciones"}
                   className="hover:bg-accent/50"
@@ -145,6 +164,9 @@ export function Sidebar({
                      onNewConversation();
                    } else {
                      onNewTemporaryConversation();
+                   }
+                   if (window.innerWidth < 768 && isOpen) {
+                     onToggleSidebar();
                    }
                 }}
                 className={cn(
