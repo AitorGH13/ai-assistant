@@ -111,9 +111,17 @@ export function useConversations(): {
         
         const ttsHistory = data.ttsHistory || [];
         
-        // Update local cache with BOTH messages and TTS history
+        // Update local cache with messages, TTS history, AND title
         setConversations(prev => prev.map(c => 
-            c.id === id ? { ...c, messages: messages, ttsHistory: ttsHistory } : c
+            c.id === id ? { 
+                ...c, 
+                messages: messages, 
+                ttsHistory: ttsHistory,
+                // Only update title if provided and not empty (to avoid overwriting with empty if backend response is weird)
+                title: data.title || c.title,
+                // If it was local, mark as synced (isLocal: false) since we fetched it from backend
+                isLocal: false 
+            } : c
         ));
     } catch (error) {
         console.error("Failed to load conversation:", error);

@@ -23,11 +23,6 @@ class ChatRequest(BaseModel):
     model: str = "gpt-4o-mini"
     is_temporary: bool = False
 
-class ChatResponse(BaseModel):
-    response: str
-    conversation_id: UUID
-    history: List[Message] # Return clean Message objects, not raw dicts
-
 class JSONBMessage(BaseModel):
     id: int # 0=User, 1=AI
     msg: str
@@ -45,5 +40,6 @@ class TTSAudio(BaseModel):
 class ChatResponse(BaseModel):
     response: str
     conversation_id: UUID
+    title: Optional[str] = None
     history: List[Message]
     ttsHistory: Optional[List[TTSAudio]] = []

@@ -251,19 +251,21 @@ async def get_conversation(conversation_id: UUID, user_id: UUID = Depends(get_cu
             meta = transcripts[0]
             # Try to get text from 'msg' (standard) or 'text' (legacy/tts)
             text_content = meta.get("msg") or meta.get("text") or "Audio"
+            audio_url = session.get("audio_url")
             tts_history.append(TTSAudio(
                 id=str(session.get("id")),
                 text=text_content,
-                audioUrl=session.get("audio_url", ""),
-                timestamp=meta.get("timestamp", datetime.utcnow().timestamp() * 1000), # Ensure valid float
+                audioUrl=audio_url if audio_url else "", # Handle None
+                timestamp=meta.get("timestamp") or datetime.utcnow().timestamp() * 1000,
                 voiceId=meta.get("voice_id") or "conversational-ai",
-                voiceName=meta.get("voice_name", "Unknown Voice"),
+                voiceName=meta.get("voice_name") or "Unknown Voice", # Handle None
                 transcript=transcripts
             ))
 
     return ChatResponse(
         response="OK",
         conversation_id=conversation_id,
+        title=conversation.get("title"),
         history=messages,
         ttsHistory=tts_history
     )
