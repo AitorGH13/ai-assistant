@@ -54,4 +54,28 @@ class ElevenLabsService:
             if chunk:
                 yield chunk
 
+    def get_conversation(self, conversation_id: str) -> dict:
+        """
+        Fetch conversation metadata and transcript from ElevenLabs.
+        """
+        url = f"{self.api_url}/convai/conversations/{conversation_id}"
+        response = requests.get(url, headers=self.headers)
+        
+        if response.status_code != 200:
+            raise Exception(f"ElevenLabs API Error (get_conversation): {response.status_code} - {response.text}")
+            
+        return response.json()
+
+    def get_audio(self, conversation_id: str) -> bytes:
+        """
+        Fetch the audio of the conversation.
+        """
+        url = f"{self.api_url}/convai/conversations/{conversation_id}/audio"
+        response = requests.get(url, headers=self.headers)
+        
+        if response.status_code != 200:
+            raise Exception(f"ElevenLabs API Error (get_audio): {response.status_code} - {response.text}")
+            
+        return response.content
+
 elevenlabs_service = ElevenLabsService()

@@ -1,6 +1,6 @@
 from supabase import create_client, Client
 from app.core.config import settings
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 from uuid import UUID
 
 class SupabaseService:
@@ -58,7 +58,7 @@ class SupabaseService:
         response = self.client.table("conversations").update({"title": title}).eq("id", str(conversation_id)).execute()
         return len(response.data) > 0
 
-    def create_voice_session(self, user_id: UUID, transcript: List[Dict[str, Any]], audio_url: Optional[str] = None, conversation_id: Optional[UUID] = None) -> Dict[str, Any]:
+    def create_voice_session(self, user_id: UUID, transcript: List[Dict[str, Any]], audio_url: Optional[str] = None, conversation_id: Optional[Union[UUID, str]] = None) -> Dict[str, Any]:
         """
         Creates a voice session. Can be linked to a conversation or standalone.
         """

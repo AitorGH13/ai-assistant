@@ -64,7 +64,6 @@ function App() {
     loadConversation,
     deleteConversation,
     updateCurrentMessages,
-    addChatMessage,
     addTTSAudio,
     deleteTTSAudio,
     updateConversationTitle,
@@ -666,11 +665,8 @@ function App() {
             </div>
           ) : mode === "conversational" ? (
             <ConversationalAI 
-              addTTSAudio={addTTSAudio}
               createConversation={createConversation}
               loadConversation={loadConversation}
-              addChatMessage={addChatMessage}
-              updateConversationTitle={updateConversationTitle}
               isTemporary={conversations.find(c => c.id === currentConversationId)?.isTemporary}
             />
           ) : mode === "search" ? (
