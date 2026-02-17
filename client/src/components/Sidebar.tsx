@@ -104,7 +104,7 @@ export function Sidebar({
 
       <div
         className={cn(
-          "bg-slate-200 dark:bg-slate-900 transition-all duration-300 ease-in-out overflow-hidden flex-shrink-0 z-50",
+          "bg-slate-200 dark:bg-slate-900 transition-all duration-150 md:duration-300 ease-in-out overflow-hidden flex-shrink-0 z-50",
           "fixed inset-y-0 left-0 md:relative h-full",
           isOpen
             ? "w-88 translate-x-0 shadow-2xl md:shadow-none"
@@ -192,9 +192,9 @@ export function Sidebar({
           {/* Historial de Conversaciones */}
           <ScrollArea className="flex-1 w-full">
             {isOpen && (
-              <div className="px-4 space-y-2 w-full overflow-hidden animate-in fade-in duration-300">
+              <div className="px-4 space-y-2 w-full overflow-hidden animate-in fade-in duration-150 md:duration-300">
                 <div className="w-full overflow-hidden">
-                  <h3 className="text-sm font-semibold text-muted-foreground mb-3 px-2 whitespace-nowrap overflow-hidden transition-opacity duration-300">
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-3 px-2 whitespace-nowrap overflow-hidden transition-opacity duration-150 md:duration-300">
                     Historial
                   </h3>
                   {conversations.length === 0 ? (
