@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Settings, Palette, FileText, Menu, Search, Volume2, MessageSquare, Pencil, Trash2, Mic, MessageSquareDashed } from "lucide-react";
 import { Theme } from "../utils/theme";
 import { Conversation } from "../types";
@@ -48,6 +48,13 @@ export function Sidebar({
   const [showFloatingSettings, setShowFloatingSettings] = useState(false);
   const [editTitleId, setEditTitleId] = useState<string | null>(null);
   const [editTitleValue, setEditTitleValue] = useState("");
+
+  // Cierra el panel de configuración si el menú se cierra en móvil/tablet
+  useEffect(() => {
+    if (!isOpen && window.innerWidth < 768) {
+      setShowFloatingSettings(false);
+    }
+  }, [isOpen]);
 
   const handleSettingsClick = () => {
     setShowFloatingSettings(!showFloatingSettings);
