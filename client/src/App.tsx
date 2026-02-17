@@ -355,6 +355,22 @@ function App() {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
         
+        const isTemporary = conversations.find(c => c.id === conversationId)?.isTemporary;
+        
+        let messagesPayload;
+        if (isTemporary) {
+             // For temporary chat, we must send the full history because backend won't save it.
+             // currentMessages is the state BEFORE this new message (React state update is async)
+             // We need to map ChatMessage to the API format { role, content }
+             messagesPayload = [...currentMessages, userMessage].map(m => ({
+                 role: m.role,
+                 content: m.content
+             }));
+        } else {
+             // For persistent chat, just send the new message
+             messagesPayload = [{ role: userMessage.role, content: userMessage.content }];
+        }
+
         const response = await fetch(`/api/chat/${conversationId}/message`, {
             method: "POST",
             headers: {
@@ -362,8 +378,8 @@ function App() {
                 "Authorization": `Bearer ${token}`
             },
             body: JSON.stringify({
-                messages: [{ role: userMessage.role, content: userMessage.content }] 
-                // Sending only new message. Backend appends it to history.
+                messages: messagesPayload,
+                is_temporary: !!isTemporary
             })
         });
 
@@ -461,7 +477,7 @@ function App() {
         onNewConversation={handleNewConversation}
         onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         isOpen={isSidebarOpen}
-        conversations={conversations}
+        conversations={conversations.filter(c => !c.isTemporary)}
         currentConversationId={currentConversationId}
         onLoadConversation={handleLoadConversation}
         onDeleteConversation={handleDeleteConversation}

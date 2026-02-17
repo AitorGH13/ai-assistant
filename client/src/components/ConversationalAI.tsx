@@ -24,6 +24,12 @@ export function ConversationalAI({
   const conversationMessagesRef = useRef<Array<{role: string, message: string}>>([]);
   const [_conversationMessages, setConversationMessages] = useState<Array<{role: string, message: string}>>([]);
   
+  const isTemporaryRef = useRef(isTemporary);
+  
+  useEffect(() => {
+    isTemporaryRef.current = isTemporary;
+  }, [isTemporary]);
+
   // Hook oficial de ElevenLabs para gestionar la conversación
   const conversation = useConversation({
     onConnect: () => {
@@ -62,8 +68,12 @@ export function ConversationalAI({
             }
         };
         
-        if (elevenLabsConvId) {
-             saveVoiceSession(elevenLabsConvId);
+        // Use Ref to ensure we have the latest value inside the callback
+        if (elevenLabsConvId && !isTemporaryRef.current) {
+            saveVoiceSession(elevenLabsConvId);
+        } else if (isTemporaryRef.current && conversationIdRef.current) {
+             // Logic for temporary session (do nothing / don't save)
+             // ...
         }
 
         conversationIdRef.current = null;

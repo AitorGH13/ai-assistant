@@ -125,22 +125,36 @@ async def send_message(
         "date": datetime.utcnow().isoformat()
     }
     
-    if not conversation:
-        # Create conversation on the fly
-        first_msg_content = last_user_msg.content
-        if isinstance(first_msg_content, list):
-             text_parts = [p['text'] for p in first_msg_content if p.get('type') == 'text']
-             first_msg_text = " ".join(text_parts)
-        else:
-            first_msg_text = first_msg_content
-            
-        title = first_msg_text[:30] + "..." if len(first_msg_text) > 30 else first_msg_text
-        
-        conversation = supabase_service.create_conversation(user_id, title, user_msg_entry, conversation_id)
-        updated_history = [user_msg_entry]
+    if request.is_temporary:
+        # For temporary chats, we rely on the frontend sending the full context if needed.
+        # But wait, frontend currently sends only the last message?
+        # If we want temporary chat, frontend MUST send full history if it wants context.
+        # Here we just use what we get.
+        updated_history = []
+        for m in request.messages:
+             updated_history.append({
+                 "role": m.role,
+                 "msg": m.content if isinstance(m.content, str) else str(m.content), # Simplify for now
+                 "id": 0 if m.role == "user" else 1,
+                 "date": datetime.utcnow().isoformat()
+             })
     else:
-        updated_history = current_history + [user_msg_entry]
-        supabase_service.update_conversation_history(conversation_id, updated_history)
+        if not conversation:
+            # Create conversation on the fly
+            first_msg_content = last_user_msg.content
+            if isinstance(first_msg_content, list):
+                 text_parts = [p['text'] for p in first_msg_content if p.get('type') == 'text']
+                 first_msg_text = " ".join(text_parts)
+            else:
+                first_msg_text = first_msg_content
+                
+            title = first_msg_text[:30] + "..." if len(first_msg_text) > 30 else first_msg_text
+            
+            conversation = supabase_service.create_conversation(user_id, title, user_msg_entry, conversation_id)
+            updated_history = [user_msg_entry]
+        else:
+            updated_history = current_history + [user_msg_entry]
+            supabase_service.update_conversation_history(conversation_id, updated_history)
     
     # Prepare messages for OpenAI
     openai_messages = []
@@ -174,14 +188,15 @@ async def send_message(
                     pass
             yield chunk
             
-        ai_msg_entry = {
-            "id": 1, # AI
-            "role": "assistant",
-            "msg": full_response_content,
-            "date": datetime.utcnow().isoformat()
-        }
-        final_history = updated_history + [ai_msg_entry]
-        supabase_service.update_conversation_history(conversation_id, final_history)
+        if not request.is_temporary:
+            ai_msg_entry = {
+                "id": 1, # AI
+                "role": "assistant",
+                "msg": full_response_content,
+                "date": datetime.utcnow().isoformat()
+            }
+            final_history = updated_history + [ai_msg_entry]
+            supabase_service.update_conversation_history(conversation_id, final_history)
 
     return StreamingResponse(stream_generator(), media_type="text/event-stream")
 

@@ -21,6 +21,7 @@ class ChatRequest(BaseModel):
     messages: List[ChatMessage]
     conversation_id: Optional[UUID] = None
     model: str = "gpt-4o-mini"
+    is_temporary: bool = False
 
 class ChatResponse(BaseModel):
     response: str

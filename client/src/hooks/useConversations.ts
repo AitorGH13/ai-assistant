@@ -61,7 +61,14 @@ export function useConversations(): {
         updatedAt: c.updated_at,
         ttsHistory: c.tts_history || [], // Map backend snake_case to frontend camelCase
       }));
-      setConversations(apiConversations);
+      setConversations(prev => {
+        // Keep local/temporary conversations that are NOT in the API validation list
+        // (Actually temporary ones are never in API, local drafts might be if we just saved them? 
+        //  No, if we just saved a draft it becomes remote. But here we talk about PURELY local/temporary ones that backend doesn't know about)
+        const localConversations = prev.filter(c => c.isLocal && !apiConversations.some((apiC: any) => apiC.id === c.id));
+        
+        return sortConversations([...apiConversations, ...localConversations]);
+      });
     } catch (error) {
       console.error("Failed to fetch conversations:", error);
     } finally {
@@ -217,6 +224,13 @@ export function useConversations(): {
       });
 
       try {
+          const conversation = conversations.find(c => c.id === targetId);
+          if (conversation?.isTemporary) {
+              // For temporary conversations, we do not save TTS history to the backend.
+              // We just keep the optimistic update in local state.
+              return;
+          }
+
           const res = await api.post(`/chat/${targetId}/tts`, audio);
           
           // If successful, mark as not local (synced) and update title if provided
