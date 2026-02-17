@@ -4,7 +4,6 @@ import { TTSAudio } from "../types";
 import { Button } from "./ui/Button";
 import { Card, CardContent } from "./ui/Card";
 import { cn } from "../lib/utils";
-import { Avatar } from "./ui/Avatar";
 
 
 interface Props {
@@ -79,7 +78,7 @@ export function TTSAudioList({ audios, onDelete }: Props) {
 
   return (
     <div className="max-w-3xl mx-auto space-y-3">
-      {audios.map((audio) => {
+      {[...audios].sort((a, b) => b.timestamp - a.timestamp).map((audio) => {
         const isVoiceSession = !!audio.transcript && audio.transcript.length > 0;
 
         if (isVoiceSession) {
@@ -90,24 +89,21 @@ export function TTSAudioList({ audios, onDelete }: Props) {
                         <div className="bg-primary/10 p-1.5 rounded-full">
                             <Bot size={16} className="text-primary" />
                         </div>
-                        <span className="text-sm font-medium">Sesión de Voz</span>
-                        <span className="text-xs text-muted-foreground ml-2">{formatTime(audio.timestamp)}</span>
+                        <span className="text-xs text-muted-foreground">{formatTime(audio.timestamp)}</span>
                     </div>
                 </div>
-                
                 <CardContent className="p-0">
                     {/* Transcript Scroll Area */}
                     <div className="max-h-96 overflow-y-auto p-4 space-y-4 bg-background/50 custom-scrollbar">
                         {audio.transcript?.map((msg, idx) => {
                             const isUser = msg.role === 'user';
                             return (
-                                <div key={idx} className={cn("flex gap-3", isUser ? "flex-row-reverse" : "flex-row")}>
-                                     <Avatar role={msg.role as 'user' | 'assistant'} size="sm" />
+                                <div key={idx} className={cn("flex", isUser ? "justify-end" : "justify-start")}>
                                      <div className={cn(
-                                         "rounded-lg px-3 py-2 max-w-[80%] text-sm",
+                                         "rounded-lg px-3 py-2 max-w-[85%] text-sm",
                                          isUser 
-                                            ? "bg-primary text-primary-foreground rounded-tr-sm" 
-                                            : "bg-muted text-foreground rounded-tl-sm"
+                                            ? "bg-primary text-white rounded-tr-md" 
+                                            : "bg-slate-200 dark:bg-muted text-foreground rounded-tl-md"
                                      )}>
                                          <p className="whitespace-pre-wrap">{msg.msg || (msg as any).text}</p>
                                      </div>
@@ -139,7 +135,6 @@ export function TTSAudioList({ audios, onDelete }: Props) {
                         
                         <div className="flex-1">
                              <div className="h-1 bg-muted rounded-full overflow-hidden">
-                                 {/* Simple progress bar placeholder - could be real if we track time */}
                                  <div className={cn("h-full bg-primary transition-all duration-500", playingId === audio.id ? "w-full animate-pulse" : "w-0")} />
                              </div>
                         </div>
@@ -180,7 +175,7 @@ export function TTSAudioList({ audios, onDelete }: Props) {
           );
         }
 
-        // Standard TTS Card (Keep existing for non-transcript items)
+        // Standard TTS Card
         return (
           <Card key={audio.id} className="hover:shadow-md transition-shadow overflow-hidden border-border/50">
             <div className="bg-muted/30 px-4 py-2 border-b border-border/50 flex items-center justify-between">
@@ -188,18 +183,13 @@ export function TTSAudioList({ audios, onDelete }: Props) {
                 <div className="bg-primary/10 p-1.5 rounded-full">
                   <Bot size={16} className="text-primary" />
                 </div>
-                <span className="text-sm font-medium">Texto a voz</span>
-                <span className="text-xs text-muted-foreground ml-2">{formatTime(audio.timestamp)}</span>
+                <span className="text-xs text-muted-foreground">{formatTime(audio.timestamp)}</span>
               </div>
             </div>
-
             <CardContent className="p-0">
               <div className="p-4">
-                <div className="flex gap-3">
-                  <Avatar role="assistant" size="sm" />
-                  <div className="rounded-lg px-3 py-2 bg-muted text-foreground rounded-tl-sm text-sm flex-1">
-                    <p className="whitespace-pre-wrap">{audio.text}</p>
-                  </div>
+                <div className="rounded-lg px-3 py-2 bg-slate-200 dark:bg-muted text-foreground rounded-tl-md text-sm w-fit max-w-full shadow-sm">
+                  <p className="whitespace-pre-wrap">{audio.text}</p>
                 </div>
               </div>
 

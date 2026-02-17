@@ -106,21 +106,18 @@ function App() {
     // Find the current conversation object (which might have been updated with details)
     const conversation = conversations.find((c: Conversation) => c.id === currentConversationId);
     if (conversation) {
+      const hasConversationalAudio = conversation.ttsHistory?.some(audio => audio.voiceId === 'conversational-ai');
       const hasTTSAudios = conversation.ttsHistory && conversation.ttsHistory.length > 0;
       const hasMessages = conversation.messages && conversation.messages.length > 0;
 
-      
-      // Determine the correct mode and update state if it differs
-      // CHANGED: We now want to show the Unified List (TTSAudioList) for history, 
-      // instead of forcing "conversational" mode (which shows the Mic/Recording UI).
-      // So we ONLY force conversational mode if it's explicitly set or maybe for *active* sessions?
-      // Actually, if we just remove the forced switch, the user will see the list if they are in 'chat' or 'tts' mode.
-      // Let's remove the forced switch to 'conversational' completely for history.
-      
-      if (hasTTSAudios && !hasMessages) {
+      // Prioritize Conversational AI mode
+      if (hasConversationalAudio) {
+        if (mode !== "conversational") setMode("conversational");
+      } else if (hasTTSAudios) {
+        // If it has TTS but NOT conversational-ai
         if (mode !== "tts") setMode("tts");
       } else if (hasMessages) {
-        // Default to chat mode if there are messages
+        // Default to chat if there are messages
         if (mode !== "chat") setMode("chat");
       }
     }
@@ -178,7 +175,9 @@ function App() {
     const messageMatch = conv.messages?.some((msg: ChatMessageType) => {
       const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
       return normalizeText(content).includes(normalizeText(searchQuery));
-    }) || false;
+    }) || conv.ttsHistory?.some((audio: TTSAudio) => 
+      audio.transcript?.some(t => normalizeText(t.msg).includes(normalizeText(searchQuery)))
+    ) || false;
 
     const audioMatch = conv.ttsHistory?.some((audio: TTSAudio) => 
       normalizeText(audio.text).includes(normalizeText(searchQuery))
@@ -435,10 +434,9 @@ function App() {
     "¿Cuál es el clima en Tokio?",
   ];
 
-  const conversationalAudioList = currentTTSHistory.filter(
-    (audio: TTSAudio) => audio.voiceId === "conversational-ai"
+  const isConversationalHistory = currentTTSHistory.some(
+    (audio: TTSAudio) => audio.voiceId === "conversational-ai" || audio.transcript?.some(t => t.role === 'user')
   );
-  const isConversationalHistory = conversationalAudioList.length > 0;
 
   if (authLoading) {
     return (
@@ -521,7 +519,8 @@ function App() {
                 ) : (
                   <div className="space-y-2">
                     {filteredConversations.map((conversation: Conversation) => {
-                      const hasMessages = conversation.messages && conversation.messages.length > 0;
+                      const hasMessages = (conversation.messages && conversation.messages.length > 0) || 
+                                          (conversation.ttsHistory && conversation.ttsHistory.some(t => t.transcript && t.transcript.length > 0));
                       const hasTTSAudios = conversation.ttsHistory && conversation.ttsHistory.length > 0;
                       const hasConversationalAudio = hasTTSAudios && conversation.ttsHistory?.some(
                         (audio: TTSAudio) => audio.voiceId === "conversational-ai"
@@ -627,8 +626,17 @@ function App() {
               {currentTTSHistory.length > 0 && (
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                    <Volume2 className="h-5 w-5 text-black dark:text-white" />
-                    Texto a voz
+                    {isConversationalHistory && mode !== "tts" ? ( 
+                      <>
+                        <Mic className="h-5 w-5 text-black dark:text-white" />
+                        Conversación de Voz
+                      </>
+                    ) : (
+                      <>
+                        <Volume2 className="h-5 w-5 text-black dark:text-white" />
+                        Texto a voz
+                      </>
+                    )}
                   </h3>
                 </div>
               )}
@@ -636,13 +644,19 @@ function App() {
               {currentTTSHistory.length === 0 ? (
                 <div className="flex flex-col items-center mb-8 mt-4">
                   <div className="mb-4 sm:mb-6 inline-flex p-3 sm:p-4 rounded-full bg-primary/20 dark:bg-primary/20 ring-8 ring-primary/10 shadow-inner">
-                    <Volume2 className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-primary" />
+                    {isConversationalHistory ? (
+                      <Mic className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-primary" />
+                    ) : (
+                      <Volume2 className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-primary" />
+                    )}
                   </div>
                   <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-2">
-                    Texto a voz
+                    {isConversationalHistory && mode !== "tts" ? "Conversación de Voz" : "Texto a voz"}
                   </h2>
                   <p className="text-sm sm:text-base text-muted-foreground mb-6 sm:mb-8 text-center">
-                    Escribre un mensaje abajo o prueba una de estas sugerencias
+                    {isConversationalHistory && mode !== "tts"
+                      ? "Inicia una conversación de voz o revisa el historial" 
+                      : "Escribe un mensaje abajo o prueba una de estas sugerencias"}
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 w-full">
                     {[
@@ -680,11 +694,23 @@ function App() {
                   Conversación de Voz
                 </h3>
               </div>
-              <ConversationalAI 
-                createConversation={createConversation}
-                loadConversation={loadConversation}
-                isTemporary={conversations.find(c => c.id === currentConversationId)?.isTemporary}
-              />
+              
+              {isConversationalHistory ? (
+                <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                   <div className="max-w-3xl mx-auto">
+                      <TTSAudioList 
+                        audios={currentTTSHistory} 
+                        onDelete={deleteTTSAudio} 
+                      />
+                   </div>
+                </div>
+              ) : (
+                <ConversationalAI 
+                  createConversation={createConversation}
+                  loadConversation={loadConversation}
+                  isTemporary={conversations.find(c => c.id === currentConversationId)?.isTemporary}
+                />
+              )}
             </div>
           ) : mode === "search" ? (
             <SemanticSearch />
@@ -765,20 +791,23 @@ function App() {
 
         {view === "chat" && !showSearchView && mode !== "conversational" && (
           isConversationalHistory ? (
-            <div className="bg-background p-3 sm:p-4 border-t border-border transition-colors duration-200">
-              <div className="max-w-4xl mx-auto">
-                <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2 uppercase tracking-wider">
-                  <Volume2 className="h-4 w-4" />
-                  Historial de Voz y Audio
-                </h3>
-                {/* Unified List for both TTS and Voice Sessions */}
-                <TTSAudioList 
-                  audios={currentTTSHistory} 
-                  onDelete={deleteTTSAudio}
-                />
+            /* Si es historial de voz (Conversational AI), mostramos la lista abajo (si estamos en modo Chat) y NUNCA mostramos input */
+            mode !== "tts" ? (
+              <div className="bg-background p-3 sm:p-4 border-t border-border transition-colors duration-200">
+                <div className="max-w-4xl mx-auto">
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2 uppercase tracking-wider">
+                    <Mic className="h-4 w-4" />
+                    Historial de Conversación de Voz
+                  </h3>
+                  <TTSAudioList 
+                    audios={currentTTSHistory} 
+                    onDelete={deleteTTSAudio}
+                  />
+                </div>
               </div>
-            </div>
+            ) : null
           ) : (
+            /* Si NO es historial de voz (es decir, es Chat normal o Texto a Voz estándar), mostramos SIEMPRE el Input */
             <ChatInput 
               onSend={mode === "tts" ? handleTTSGenerate : handleSendMessage}
               onSearch={handleSemanticSearch}

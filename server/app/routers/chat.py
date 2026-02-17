@@ -241,7 +241,7 @@ async def get_conversation(conversation_id: UUID, user_id: UUID = Depends(get_cu
                 text=text_content,
                 audioUrl=session.get("audio_url", ""),
                 timestamp=meta.get("timestamp", datetime.utcnow().timestamp() * 1000), # Ensure valid float
-                voiceId=meta.get("voice_id", "default"),
+                voiceId=meta.get("voice_id") or "conversational-ai",
                 voiceName=meta.get("voice_name", "Unknown Voice"),
                 transcript=transcripts
             ))
