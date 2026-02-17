@@ -39,6 +39,7 @@ class TTSAudio(BaseModel):
     timestamp: float
     voiceId: str
     voiceName: str
+    transcript: Optional[List[Dict[str, Any]]] = None
 
 class ChatResponse(BaseModel):
     response: str

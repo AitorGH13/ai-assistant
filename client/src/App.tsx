@@ -108,14 +108,16 @@ function App() {
     if (conversation) {
       const hasTTSAudios = conversation.ttsHistory && conversation.ttsHistory.length > 0;
       const hasMessages = conversation.messages && conversation.messages.length > 0;
-      const hasConversationalAudio = hasTTSAudios && conversation.ttsHistory?.some(
-        (audio: TTSAudio) => audio.voiceId === "conversational-ai"
-      );
+
       
       // Determine the correct mode and update state if it differs
-      if (hasConversationalAudio) {
-        if (mode !== "conversational") setMode("conversational");
-      } else if (hasTTSAudios && !hasMessages) {
+      // CHANGED: We now want to show the Unified List (TTSAudioList) for history, 
+      // instead of forcing "conversational" mode (which shows the Mic/Recording UI).
+      // So we ONLY force conversational mode if it's explicitly set or maybe for *active* sessions?
+      // Actually, if we just remove the forced switch, the user will see the list if they are in 'chat' or 'tts' mode.
+      // Let's remove the forced switch to 'conversational' completely for history.
+      
+      if (hasTTSAudios && !hasMessages) {
         if (mode !== "tts") setMode("tts");
       } else if (hasMessages) {
         // Default to chat mode if there are messages
@@ -752,10 +754,11 @@ function App() {
               <div className="max-w-4xl mx-auto">
                 <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2 uppercase tracking-wider">
                   <Volume2 className="h-4 w-4" />
-                  Audio de la Conversación
+                  Historial de Voz y Audio
                 </h3>
+                {/* Unified List for both TTS and Voice Sessions */}
                 <TTSAudioList 
-                  audios={conversationalAudioList}
+                  audios={currentTTSHistory} 
                   onDelete={deleteTTSAudio}
                 />
               </div>

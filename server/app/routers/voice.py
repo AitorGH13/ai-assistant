@@ -12,6 +12,7 @@ class SpeakRequest(BaseModel):
 
 class VoiceSessionRequest(BaseModel):
     transcript: Optional[List[Dict[str, Any]]] = None
+    app_conversation_id: Optional[str] = None
 
 router = APIRouter(prefix="/voice", tags=["voice"])
 
@@ -37,11 +38,11 @@ async def process_voice_session(
     2. Accepts optional fallback transcript in body.
     """
     try:
-        # Delegate to Service Layer
         result = await voice_service.process_and_save_session(
             conversation_id=conversation_id,
             user_id=user_id,
-            fallback_transcript=request.transcript
+            fallback_transcript=request.transcript,
+            app_conversation_id=request.app_conversation_id
         )
         return result
 

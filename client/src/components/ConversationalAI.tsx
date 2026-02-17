@@ -37,6 +37,8 @@ export function ConversationalAI({
       if (conversationIdRef.current && conversationStartTimeRef.current) {
         const elevenLabsConvId = elevenLabsConversationIdRef.current; // The ID we need for backend
 
+        const currentAppConvId = conversationIdRef.current;
+
         const saveVoiceSession = async (convId: string) => {
             try {
                 // Collect transcript from Ref (fallback)
@@ -47,8 +49,13 @@ export function ConversationalAI({
                 }));
 
                 await api.post(`/voice/process/${convId}`, {
-                    transcript: fallbackTranscript
+                    transcript: fallbackTranscript,
+                    app_conversation_id: currentAppConvId
                 });
+                
+                if (currentAppConvId) {
+                    loadConversation(currentAppConvId);
+                }
                 
             } catch (e) {
                 console.error("Error saving session", e);
@@ -125,7 +132,8 @@ export function ConversationalAI({
       const newConvId = createConversation(isTemporary);
       conversationIdRef.current = newConvId;
       
-      loadConversation(newConvId);
+      // Do not loadConversation(newConvId) here because it is local-only and will 404 on backend
+      // createConversation already sets it as current.
       
       await navigator.mediaDevices.getUserMedia({ audio: true });
       

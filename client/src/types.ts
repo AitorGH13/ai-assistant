@@ -41,6 +41,12 @@ export interface TTSAudio {
   timestamp: number;
   voiceId: string;
   voiceName: string;
+  transcript?: {
+    id?: any;
+    role: string;
+    msg: string;
+    date?: string;
+  }[];
 }
 
 // Raw DB Types (for mapping)

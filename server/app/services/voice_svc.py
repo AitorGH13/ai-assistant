@@ -7,14 +7,14 @@ from app.services.storage_service import storage_service
 from app.services.supabase_svc import supabase_service
 
 class VoiceService:
-    async def process_and_save_session(self, conversation_id: str, user_id: UUID, fallback_transcript: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+    async def process_and_save_session(self, conversation_id: str, user_id: UUID, fallback_transcript: Optional[List[Dict[str, Any]]] = None, app_conversation_id: Optional[str] = None) -> Dict[str, Any]:
         """
         Process a completed voice session:
         1. Fetch audio from Local Webhook Server (Bun) OR ElevenLabs and upload to Supabase.
         2. Fetch transcript from ElevenLabs (or use fallback).
         3. Format data and save to voice_sessions table.
         """
-        print(f"Processing voice session: {conversation_id} for user {user_id}")
+        print(f"Processing voice session: {conversation_id} (App ID: {app_conversation_id}) for user {user_id}")
         
         # 1. Audio Persistence
         audio_url = None
@@ -119,11 +119,43 @@ class VoiceService:
             
         # 4. Save to DB (Voice Sessions ONLY)
         print(f"Saving voice session with {len(processed_transcript)} messages.")
+        
+        target_conversation_id = conversation_id
+        
+        # If App ID provided, prioritize it and ensure conversation exists
+        if app_conversation_id:
+            print(f"Linking voice session to App Conversation ID: {app_conversation_id}")
+            # Ensure the conversation exists in `conversations` table
+            # We don't have a direct 'ensure_exists' method but create_conversation might handle it or we check first?
+            # supabase_service.get_conversation returns None if not found.
+            
+            existing_conv = supabase_service.get_conversation(app_conversation_id)
+            if not existing_conv:
+                # Create it!
+                print(f"Conversation {app_conversation_id} not found. Creating placeholder.")
+                # We need a title. Use date or something generic.
+                title = f"Voice Session - {len(processed_transcript)} messages" 
+                if processed_transcript:
+                     first_msg = processed_transcript[0].get("msg", "")[:30]
+                     if first_msg:
+                         title = first_msg + "..."
+                         
+                # Create minimal conversation entry
+                supabase_service.create_conversation(
+                    user_id=user_id,
+                    title=title,
+                    initial_message=None, # Voice session has its own storage
+                    conversation_id=app_conversation_id
+                )
+            
+            target_conversation_id = app_conversation_id
+
+        # Save Voice Session linked to the Target Conversation ID
         result = supabase_service.create_voice_session(
             user_id=user_id,
             transcript=processed_transcript,
             audio_url=audio_url,
-            conversation_id=conversation_id # Pass the ElevenLabs ID
+            conversation_id=target_conversation_id 
         )
         
         return {

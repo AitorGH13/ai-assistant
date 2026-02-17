@@ -1,9 +1,11 @@
-import { Volume2, Play, Pause, Download, Trash2 } from "lucide-react";
+import { Volume2, Play, Pause, Download, Trash2, Bot } from "lucide-react";
 import { useState, useRef } from "react";
 import { TTSAudio } from "../types";
 import { Button } from "./ui/Button";
 import { Card, CardContent } from "./ui/Card";
 import { cn } from "../lib/utils";
+import { Avatar } from "./ui/Avatar";
+
 
 interface Props {
   audios: TTSAudio[];
@@ -77,7 +79,98 @@ export function TTSAudioList({ audios, onDelete }: Props) {
 
   return (
     <div className="max-w-3xl mx-auto space-y-3">
-      {audios.map((audio) => (
+      {audios.map((audio) => {
+        const isVoiceSession = !!audio.transcript && audio.transcript.length > 0;
+
+        if (isVoiceSession) {
+          return (
+             <Card key={audio.id} className="hover:shadow-md transition-shadow overflow-hidden border-border/50">
+                <div className="bg-muted/30 px-4 py-2 border-b border-border/50 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <div className="bg-primary/10 p-1.5 rounded-full">
+                            <Bot size={16} className="text-primary" />
+                        </div>
+                        <span className="text-sm font-medium">Sesión de Voz</span>
+                        <span className="text-xs text-muted-foreground ml-2">{formatTime(audio.timestamp)}</span>
+                    </div>
+                </div>
+                
+                <CardContent className="p-0">
+                    {/* Transcript Scroll Area */}
+                    <div className="max-h-96 overflow-y-auto p-4 space-y-4 bg-background/50 custom-scrollbar">
+                        {audio.transcript?.map((msg, idx) => {
+                            const isUser = msg.role === 'user';
+                            return (
+                                <div key={idx} className={cn("flex gap-3", isUser ? "flex-row-reverse" : "flex-row")}>
+                                     <Avatar role={msg.role as 'user' | 'assistant'} size="sm" />
+                                     <div className={cn(
+                                         "rounded-lg px-3 py-2 max-w-[80%] text-sm",
+                                         isUser 
+                                            ? "bg-primary text-primary-foreground rounded-tr-sm" 
+                                            : "bg-muted text-foreground rounded-tl-sm"
+                                     )}>
+                                         <p className="whitespace-pre-wrap">{msg.msg}</p>
+                                     </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Audio Controls Footer */}
+                    <div className="p-3 bg-card border-t border-border flex items-center gap-3">
+                         <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handlePlayPause(audio)}
+                            disabled={!audio.audioUrl}
+                            className={cn(
+                            "flex-shrink-0 rounded-full h-10 w-10 min-h-[40px] min-w-[40px]",
+                            audio.audioUrl 
+                                ? "bg-primary/10 text-primary hover:bg-primary/20" 
+                                : "text-muted-foreground"
+                            )}
+                        >
+                            {playingId === audio.id ? (
+                            <Pause size={20} fill="currentColor" />
+                            ) : (
+                            <Play size={20} fill="currentColor" />
+                            )}
+                        </Button>
+                        
+                        <div className="flex-1">
+                             <div className="h-1 bg-muted rounded-full overflow-hidden">
+                                 {/* Simple progress bar placeholder - could be real if we track time */}
+                                 <div className={cn("h-full bg-primary transition-all duration-500", playingId === audio.id ? "w-full animate-pulse" : "w-0")} />
+                             </div>
+                        </div>
+
+                         {audio.audioUrl && (
+                            <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDownload(audio)}
+                            className="text-muted-foreground hover:text-foreground h-8 w-8"
+                            title="Descargar audio"
+                            >
+                            <Download size={16} />
+                            </Button>
+                        )}
+                    </div>
+                </CardContent>
+
+                <audio
+                    ref={el => {
+                        if (el) audioRefs.current[audio.id] = el;
+                    }}
+                    src={audio.audioUrl}
+                    onEnded={handleAudioEnded}
+                />
+             </Card>
+          );
+        }
+
+        // Standard TTS Card (Keep existing for non-transcript items)
+        return (
         <Card key={audio.id} className="hover:shadow-md transition-shadow">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -125,8 +218,6 @@ export function TTSAudioList({ audios, onDelete }: Props) {
                 </div>
               </div>
 
-
-
               {/* Delete Button */}
               {audio.voiceId !== "conversational-ai" && (
                 <Button
@@ -140,7 +231,7 @@ export function TTSAudioList({ audios, onDelete }: Props) {
                 </Button>
               )}
 
-              {/* Right Side Download Button - Only for Conversational AI */}
+              {/* Right Side Download Button - Only for Conversational AI (Legacy Fallback) */}
               {audio.voiceId === "conversational-ai" && (
                 <Button
                   variant="ghost"
@@ -165,7 +256,7 @@ export function TTSAudioList({ audios, onDelete }: Props) {
             />
           </CardContent>
         </Card>
-      ))}
+      )})}
     </div>
   );
 }
