@@ -624,40 +624,47 @@ function App() {
             </div>
           ) : mode === "tts" ? (
             <div className="max-w-4xl mx-auto">
+              {currentTTSHistory.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                    <Volume2 className="h-5 w-5 text-black dark:text-white" />
+                    Texto a voz
+                  </h3>
+                </div>
+              )}
+              
               {currentTTSHistory.length === 0 ? (
-                <>
-                  <div className="flex flex-col items-center mb-8 mt-4">
-                    <div className="mb-4 sm:mb-6 inline-flex p-3 sm:p-4 rounded-full bg-primary/20 dark:bg-primary/20 ring-8 ring-primary/10 shadow-inner">
-                      <Volume2 className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-primary" />
-                    </div>
-                    <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-2">
-                      Texto a voz
-                    </h2>
-                    <p className="text-sm sm:text-base text-muted-foreground mb-6 sm:mb-8 text-center">
-                      Escribe un mensaje abajo o prueba una de estas sugerencias
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 w-full">
-                      {[
-                        "Bienvenido a nuestra aplicación de inteligencia artificial",
-                        "La tecnología de síntesis de voz ha avanzado enormemente en los últimos años",
-                        "Hola, mi nombre es Roger y estoy aquí para ayudarte",
-                        "El futuro de la comunicación está en la voz artificial"
-                      ].map((example, index) => (
-                        <Button
-                          key={index}
-                          variant="outline"
-                          onClick={() => handleTTSGenerate(example)}
-                          disabled={isMessagesLoading || !isInitialized}
-                          className="p-3 sm:p-4 h-auto text-left justify-start hover:border-primary hover:shadow-md transition-all duration-200"
-                        >
-                          <p className="text-xs sm:text-sm">
-                            {example}
-                          </p>
-                        </Button>
-                      ))}
-                    </div>
+                <div className="flex flex-col items-center mb-8 mt-4">
+                  <div className="mb-4 sm:mb-6 inline-flex p-3 sm:p-4 rounded-full bg-primary/20 dark:bg-primary/20 ring-8 ring-primary/10 shadow-inner">
+                    <Volume2 className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-primary" />
                   </div>
-                </>
+                  <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-2">
+                    Texto a voz
+                  </h2>
+                  <p className="text-sm sm:text-base text-muted-foreground mb-6 sm:mb-8 text-center">
+                    Escribre un mensaje abajo o prueba una de estas sugerencias
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 w-full">
+                    {[
+                      "Bienvenido a nuestra aplicación de inteligencia artificial",
+                      "La tecnología de síntesis de voz ha avanzado enormemente en los últimos años",
+                      "Hola, mi nombre es Roger y estoy aquí para ayudarte",
+                      "El futuro de la comunicación está en la voz artificial"
+                    ].map((example, index) => (
+                      <Button
+                        key={index}
+                        variant="outline"
+                        onClick={() => handleTTSGenerate(example)}
+                        disabled={isMessagesLoading || !isInitialized}
+                        className="p-3 sm:p-4 h-auto text-left justify-start hover:border-primary hover:shadow-md transition-all duration-200"
+                      >
+                        <p className="text-xs sm:text-sm">
+                          {example}
+                        </p>
+                      </Button>
+                    ))}
+                  </div>
+                </div>
               ) : (
                 <TTSAudioList 
                   audios={currentTTSHistory}
@@ -666,11 +673,19 @@ function App() {
               )}
             </div>
           ) : mode === "conversational" ? (
-            <ConversationalAI 
-              createConversation={createConversation}
-              loadConversation={loadConversation}
-              isTemporary={conversations.find(c => c.id === currentConversationId)?.isTemporary}
-            />
+            <div className="flex-1 flex flex-col min-h-0">
+              <div className="px-4 py-2 border-b border-border/50">
+                <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                  <Mic className="h-5 w-5 text-primary" />
+                  Conversación de Voz
+                </h3>
+              </div>
+              <ConversationalAI 
+                createConversation={createConversation}
+                loadConversation={loadConversation}
+                isTemporary={conversations.find(c => c.id === currentConversationId)?.isTemporary}
+              />
+            </div>
           ) : mode === "search" ? (
             <SemanticSearch />
           ) : (  

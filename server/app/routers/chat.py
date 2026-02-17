@@ -234,9 +234,11 @@ async def get_conversation(conversation_id: UUID, user_id: UUID = Depends(get_cu
         transcripts = session.get("transcript", [])
         if transcripts and isinstance(transcripts, list):
             meta = transcripts[0]
+            # Try to get text from 'msg' (standard) or 'text' (legacy/tts)
+            text_content = meta.get("msg") or meta.get("text") or "Audio"
             tts_history.append(TTSAudio(
                 id=str(session.get("id")),
-                text=meta.get("text", "") or "Audio",
+                text=text_content,
                 audioUrl=session.get("audio_url", ""),
                 timestamp=meta.get("timestamp", datetime.utcnow().timestamp() * 1000), # Ensure valid float
                 voiceId=meta.get("voice_id", "default"),
@@ -277,7 +279,8 @@ async def add_tts_entry(
     # voice_sessions: id, user_id, conversation_id (via JSON), transcript (jsonb), audio_url
     
     transcript_entry = {
-        "text": audio.text,
+        "msg": audio.text,
+        "role": "assistant",
         "timestamp": audio.timestamp,
         "voice_id": audio.voiceId,
         "voice_name": audio.voiceName
@@ -302,3 +305,25 @@ async def add_tts_entry(
         "id": result.get("id"),
         "title": updated_title
     }
+
+@router.delete("/{conversation_id}/tts/{audio_id}")
+async def delete_tts_entry(
+    conversation_id: UUID, 
+    audio_id: str,
+    user_id: UUID = Depends(get_current_user_id)
+):
+    """Delete a TTS audio entry (voice session)."""
+    # Using the existing supabase_service functionality if available or adding it
+    # Since voice_sessions is its own table, we can delete by ID
+    from app.services.supabase_svc import supabase_service
+    
+    # Verify ownership or relationship (conversation_id matches)
+    response = supabase_service.client.table("voice_sessions").delete()\
+        .eq("id", audio_id)\
+        .eq("user_id", str(user_id))\
+        .execute()
+        
+    if not response.data:
+        raise HTTPException(status_code=404, detail="Audio not found or not owned by user")
+        
+    return {"status": "ok", "message": "Audio deleted"}

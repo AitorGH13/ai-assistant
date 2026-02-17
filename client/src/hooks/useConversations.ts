@@ -233,9 +233,10 @@ export function useConversations(): {
       }
   }, [currentConversationId]);
 
-  const deleteTTSAudio = useCallback((audioId: string) => {
+  const deleteTTSAudio = useCallback(async (audioId: string) => {
       if (!currentConversationId) return;
 
+      // Optimistic Update
       setConversations(prev => prev.map(c => {
           if (c.id === currentConversationId) {
               const newHistory = (c.ttsHistory || []).filter(a => a.id !== audioId);
@@ -243,6 +244,13 @@ export function useConversations(): {
           }
           return c;
       }));
+
+      try {
+          await api.delete(`/chat/${currentConversationId}/tts/${audioId}`);
+      } catch (e) {
+          console.error("Failed to delete TTS audio", e);
+          // Optional: Re-fetch or revert on error
+      }
   }, [currentConversationId]);
 
   const updateCurrentMessages = useCallback((messages: any) => setCurrentMessages(messages), []);
