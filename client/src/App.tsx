@@ -94,7 +94,7 @@ function App() {
   };
 
   const handleLoadConversation = (conversationId: string) => {
-    // Sincronizar el modo inmediatamente para evitar parpadeos si ya lo tenemos en el listado
+
     const conversation = conversations.find(c => c.id === conversationId);
     if (conversation) {
       const hasConversationalAudio = conversation.ttsHistory?.some(audio => audio.voiceId === 'conversational-ai');
@@ -118,7 +118,7 @@ function App() {
   const handleModeChange = (newMode: AppMode) => {
     if (newMode === mode) return;
 
-    // Si estamos en una conversación con contenido, iniciamos una nueva en el nuevo modo
+
     const conversation = conversations.find(c => c.id === currentConversationId);
     const hasContent = conversation && (
       (conversation.messages && conversation.messages.length > 0) || 
@@ -138,21 +138,21 @@ function App() {
   useEffect(() => {
     if (!currentConversationId) return;
     
-    // Find the current conversation object (which might have been updated with details)
+
     const conversation = conversations.find((c: Conversation) => c.id === currentConversationId);
     if (conversation) {
       const hasConversationalAudio = conversation.ttsHistory?.some(audio => audio.voiceId === 'conversational-ai');
       const hasTTSAudios = conversation.ttsHistory && conversation.ttsHistory.length > 0;
       const hasMessages = conversation.messages && conversation.messages.length > 0;
 
-      // Prioritize Conversational AI mode
+
       if (hasConversationalAudio) {
         if (mode !== "conversational") setMode("conversational");
       } else if (hasTTSAudios) {
-        // If it has TTS but NOT conversational-ai
+
         if (mode !== "tts") setMode("tts");
       } else if (hasMessages) {
-        // Default to chat if there are messages
+
         if (mode !== "chat") setMode("chat");
       }
     }
@@ -246,11 +246,7 @@ function App() {
   }, [currentMessages, mode, currentTTSHistory]);
 
   const handleTTSGenerate = async (text: string) => {
-      // Implement TTS logic via API if needed or keep existing logic if it calls /api/speak
-      // existing handleTTSGenerate seems to fetch /api/speak directly, which is fine.
-      // But we need to use `addTTSAudio` from hook to save it.
-      
-      // ... (Reusing logic from previous App.tsx but simplified)
+
       if (!text.trim()) {
         alert("Por favor, escribe un texto para convertir a voz");
         return;
@@ -261,8 +257,7 @@ function App() {
         conversationId = createConversation();
       }
 
-      // setIsLoading(true); // TODO: Expose loading state setter from hook or manage local?
-      // For now, let's keep local loading state for UI feedback but separating it from messages loading
+
       
       try {
         const response = await fetch("/api/voice/speak", {
@@ -287,7 +282,7 @@ function App() {
         const ttsAudio: TTSAudio = {
           id: crypto.randomUUID(),
           text: text.trim(),
-          audioUrl: base64Audio, // Use base64 instead of temporary blob URL
+          audioUrl: base64Audio,
           timestamp: Date.now(),
           voiceId: selectedVoiceId,
           voiceName: "Roger - Laid-Back, Casual, Resonant",
@@ -310,14 +305,13 @@ function App() {
     let messageContent: string | MessageContent[];
     let finalImageUrl = imageBase64;
 
-    // Upload Image if present
+
     if (imageFile) {
         try {
             const formData = new FormData();
             formData.append('file', imageFile);
             
-            // Note: We might want a separate loading state or toast here?
-            // "Uploading image..."
+
             const uploadRes = await fetch(`/api/chat/upload`, {
                  method: 'POST',
                  headers: {
@@ -329,15 +323,13 @@ function App() {
             
             if (uploadRes.ok) {
                 const data = await uploadRes.json();
-                // Assuming data.url is the string. Check verify result.
-                // storage_service.py/chat.py: return {"url": ...}
+
                 if (data.url) {
                     finalImageUrl = data.url;
                 }
             } else {
                 console.error("Image upload failed");
-                // Fallback to base64 or show error? 
-                // Let's keep base64 as fallback or just proceed so user doesn't lose text.
+
             }
         } catch (e) {
             console.error("Error uploading image:", e);
@@ -365,13 +357,8 @@ function App() {
 
     updateCurrentMessages(prev => [...prev, userMessage]);
     
-    // We don't call `addChatMessage` because we will manually manage the POST request for streaming here.
-    // OR... we can call `addChatMessage` to persist the user message, then call separate logic for streaming?
-    // The backend `send_message` does both: saves user message AND streams response.
-    // So we should make ONE call.
-    
-    // Let's implement the fetch/stream manually here using the logic from previous App.tsx
-    // but adapted to the new backend.
+
+
     
     const assistantMessageId = crypto.randomUUID();
     const assistantMessage: ChatMessageType = {
@@ -384,9 +371,9 @@ function App() {
     updateCurrentMessages(prev => [...prev, assistantMessage]);
 
     try {
-        // Construct payload
+
         
-        // We need auth token for the fetch
+
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
         
@@ -402,7 +389,7 @@ function App() {
                  content: m.content
              }));
         } else {
-             // For persistent chat, just send the new message
+
              messagesPayload = [{ role: userMessage.role, content: userMessage.content }];
         }
 
@@ -851,7 +838,7 @@ function App() {
 
         {view === "chat" && !showSearchView && mode !== "conversational" && (
           isConversationalHistory ? (
-            /* Si es historial de voz (Conversational AI), mostramos la lista abajo (si estamos en modo Chat) y NUNCA mostramos input */
+
             mode !== "tts" ? (
               <div className="bg-background p-3 sm:p-4 border-t border-border transition-colors duration-200">
                 <div className="max-w-4xl mx-auto">
@@ -867,7 +854,7 @@ function App() {
               </div>
             ) : null
           ) : (
-            /* Si NO es historial de voz (es decir, es Chat normal o Texto a Voz estándar), mostramos SIEMPRE el Input */
+
             <ChatInput 
               onSend={mode === "tts" ? handleTTSGenerate : handleSendMessage}
               onSearch={handleSemanticSearch}
