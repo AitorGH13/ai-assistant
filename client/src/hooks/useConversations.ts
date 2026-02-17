@@ -53,14 +53,36 @@ export function useConversations(): {
     setIsLoading(true);
     try {
       const response = await api.get('/chat/');
-      const apiConversations = response.data.map((c: any) => ({
-        id: c.id,
-        title: c.title,
-        messages: [], 
-        createdAt: c.created_at,
-        updatedAt: c.updated_at,
-        ttsHistory: c.tts_history || [], // Map backend snake_case to frontend camelCase
-      }));
+      const apiConversations = response.data.map((c: any) => {
+        // Map history to messages (minimal mapping for icons)
+        const messages = (c.history || []).map((m: any) => ({
+          id: m.id,
+          role: m.role || (m.id === 0 ? 'user' : 'assistant'),
+          content: m.msg,
+          timestamp: m.date
+        }));
+
+        // Map voice_sessions to ttsHistory (minimal mapping for icons)
+        const ttsHistory = (c.voice_sessions || []).map((session: any) => {
+          const transcripts = session.transcript || [];
+          const meta = transcripts[0] || {};
+          return {
+            id: session.id,
+            voiceId: meta.voice_id || 'conversational-ai',
+            text: meta.msg || meta.text || 'Audio',
+            transcript: transcripts
+          };
+        });
+
+        return {
+          id: c.id,
+          title: c.title,
+          messages: messages,
+          createdAt: c.created_at,
+          updatedAt: c.updated_at,
+          ttsHistory: ttsHistory,
+        };
+      });
       setConversations(prev => {
         // Keep local/temporary conversations that are NOT in the API validation list
         // (Actually temporary ones are never in API, local drafts might be if we just saved them? 
