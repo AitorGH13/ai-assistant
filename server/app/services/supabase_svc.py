@@ -43,7 +43,12 @@ class SupabaseService:
         return response.data
 
     def delete_conversation(self, conversation_id: UUID, user_id: UUID) -> bool:
-        # Verify ownership implicitly by filter
+        # Delete associated voice sessions first
+        self.client.table("voice_sessions").delete()\
+            .eq("conversation_id", str(conversation_id))\
+            .execute()
+
+        # Verify ownership implicitly by filter and delete conversation
         response = self.client.table("conversations").delete()\
             .eq("id", str(conversation_id))\
             .eq("user_id", str(user_id))\

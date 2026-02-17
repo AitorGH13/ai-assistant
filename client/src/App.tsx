@@ -477,7 +477,7 @@ function App() {
         onNewConversation={handleNewConversation}
         onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         isOpen={isSidebarOpen}
-        conversations={conversations.filter(c => !c.isTemporary)}
+        conversations={conversations}
         currentConversationId={currentConversationId}
         onLoadConversation={handleLoadConversation}
         onDeleteConversation={handleDeleteConversation}
@@ -704,16 +704,20 @@ function App() {
             </div>
           ) : mode === "conversational" ? (
             <div className="flex-1 flex flex-col min-h-0">
-              <div className="px-4 py-2 border-b border-border/50">
-                <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                  <Mic className="h-5 w-5 text-primary" />
-                  Conversación de Voz
-                </h3>
-              </div>
-              
               {isConversationalHistory ? (
-                <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-                   <div className="max-w-3xl mx-auto">
+                <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 custom-scrollbar">
+                   <div className="max-w-4xl mx-auto">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                          <Mic className="h-5 w-5" />
+                          Conversación de Voz
+                        </h3>
+                        {conversations.find(c => c.id === currentConversationId)?.isTemporary && (
+                          <span className="text-xs text-muted-foreground bg-accent/50 px-2 py-1 rounded-md">
+                            No se guarda en el historial
+                          </span>
+                        )}
+                      </div>
                       <TTSAudioList 
                         audios={currentTTSHistory} 
                         onDelete={deleteTTSAudio} 
