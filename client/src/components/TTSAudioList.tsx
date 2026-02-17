@@ -1,9 +1,10 @@
-import { Volume2, Play, Pause, Download, Trash2, Bot } from "lucide-react";
+import { Volume2, Play, Pause, Download, Trash2, Bot, User } from "lucide-react";
 import { useState, useRef } from "react";
 import { TTSAudio } from "../types";
 import { Button } from "./ui/Button";
 import { Card, CardContent } from "./ui/Card";
 import { cn } from "../lib/utils";
+import { useAuth } from "../context/AuthProvider";
 
 
 interface Props {
@@ -12,6 +13,8 @@ interface Props {
 }
 
 export function TTSAudioList({ audios, onDelete }: Props) {
+  const { user } = useAuth();
+  const userName = user?.user_metadata?.full_name || "Tú";
   const [playingId, setPlayingId] = useState<string | null>(null);
   const audioRefs = useRef<{ [key: string]: HTMLAudioElement }>({});
 
@@ -64,6 +67,15 @@ export function TTSAudioList({ audios, onDelete }: Props) {
            date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
   };
 
+  const formatMessageTime = (dateStr?: string) => {
+    if (!dateStr) return "";
+    const date = new Date(dateStr);
+    return date.toLocaleTimeString('es-ES', { 
+      hour: '2-digit', 
+      minute: '2-digit'
+    });
+  };
+
   if (audios.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -100,14 +112,33 @@ export function TTSAudioList({ audios, onDelete }: Props) {
                         {audio.transcript?.map((msg, idx) => {
                             const isUser = msg.role === 'user';
                             return (
-                                <div key={idx} className={cn("flex", isUser ? "justify-end" : "justify-start")}>
-                                     <div className={cn(
-                                         "rounded-2xl px-4 py-3 max-w-[85%] text-sm sm:text-base shadow-sm",
-                                         isUser 
-                                            ? "bg-primary text-white rounded-tr-none" 
-                                            : "bg-slate-200 dark:bg-muted text-foreground rounded-tl-none"
-                                     )}>
-                                         <p className="whitespace-pre-wrap leading-relaxed">{msg.msg || (msg as any).text}</p>
+                                <div key={idx} className={cn("flex gap-1.5 sm:gap-2 items-start", isUser ? "flex-row-reverse" : "flex-row")}>
+                                     {!isUser ? (
+                                         <div className="flex-shrink-0 h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                                             <Bot size={28} className="text-primary" />
+                                         </div>
+                                     ) : (
+                                         <div className="flex-shrink-0 h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-primary-500 flex items-center justify-center">
+                                             <User size={28} className="text-white" />
+                                         </div>
+                                     )}
+                                     <div className={cn("flex flex-col gap-1 max-w-[85%] mt-6", isUser ? "items-end" : "items-start")}>
+                                         <div className="flex items-center gap-2 px-1">
+                                             <span className="text-[10px] sm:text-xs font-medium text-muted-foreground">
+                                                 {isUser ? userName : "AI Assistant"}
+                                             </span>
+                                             <span className="text-[10px] text-muted-foreground/60">
+                                                 {formatMessageTime(msg.date)}
+                                             </span>
+                                         </div>
+                                         <div className={cn(
+                                             "rounded-3xl px-4 py-3 shadow-sm",
+                                             isUser 
+                                                ? "bg-primary text-white rounded-tr-none" 
+                                                : "bg-slate-200 dark:bg-muted text-foreground rounded-tl-none"
+                                         )}>
+                                             <p className="whitespace-pre-wrap leading-relaxed text-sm sm:text-base">{msg.msg || (msg as any).text}</p>
+                                         </div>
                                      </div>
                                 </div>
                             );
