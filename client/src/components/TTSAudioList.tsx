@@ -79,7 +79,8 @@ export function TTSAudioList({ audios, onDelete }: Props) {
   return (
     <div className="max-w-3xl mx-auto space-y-3">
       {[...audios].sort((a, b) => b.timestamp - a.timestamp).map((audio) => {
-        const isVoiceSession = !!audio.transcript && audio.transcript.length > 0;
+        // Only treat as "Voice Session" (Conversational) if it has a transcript AND the voiceId is specific to conversational mode
+        const isVoiceSession = !!audio.transcript && audio.transcript.length > 0 && audio.voiceId === 'conversational-ai';
 
         if (isVoiceSession) {
           return (
@@ -94,18 +95,19 @@ export function TTSAudioList({ audios, onDelete }: Props) {
                 </div>
                 <CardContent className="p-0">
                     {/* Transcript Scroll Area */}
-                    <div className="max-h-96 overflow-y-auto p-4 space-y-4 bg-background/50 custom-scrollbar">
+                    {/* Transcript Scroll Area responsive to screen size */}
+                    <div className="max-h-[60vh] min-h-[200px] overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6 bg-background/50 custom-scrollbar">
                         {audio.transcript?.map((msg, idx) => {
                             const isUser = msg.role === 'user';
                             return (
                                 <div key={idx} className={cn("flex", isUser ? "justify-end" : "justify-start")}>
                                      <div className={cn(
-                                         "rounded-lg px-3 py-2 max-w-[85%] text-sm",
+                                         "rounded-2xl px-4 py-3 max-w-[85%] text-sm sm:text-base shadow-sm",
                                          isUser 
-                                            ? "bg-primary text-white rounded-tr-md" 
-                                            : "bg-slate-200 dark:bg-muted text-foreground rounded-tl-md"
+                                            ? "bg-primary text-white rounded-tr-none" 
+                                            : "bg-slate-200 dark:bg-muted text-foreground rounded-tl-none"
                                      )}>
-                                         <p className="whitespace-pre-wrap">{msg.msg || (msg as any).text}</p>
+                                         <p className="whitespace-pre-wrap leading-relaxed">{msg.msg || (msg as any).text}</p>
                                      </div>
                                 </div>
                             );
@@ -134,7 +136,7 @@ export function TTSAudioList({ audios, onDelete }: Props) {
                         </Button>
                         
                         <div className="flex-1">
-                             <div className="h-1 bg-muted rounded-full overflow-hidden">
+                             <div className="h-1 bg-slate-200 dark:bg-muted rounded-full overflow-hidden">
                                  <div className={cn("h-full bg-primary transition-all duration-500", playingId === audio.id ? "w-full animate-pulse" : "w-0")} />
                              </div>
                         </div>
@@ -215,7 +217,7 @@ export function TTSAudioList({ audios, onDelete }: Props) {
                 </Button>
                 
                 <div className="flex-1">
-                  <div className="h-1 bg-muted rounded-full overflow-hidden">
+                  <div className="h-1 bg-slate-200 dark:bg-muted rounded-full overflow-hidden">
                     <div className={cn("h-full bg-primary transition-all duration-500", playingId === audio.id ? "w-full animate-pulse" : "w-0")} />
                   </div>
                 </div>
