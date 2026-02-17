@@ -717,7 +717,7 @@ function App() {
                     )}
                   </div>
                   <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-2">
-                    {isConversationalHistory && mode !== "tts" ? "Conversación de Voz" : "Texto a voz"}
+                    {isConversationalHistory && mode !== "tts" ? "IA Conversacional" : "Texto a voz"}
                   </h2>
                   <p className="text-sm sm:text-base text-muted-foreground mb-6 sm:mb-8 text-center">
                     {isConversationalHistory && mode !== "tts"
@@ -760,7 +760,7 @@ function App() {
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
                           <Mic className="h-5 w-5" />
-                          Conversación de Voz
+                          IA Conversacional
                         </h3>
                       </div>
                       <TTSAudioList 

@@ -1,10 +1,11 @@
-import { Volume2, Play, Pause, Download, Trash2, Bot, User } from "lucide-react";
+import { Volume2, Play, Pause, Download, Trash2 } from "lucide-react";
 import { useState, useRef } from "react";
 import { TTSAudio } from "../types";
 import { Button } from "./ui/Button";
 import { Card, CardContent } from "./ui/Card";
 import { cn } from "../lib/utils";
 import { useAuth } from "../context/AuthProvider";
+import { Avatar } from "./ui/Avatar";
 
 
 interface Props {
@@ -110,22 +111,14 @@ export function TTSAudioList({ audios, onDelete }: Props) {
                         {audio.transcript?.map((msg, idx) => {
                             const isUser = msg.role === 'user';
                             return (
-                                <div key={idx} className="flex gap-4 items-start">
-                                     {!isUser ? (
-                                         <div className="flex-shrink-0 h-10 w-10 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center mt-1">
-                                             <Bot size={20} className="text-indigo-600 dark:text-indigo-400" />
-                                         </div>
-                                     ) : (
-                                         <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mt-1">
-                                             <User size={20} className="text-gray-500 dark:text-gray-400" />
-                                         </div>
-                                     )}
+                                 <div key={idx} className="flex gap-4 items-start">
+                                     <Avatar role={isUser ? 'user' : 'assistant'} size="sm" />
                                      
                                      <div className="flex flex-col gap-1 flex-1 min-w-0">
                                          <div className="flex items-center gap-2">
                                              <span className={cn(
                                                  "text-sm font-bold",
-                                                 isUser ? "text-gray-500 dark:text-gray-400" : "text-indigo-600 dark:text-indigo-400"
+                                                 isUser ? "text-primary" : "text-muted-foreground"
                                              )}>
                                                  {isUser ? userName : "AI Assistant"}
                                              </span>
