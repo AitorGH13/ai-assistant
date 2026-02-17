@@ -217,7 +217,7 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
             placeholder={placeholder}
             disabled={disabled}
             rows={1}
-            className="flex-1 resize-none bg-transparent py-2.5 text-sm sm:text-base text-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50 min-h-[44px]"
+            className="flex-1 resize-none bg-transparent py-2.5 text-[13px] sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50 min-h-[44px]"
             style={{
               maxHeight: "200px",
               overflowY: input.split("\n").length > 3 ? "auto" : "hidden",
@@ -234,13 +234,13 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
                   onClick={handleModeToggle}
                   disabled={disabled}
                   className={cn(
-                    "h-9 w-9 min-h-[36px] min-w-[36px] hover:bg-accent/50",
+                    "h-8 w-8 min-h-[32px] min-w-[32px] hover:bg-accent/50",
                     mode === "search" ? "text-primary hover:text-primary" : "text-muted-foreground hover:text-muted-foreground"
                   )}
                   aria-label={mode === "search" ? "Cambiar a modo chat" : "Cambiar a modo búsqueda"}
                   title={mode === "search" ? "Modo chat" : "Búsqueda semántica"}
                 >
-                  <Search size={20} />
+                  <Search size={18} />
                 </Button>
               )}
 
@@ -259,11 +259,11 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
                     size="icon"
                     onClick={handleImageButtonClick}
                     disabled={disabled}
-                    className="h-9 w-9 min-h-[36px] min-w-[36px] hover:bg-accent/50 text-muted-foreground hover:text-muted-foreground"
+                    className="h-8 w-8 min-h-[32px] min-w-[32px] hover:bg-accent/50 text-muted-foreground hover:text-muted-foreground"
                     aria-label="Añadir imagen"
                     title="Añadir imagen"
                   >
-                    <Image size={20} />
+                    <Image size={18} />
                   </Button>
                 </>
               )}
@@ -280,13 +280,13 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
                     onClick={handleTTSToggle}
                     disabled={disabled}
                     className={cn(
-                      "h-9 w-9 min-h-[36px] min-w-[36px] hover:bg-accent/50",
+                      "h-8 w-8 min-h-[32px] min-w-[32px] hover:bg-accent/50",
                       mode === "tts" ? "text-primary hover:text-primary" : "text-muted-foreground hover:text-muted-foreground"
                     )}
                     aria-label="Modo texto a voz"
                     title="Texto a voz"
                   >
-                    <Volume2 size={20} />
+                    <Volume2 size={18} />
                   </Button>
 
                   {/* Conversational AI Button - Hidden on mobile when typing */}
@@ -296,14 +296,14 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
                     onClick={handleConversationalToggle}
                     disabled={disabled}
                     className={cn(
-                      "h-9 w-9 min-h-[36px] min-w-[36px] hover:bg-accent/50",
+                      "h-8 w-8 min-h-[32px] min-w-[32px] hover:bg-accent/50",
                       mode === "conversational" ? "bg-primary/10 text-primary hover:text-primary" : "text-muted-foreground hover:text-muted-foreground",
                       (input.trim() || imageBase64) ? "hidden md:flex" : "flex"
                     )}
                     aria-label="Modo IA conversacional"
                     title="IA conversacional"
                   >
-                    <Mic size={20} />
+                    <Mic size={18} />
                   </Button>
                 </>
               )}
@@ -315,12 +315,12 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
                 onClick={handleSubmit}
                 disabled={disabled || (!input.trim() && !imageBase64)}
                 className={cn(
-                  "h-9 w-9 min-h-[36px] min-w-[36px] hover:bg-accent/50 text-primary hover:text-primary",
+                  "h-8 w-8 min-h-[32px] min-w-[32px] hover:bg-accent/50 text-primary hover:text-primary",
                   (input.trim() || imageBase64) ? "flex md:hidden" : "hidden"
                 )}
                 aria-label="Enviar mensaje"
               >
-                <SendHorizontal size={20} />
+                <SendHorizontal size={18} />
               </Button>
             </div>
           </div>
