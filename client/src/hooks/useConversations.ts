@@ -55,8 +55,8 @@ export function useConversations(): {
       const response = await api.get('/chat/');
       const apiConversations = response.data.map((c: any) => {
         // Map history to messages (minimal mapping for icons)
-        const messages = (c.history || []).map((m: any) => ({
-          id: m.id,
+        const messages = (c.history || []).map((m: any, idx: number) => ({
+          id: m.id !== undefined && m.id !== null ? `${m.id}-${idx}` : `msg-${c.id}-${idx}`,
           role: m.role || (m.id === 0 ? 'user' : 'assistant'),
           content: m.msg,
           timestamp: m.date
@@ -122,8 +122,8 @@ export function useConversations(): {
         const data = response.data;
         
         // Map backend history (Clean Message objects) to ChatMessage[]
-        const messages: ChatMessage[] = (data.history || []).map((m: any) => ({
-            id: m.id,
+        const messages: ChatMessage[] = (data.history || []).map((m: any, idx: number) => ({
+            id: m.id !== undefined && m.id !== null ? `${m.id}-${idx}` : `msg-${id}-${idx}`,
             role: m.role,
             content: m.content,
             timestamp: m.created_at

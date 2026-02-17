@@ -847,8 +847,8 @@ function App() {
                         </span>
                       )}
                     </div>
-                    {currentMessages.map((message: ChatMessageType) => (
-                      <ChatMessage key={message.id} message={message} theme={theme} />
+                    {currentMessages.map((message: ChatMessageType, index: number) => (
+                      <ChatMessage key={`${message.id}-${index}`} message={message} theme={theme} />
                     ))}
                   </div>
                 </>
