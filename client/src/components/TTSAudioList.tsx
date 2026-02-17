@@ -145,7 +145,7 @@ export function TTSAudioList({ audios, onDelete }: Props) {
                                     variant="ghost"
                                     size="icon"
                                     onClick={() => handleDownload(audio)}
-                                    className="text-muted-foreground hover:text-foreground h-8 w-8"
+                                    className="text-primary h-8 w-8"
                                     title="Descargar audio"
                                 >
                                     <Download size={16} />
@@ -155,7 +155,7 @@ export function TTSAudioList({ audios, onDelete }: Props) {
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => onDelete(audio.id)}
-                                className="text-muted-foreground hover:text-destructive h-8 w-8"
+                                className="text-primary h-8 w-8"
                                 title="Eliminar audio"
                             >
                                 <Trash2 size={16} />
@@ -226,7 +226,7 @@ export function TTSAudioList({ audios, onDelete }: Props) {
                       variant="ghost"
                       size="icon"
                       onClick={() => handleDownload(audio)}
-                      className="text-muted-foreground hover:text-foreground h-8 w-8"
+                      className="text-primary h-8 w-8"
                       title="Descargar audio"
                     >
                       <Download size={16} />
@@ -236,7 +236,7 @@ export function TTSAudioList({ audios, onDelete }: Props) {
                     variant="ghost"
                     size="icon"
                     onClick={() => onDelete(audio.id)}
-                    className="text-muted-foreground hover:text-destructive h-8 w-8"
+                    className="text-primary h-8 w-8"
                     title="Eliminar audio"
                   >
                     <Trash2 size={16} />
