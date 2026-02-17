@@ -84,7 +84,7 @@ export function ChatMessage({ message, theme = 'dark' }: Props) {
   return (
     <div
       className={cn(
-        "flex gap-2 sm:gap-3 mb-4 sm:mb-6 animate-fade-in",
+        "flex gap-2 sm:gap-3 mb-4 sm:mb-6",
         isUser ? "flex-row-reverse" : "flex-row"
       )}
     >

@@ -13,12 +13,8 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      "/api/chat": {
-        target: "http://localhost:3001",
-        changeOrigin: true,
-      },
-      "/api/search": {
-        target: "http://localhost:3001",
+      "/api/conversation": {
+        target: "http://localhost:3002",
         changeOrigin: true,
       },
       "/api/voices": {
@@ -29,16 +25,8 @@ export default defineConfig({
         target: "http://localhost:3002",
         changeOrigin: true,
       },
-      "/api/conversation-signature": {
-        target: "http://localhost:3002",
-        changeOrigin: true,
-      },
-      "/api/conversation-webhook": {
-        target: "http://localhost:3002",
-        changeOrigin: true,
-      },
-      "/api/conversation-audio": {
-        target: "http://localhost:3002",
+      "/api": {
+        target: "http://localhost:3001",
         changeOrigin: true,
       },
     },

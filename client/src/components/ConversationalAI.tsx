@@ -1,26 +1,19 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Mic, Square, Loader2 } from "lucide-react";
 import { useConversation } from "@elevenlabs/react";
-import { ChatMessage, TTSAudio } from "../types";
 import { Button } from "./ui/Button";
 import { cn } from "../lib/utils";
+import api from "../services/api";
 
 interface ConversationalAIProps {
-  addTTSAudio: (audio: TTSAudio, conversationId?: string) => void;
   createConversation: (isTemporary?: boolean) => string;
   loadConversation: (id: string) => void;
-  addChatMessage: (message: ChatMessage, conversationId?: string) => void;
-  updateConversationTitle: (id: string, newTitle: string) => void;
   isTemporary?: boolean;
 }
 
 export function ConversationalAI({
-  addTTSAudio,
   createConversation,
   loadConversation,
-  addChatMessage,
-  updateConversationTitle,
   isTemporary = false,
 }: ConversationalAIProps) {
   const [agentId, setAgentId] = useState<string>("");
@@ -28,100 +21,65 @@ export function ConversationalAI({
   const elevenLabsConversationIdRef = useRef<string | null>(null);
   const conversationStartTimeRef = useRef<number | null>(null);
   const messagesCountRef = useRef<number>(0);
+  const conversationMessagesRef = useRef<Array<{role: string, message: string}>>([]);
   const [_conversationMessages, setConversationMessages] = useState<Array<{role: string, message: string}>>([]);
   
+  const isTemporaryRef = useRef(isTemporary);
+  
+  useEffect(() => {
+    isTemporaryRef.current = isTemporary;
+  }, [isTemporary]);
+
   // Hook oficial de ElevenLabs para gestionar la conversación
   const conversation = useConversation({
     onConnect: () => {
       conversationStartTimeRef.current = Date.now();
       messagesCountRef.current = 0;
+      conversationMessagesRef.current = [];
     },
     onDisconnect: () => {
       
       // Guardar la conversación cuando se desconecta
       if (conversationIdRef.current && conversationStartTimeRef.current) {
-        const duration = Math.floor((Date.now() - conversationStartTimeRef.current) / 1000);
-        const convId = conversationIdRef.current;
-        const elevenLabsConvId = elevenLabsConversationIdRef.current;
+        const elevenLabsConvId = elevenLabsConversationIdRef.current; // The ID we need for backend
 
-        // Actualizar el título de la conversación en el historial
-        const durationString = `${Math.floor(duration / 60)}:${String(duration % 60).padStart(2, '0')}`;
-        updateConversationTitle(convId, `Conversación - ${durationString}`);
-        
-        const tryFetchAudio = async (attempts = 0, maxAttempts = 5) => {
-          if (!elevenLabsConvId || attempts >= maxAttempts) {
-            addTTSAudio({
-              id: crypto.randomUUID(),
-              text: `Conversación de voz - Duración: ${durationString} (sin audio)`,
-              audioUrl: "",
-              timestamp: Date.now(),
-              voiceId: "conversational-ai",
-              voiceName: "ElevenLabs Agent",
-            }, convId);
-            return;
-          }
-          
-          try {
-            const response = await fetch(`/api/conversation-audio/${elevenLabsConvId}`);
-            
-            if (response.ok) {
-              const contentType = response.headers.get('content-type');
-              
-              if (contentType?.includes('audio')) {
-                const audioBlob = await response.blob();
-              
-              const reader = new FileReader();
-              const audioUrl = await new Promise<string>((resolve) => {
-                reader.onloadend = () => {
-                  resolve(reader.result as string);
-                };
-                reader.readAsDataURL(audioBlob);
-              });
-              
-              const transcription = response.headers.get('X-Transcription') || '';
-              
-              const audioEntry = {
-                id: crypto.randomUUID(),
-                text: transcription || `Conversación de voz - Duración: ${durationString}`,
-                audioUrl: audioUrl,
-                timestamp: Date.now(),
-                voiceId: "conversational-ai",
-                voiceName: "ElevenLabs Agent",
-              };
-              
-                // Guardar la transcripción completa como mensaje en el historial
-                if (transcription && convId) {
-                  const chatMessage = {
-                    id: crypto.randomUUID(),
-                    role: 'assistant' as const,
-                    content: transcription,
-                    timestamp: new Date().toISOString(),
-                  };
-                  await addChatMessage(chatMessage, convId);
-                }
+        const currentAppConvId = conversationIdRef.current;
 
-                await addTTSAudio(audioEntry, convId);
+        const saveVoiceSession = async (convId: string) => {
+            try {
+                // Collect transcript from Ref (fallback)
+                const fallbackTranscript = conversationMessagesRef.current.map(msg => ({
+                    role: msg.role === 'assistant' ? 'agent' : 'user', // Map back to ElevenLabs/Backend terms if needed, or just send as is and let backend handle.
+                    // Backend expects 'agent' or 'user'. Frontend uses 'assistant'.
+                    message: msg.message
+                }));
+
+                await api.post(`/voice/process/${convId}`, {
+                    transcript: fallbackTranscript,
+                    app_conversation_id: currentAppConvId
+                });
                 
-                // Forzar actualización del título al final para asegurar que prevalece sobre cualquier
-                // título generado automáticamente por addChatMessage o addTTSAudio
-                updateConversationTitle(convId, `Conversación - ${durationString}`);
-              } else {
-                setTimeout(() => tryFetchAudio(attempts + 1, maxAttempts), 3000);
-              }
-            } else {
-              setTimeout(() => tryFetchAudio(attempts + 1, maxAttempts), 3000);
+                if (currentAppConvId) {
+                    loadConversation(currentAppConvId);
+                }
+                
+            } catch (e) {
+                console.error("Error saving session", e);
             }
-          } catch {
-            setTimeout(() => tryFetchAudio(attempts + 1, maxAttempts), 3000);
-          }
         };
         
-        setTimeout(() => tryFetchAudio(), 5000);
-        
+        // Use Ref to ensure we have the latest value inside the callback
+        if (elevenLabsConvId && !isTemporaryRef.current) {
+            saveVoiceSession(elevenLabsConvId);
+        } else if (isTemporaryRef.current && conversationIdRef.current) {
+             // Logic for temporary session (do nothing / don't save)
+             // ...
+        }
+
         conversationIdRef.current = null;
         conversationStartTimeRef.current = null;
         elevenLabsConversationIdRef.current = null;
-      }
+    }
     },
     onMessage: (message) => {
       if (message && typeof message === 'object') {
@@ -129,21 +87,18 @@ export function ConversationalAI({
         const role = msgObj.role || msgObj.source || 'user';
         const content = msgObj.message || msgObj.text || '';
         
-        if (content && conversationIdRef.current) {
+        if (content) {
           messagesCountRef.current += 1;
-          const chatMessage = {
-            id: crypto.randomUUID(),
-            role: (role === 'agent' ? 'assistant' : 'user') as 'user' | 'assistant',
-            content: content,
-            timestamp: new Date().toISOString(),
+          
+          const newMsg = {
+            role: (role === 'agent' ? 'assistant' : 'user'), 
+            message: content
           };
           
-          addChatMessage(chatMessage, conversationIdRef.current);
-          
-          setConversationMessages(prev => [...prev, {
-            role: role,
-            message: content
-          }]);
+          // Update Ref for safe access in onDisconnect
+          conversationMessagesRef.current.push(newMsg);
+
+          setConversationMessages(prev => [...prev, newMsg]);
         }
         
         const possibleId = msgObj.conversation_id || 
@@ -187,7 +142,8 @@ export function ConversationalAI({
       const newConvId = createConversation(isTemporary);
       conversationIdRef.current = newConvId;
       
-      loadConversation(newConvId);
+      // Do not loadConversation(newConvId) here because it is local-only and will 404 on backend
+      // createConversation already sets it as current.
       
       await navigator.mediaDevices.getUserMedia({ audio: true });
       

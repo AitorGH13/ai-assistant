@@ -1,9 +1,10 @@
-import { Volume2, Play, Pause, Download, Trash2 } from "lucide-react";
+import { Volume2, Play, Pause, Download, Trash2, Bot } from "lucide-react";
 import { useState, useRef } from "react";
 import { TTSAudio } from "../types";
 import { Button } from "./ui/Button";
 import { Card, CardContent } from "./ui/Card";
 import { cn } from "../lib/utils";
+
 
 interface Props {
   audios: TTSAudio[];
@@ -77,85 +78,173 @@ export function TTSAudioList({ audios, onDelete }: Props) {
 
   return (
     <div className="max-w-3xl mx-auto space-y-3">
-      {audios.map((audio) => (
-        <Card key={audio.id} className="hover:shadow-md transition-shadow">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              {/* Left Side Download Button - Only for TTS */}
-              {audio.voiceId !== "conversational-ai" && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleDownload(audio)}
-                  disabled={!audio.audioUrl}
-                  className="flex-shrink-0 h-10 w-10 min-h-[40px] min-w-[40px] text-primary"
-                  title="Descargar audio"
-                >
-                  <Download size={20} />
-                </Button>
-              )}
+      {[...audios].sort((a, b) => b.timestamp - a.timestamp).map((audio) => {
+        const isVoiceSession = !!audio.transcript && audio.transcript.length > 0;
 
-              {/* Play/Pause Button */}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handlePlayPause(audio)}
-                disabled={!audio.audioUrl}
-                className={cn(
-                  "flex-shrink-0 rounded-full h-11 w-11 min-h-[44px] min-w-[44px]",
-                  audio.audioUrl 
-                    ? "bg-blue-100 dark:bg-blue-900/50 text-primary" 
-                    : "text-muted-foreground"
-                )}
-              >
-                {playingId === audio.id ? (
-                  <Pause size={20} />
-                ) : (
-                  <Play size={20} />
-                )}
-              </Button>
+        if (isVoiceSession) {
+          return (
+             <Card key={audio.id} className="hover:shadow-md transition-shadow overflow-hidden border-border/50">
+                <div className="bg-muted/30 px-4 py-2 border-b border-border/50 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <div className="bg-primary/10 p-1.5 rounded-full">
+                            <Bot size={16} className="text-primary" />
+                        </div>
+                        <span className="text-xs text-muted-foreground">{formatTime(audio.timestamp)}</span>
+                    </div>
+                </div>
+                <CardContent className="p-0">
+                    {/* Transcript Scroll Area */}
+                    <div className="max-h-96 overflow-y-auto p-4 space-y-4 bg-background/50 custom-scrollbar">
+                        {audio.transcript?.map((msg, idx) => {
+                            const isUser = msg.role === 'user';
+                            return (
+                                <div key={idx} className={cn("flex", isUser ? "justify-end" : "justify-start")}>
+                                     <div className={cn(
+                                         "rounded-lg px-3 py-2 max-w-[85%] text-sm",
+                                         isUser 
+                                            ? "bg-primary text-white rounded-tr-md" 
+                                            : "bg-slate-200 dark:bg-muted text-foreground rounded-tl-md"
+                                     )}>
+                                         <p className="whitespace-pre-wrap">{msg.msg || (msg as any).text}</p>
+                                     </div>
+                                </div>
+                            );
+                        })}
+                    </div>
 
-              {/* Audio Info */}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-foreground line-clamp-2 mb-1">
-                  {audio.text}
-                </p>
-                <div className="text-xs text-muted-foreground">
-                  {formatTime(audio.timestamp)}
+                    {/* Audio Controls Footer */}
+                    <div className="p-3 bg-card border-t border-border flex items-center gap-3">
+                         <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handlePlayPause(audio)}
+                            disabled={!audio.audioUrl}
+                            className={cn(
+                            "flex-shrink-0 rounded-full h-10 w-10 min-h-[40px] min-w-[40px]",
+                            audio.audioUrl 
+                                ? "bg-primary/10 text-primary hover:bg-primary/20" 
+                                : "text-muted-foreground"
+                            )}
+                        >
+                            {playingId === audio.id ? (
+                            <Pause size={20} fill="currentColor" />
+                            ) : (
+                            <Play size={20} fill="currentColor" />
+                            )}
+                        </Button>
+                        
+                        <div className="flex-1">
+                             <div className="h-1 bg-muted rounded-full overflow-hidden">
+                                 <div className={cn("h-full bg-primary transition-all duration-500", playingId === audio.id ? "w-full animate-pulse" : "w-0")} />
+                             </div>
+                        </div>
+
+                         <div className="flex items-center gap-1">
+                             {audio.audioUrl && (
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleDownload(audio)}
+                                    className="text-primary h-8 w-8"
+                                    title="Descargar audio"
+                                >
+                                    <Download size={16} />
+                                </Button>
+                            )}
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => onDelete(audio.id)}
+                                className="text-primary h-8 w-8"
+                                title="Eliminar audio"
+                            >
+                                <Trash2 size={16} />
+                            </Button>
+                         </div>
+                    </div>
+                </CardContent>
+
+                <audio
+                    ref={el => {
+                        if (el) audioRefs.current[audio.id] = el;
+                    }}
+                    src={audio.audioUrl}
+                    onEnded={handleAudioEnded}
+                />
+             </Card>
+          );
+        }
+
+        // Standard TTS Card
+        return (
+          <Card key={audio.id} className="hover:shadow-md transition-shadow overflow-hidden border-border/50">
+            <div className="bg-muted/30 px-4 py-2 border-b border-border/50 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="bg-primary/10 p-1.5 rounded-full">
+                  <Bot size={16} className="text-primary" />
+                </div>
+                <span className="text-xs text-muted-foreground">{formatTime(audio.timestamp)}</span>
+              </div>
+            </div>
+            <CardContent className="p-0">
+              <div className="p-4">
+                <div className="rounded-lg px-3 py-2 bg-slate-200 dark:bg-muted text-foreground rounded-tl-md text-sm w-fit max-w-full shadow-sm">
+                  <p className="whitespace-pre-wrap">{audio.text}</p>
                 </div>
               </div>
 
-
-
-              {/* Delete Button */}
-              {audio.voiceId !== "conversational-ai" && (
+              {/* Audio Controls Footer */}
+              <div className="p-3 bg-card border-t border-border flex items-center gap-3">
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => onDelete(audio.id)}
-                  className="flex-shrink-0 h-8 w-8 min-h-[32px] min-w-[32px] text-primary"
-                  aria-label="Eliminar audio"
-                >
-                  <Trash2 size={16} />
-                </Button>
-              )}
-
-              {/* Right Side Download Button - Only for Conversational AI */}
-              {audio.voiceId === "conversational-ai" && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleDownload(audio)}
+                  onClick={() => handlePlayPause(audio)}
                   disabled={!audio.audioUrl}
-                  className="flex-shrink-0 h-10 w-10 min-h-[40px] min-w-[40px] text-primary"
-                  title="Descargar audio"
+                  className={cn(
+                    "flex-shrink-0 rounded-full h-10 w-10 min-h-[40px] min-w-[40px]",
+                    audio.audioUrl 
+                      ? "bg-primary/10 text-primary hover:bg-primary/20" 
+                      : "text-muted-foreground"
+                  )}
                 >
-                  <Download size={20} />
+                  {playingId === audio.id ? (
+                    <Pause size={20} fill="currentColor" />
+                  ) : (
+                    <Play size={20} fill="currentColor" />
+                  )}
                 </Button>
-              )}
-            </div>
+                
+                <div className="flex-1">
+                  <div className="h-1 bg-muted rounded-full overflow-hidden">
+                    <div className={cn("h-full bg-primary transition-all duration-500", playingId === audio.id ? "w-full animate-pulse" : "w-0")} />
+                  </div>
+                </div>
 
-            {/* Hidden Audio Element */}
+                <div className="flex items-center gap-1">
+                  {audio.audioUrl && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDownload(audio)}
+                      className="text-primary h-8 w-8"
+                      title="Descargar audio"
+                    >
+                      <Download size={16} />
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onDelete(audio.id)}
+                    className="text-primary h-8 w-8"
+                    title="Eliminar audio"
+                  >
+                    <Trash2 size={16} />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+
             <audio
               ref={el => {
                 if (el) audioRefs.current[audio.id] = el;
@@ -163,9 +252,9 @@ export function TTSAudioList({ audios, onDelete }: Props) {
               src={audio.audioUrl}
               onEnded={handleAudioEnded}
             />
-          </CardContent>
-        </Card>
-      ))}
+          </Card>
+        );
+      })}
     </div>
   );
 }
