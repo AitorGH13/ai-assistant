@@ -695,7 +695,7 @@ function App() {
                     {isConversationalHistory && mode !== "tts" ? ( 
                       <>
                         <Mic className="h-5 w-5 text-black dark:text-white" />
-                        Conversación de Voz
+                        IA Conversacional
                       </>
                     ) : (
                       <>
