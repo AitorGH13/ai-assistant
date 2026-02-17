@@ -99,7 +99,26 @@ function App() {
     setView("chat");
   };
 
-  // Sync mode based on conversation content when it's loaded or switched
+  const handleModeChange = (newMode: AppMode) => {
+    if (newMode === mode) return;
+
+    // Si estamos en una conversación con contenido, iniciamos una nueva en el nuevo modo
+    const conversation = conversations.find(c => c.id === currentConversationId);
+    const hasContent = conversation && (
+      (conversation.messages && conversation.messages.length > 0) || 
+      (conversation.ttsHistory && conversation.ttsHistory.length > 0)
+    );
+
+    if (hasContent) {
+      createConversation(conversation.isTemporary);
+    }
+    
+    setMode(newMode);
+    setShowSearchView(false);
+    setView("chat");
+  };
+
+  // Sync mode based on conversation content ONLY when a conversation is loaded or updated from outside
   useEffect(() => {
     if (!currentConversationId) return;
     
@@ -121,7 +140,7 @@ function App() {
         if (mode !== "chat") setMode("chat");
       }
     }
-  }, [currentConversationId, conversations, mode]); // Explicitly include mode to ensure sync logic is precise
+  }, [currentConversationId, conversations]); // REMOVED 'mode' dependency to allow manual switching within a conversation
 
   const handleDeleteConversation = (conversationId: string) => {
     deleteConversation(conversationId);
@@ -834,7 +853,7 @@ function App() {
               disabled={isMessagesLoading || !isInitialized} 
               showImageUpload={mode === "chat"}
               mode={mode}
-              onModeChange={setMode}
+              onModeChange={handleModeChange}
             />
           )
         )}
