@@ -546,9 +546,9 @@ function App() {
               size="icon"
               onClick={() => setView("profile")}
               title="Perfil"
-              className="ml-auto"
+              className="ml-auto h-12 w-12"
             >
-              <UserCircle2 className="h-8 w-8 text-primary" />
+              <UserCircle2 className="h-9 w-9 text-primary" />
             </Button>
           </div>
         </div>
