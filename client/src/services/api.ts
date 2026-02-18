@@ -3,7 +3,9 @@ import { supabase } from '../lib/supabase';
 
 // Create Axios instance
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001/api', // Default to 3001 as per previous config
+  baseURL: import.meta.env.PROD
+  ? 'api'
+  : (import.meta.env.VITE_API_URL || 'http://localhost:3001/api'),
   headers: {
     'Content-Type': 'application/json',
   },

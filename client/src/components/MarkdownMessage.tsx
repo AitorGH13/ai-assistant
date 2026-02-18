@@ -22,7 +22,7 @@ function CodeBlock({ children, className, theme }: { children: string; className
 
   if (!language) {
     return (
-      <code className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-sm font-mono text-gray-800 dark:text-gray-200">
+      <code className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-[12px] font-mono text-gray-800 dark:text-gray-200">
         {children}
       </code>
     );
@@ -43,7 +43,7 @@ function CodeBlock({ children, className, theme }: { children: string; className
         customStyle={{
           margin: 0,
           borderRadius: '0.5rem',
-          fontSize: '0.875rem',
+          fontSize: '0.8rem',
         }}
         PreTag="div"
       >
@@ -65,7 +65,7 @@ export function MarkdownMessage({ content, theme = 'dark' }: MarkdownMessageProp
             
             return isInline ? (
               <code
-                className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-sm font-mono text-gray-800 dark:text-gray-200"
+                className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-[12px] font-mono text-gray-800 dark:text-gray-200"
                 {...rest}
               >
                 {value}
@@ -86,7 +86,7 @@ export function MarkdownMessage({ content, theme = 'dark' }: MarkdownMessageProp
             return <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>;
           },
           li({ children }) {
-            return <li className="text-sm">{children}</li>;
+            return <li className="text-[13px]">{children}</li>;
           },
           a({ href, children }) {
             return (

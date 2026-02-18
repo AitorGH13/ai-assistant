@@ -1,5 +1,6 @@
 import requests
 import time
+from datetime import datetime
 from uuid import UUID
 from typing import List, Dict, Any, Optional
 from app.services.elevenlabs_svc import elevenlabs_service
@@ -134,11 +135,8 @@ class VoiceService:
                 # Create it!
                 print(f"Conversation {app_conversation_id} not found. Creating placeholder.")
                 # We need a title. Use date or something generic.
-                title = f"Voice Session - {len(processed_transcript)} messages" 
-                if processed_transcript:
-                     first_msg = processed_transcript[0].get("msg", "")[:30]
-                     if first_msg:
-                         title = first_msg + "..."
+                now = datetime.now()
+                title = f"Conversación - {now.strftime('%H:%M')}"
                          
                 # Create minimal conversation entry
                 supabase_service.create_conversation(

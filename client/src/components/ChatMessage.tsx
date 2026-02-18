@@ -40,11 +40,11 @@ export function ChatMessage({ message, theme = 'dark' }: Props) {
   const renderContent = () => {
     if (typeof message.content === 'string') {
       return isUser ? (
-        <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+        <p className="whitespace-pre-wrap break-words text-[13px] leading-relaxed">
           {message.content}
         </p>
       ) : (
-        <div className="text-sm leading-relaxed">
+        <div className="text-[13px] leading-relaxed">
           <MarkdownMessage content={message.content} theme={theme} />
         </div>
       );
@@ -56,7 +56,7 @@ export function ChatMessage({ message, theme = 'dark' }: Props) {
         {message.content.map((content: MessageContent, index: number) => {
           if (content.type === 'text' && content.text) {
             return (
-              <div key={index} className="text-sm leading-relaxed">
+              <div key={index} className="text-[13px] leading-relaxed">
                 {isUser ? (
                   <p className="whitespace-pre-wrap break-words">{content.text}</p>
                 ) : (
@@ -90,7 +90,7 @@ export function ChatMessage({ message, theme = 'dark' }: Props) {
     >
       <Avatar role={message.role} size="md" />
       
-      <div className={cn("flex flex-col gap-1 max-w-[90%] sm:max-w-[85%] md:max-w-[75%]", isUser ? 'items-end' : 'items-start')}>
+      <div className={cn("flex flex-col gap-1 max-w-[90%] sm:max-w-[85%] md:max-w-[75%] pt-6", isUser ? 'items-end' : 'items-start')}>
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-muted-foreground">
             {isUser ? userName : "AI Assistant"}
@@ -99,8 +99,8 @@ export function ChatMessage({ message, theme = 'dark' }: Props) {
             {formatTime(message.timestamp)}
           </span>
           {message.toolUsed && (
-            <Badge className="text-xs gap-1 bg-primary-600 hover:bg-primary-600 text-white border-none">
-              <Wrench size={12} />
+            <Badge className="text-[10px] py-0 px-1.5 h-4 gap-1 bg-primary-600 hover:bg-primary-600 text-white border-none">
+              <Wrench size={10} />
               Tool Used
             </Badge>
           )}
@@ -108,10 +108,10 @@ export function ChatMessage({ message, theme = 'dark' }: Props) {
         
         <div
           className={cn(
-            "rounded-xl sm:rounded-2xl px-3 sm:px-4 py-2.5 sm:py-3 shadow-sm",
+            "rounded-3xl px-4 py-3 shadow-sm",
             isUser
-              ? "bg-primary text-white rounded-tr-md"
-              : "bg-slate-200 dark:bg-muted text-foreground rounded-tl-md"
+              ? "bg-primary text-white rounded-tr-none"
+              : "bg-slate-200 dark:bg-muted text-foreground rounded-tl-none"
           )}
         >
           {renderContent()}

@@ -29,18 +29,35 @@ class SupabaseService:
         return response.data[0]
         
     def list_conversations(self, user_id: UUID) -> List[Dict[str, Any]]:
-        # Fetch minimal fields for list view
-        # We don't fetch tts_history here aggressively unless needed
-        # But if frontend calculates icons based on it, we might need a count or join.
-        # For simplicity, let's keep it simple first.
-        response = self.client.table("conversations").select("id, title, created_at, updated_at")\
+        # Fetch conversations
+        conv_resp = self.client.table("conversations").select("id, title, created_at, updated_at, history")\
             .eq("user_id", str(user_id))\
             .order("updated_at", desc=True)\
             .execute()
         
-        # If we need tts info for icons, we could fetch it separately or alter query.
-        # But for now, let's assume detail view loads it.
-        return response.data
+        # Fetch ALL voice sessions for this user to map icons without complex joins
+        voice_resp = self.client.table("voice_sessions").select("id, conversation_id, transcript")\
+            .eq("user_id", str(user_id))\
+            .execute()
+        
+        conversations = conv_resp.data
+        voice_sessions = voice_resp.data
+        
+        # Group voice sessions by conversation_id
+        sessions_by_conv = {}
+        for session in voice_sessions:
+            c_id = session.get("conversation_id")
+            if c_id:
+                if c_id not in sessions_by_conv:
+                    sessions_by_conv[c_id] = []
+                sessions_by_conv[c_id].append(session)
+        
+        # Merge voice sessions into conversations
+        for conv in conversations:
+            conv_id = conv.get("id")
+            conv["voice_sessions"] = sessions_by_conv.get(conv_id, [])
+            
+        return conversations
 
     def delete_conversation(self, conversation_id: UUID, user_id: UUID) -> bool:
         # Delete associated voice sessions first

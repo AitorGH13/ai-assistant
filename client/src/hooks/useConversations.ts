@@ -53,14 +53,36 @@ export function useConversations(): {
     setIsLoading(true);
     try {
       const response = await api.get('/chat/');
-      const apiConversations = response.data.map((c: any) => ({
-        id: c.id,
-        title: c.title,
-        messages: [], 
-        createdAt: c.created_at,
-        updatedAt: c.updated_at,
-        ttsHistory: c.tts_history || [], // Map backend snake_case to frontend camelCase
-      }));
+      const apiConversations = response.data.map((c: any) => {
+        // Map history to messages (minimal mapping for icons)
+        const messages = (c.history || []).map((m: any, idx: number) => ({
+          id: m.id !== undefined && m.id !== null ? `${m.id}-${idx}` : `msg-${c.id}-${idx}`,
+          role: m.role || (m.id === 0 ? 'user' : 'assistant'),
+          content: m.msg,
+          timestamp: m.date
+        }));
+
+        // Map voice_sessions to ttsHistory (minimal mapping for icons)
+        const ttsHistory = (c.voice_sessions || []).map((session: any) => {
+          const transcripts = session.transcript || [];
+          const meta = transcripts[0] || {};
+          return {
+            id: session.id,
+            voiceId: meta.voice_id || 'conversational-ai',
+            text: meta.msg || meta.text || 'Audio',
+            transcript: transcripts
+          };
+        });
+
+        return {
+          id: c.id,
+          title: c.title,
+          messages: messages,
+          createdAt: c.created_at,
+          updatedAt: c.updated_at,
+          ttsHistory: ttsHistory,
+        };
+      });
       setConversations(prev => {
         // Keep local/temporary conversations that are NOT in the API validation list
         // (Actually temporary ones are never in API, local drafts might be if we just saved them? 
@@ -100,8 +122,8 @@ export function useConversations(): {
         const data = response.data;
         
         // Map backend history (Clean Message objects) to ChatMessage[]
-        const messages: ChatMessage[] = (data.history || []).map((m: any) => ({
-            id: m.id,
+        const messages: ChatMessage[] = (data.history || []).map((m: any, idx: number) => ({
+            id: m.id !== undefined && m.id !== null ? `${m.id}-${idx}` : `msg-${id}-${idx}`,
             role: m.role,
             content: m.content,
             timestamp: m.created_at
@@ -111,9 +133,17 @@ export function useConversations(): {
         
         const ttsHistory = data.ttsHistory || [];
         
-        // Update local cache with BOTH messages and TTS history
+        // Update local cache with messages, TTS history, AND title
         setConversations(prev => prev.map(c => 
-            c.id === id ? { ...c, messages: messages, ttsHistory: ttsHistory } : c
+            c.id === id ? { 
+                ...c, 
+                messages: messages, 
+                ttsHistory: ttsHistory,
+                // Only update title if provided and not empty (to avoid overwriting with empty if backend response is weird)
+                title: data.title || c.title,
+                // If it was local, mark as synced (isLocal: false) since we fetched it from backend
+                isLocal: false 
+            } : c
         ));
     } catch (error) {
         console.error("Failed to load conversation:", error);

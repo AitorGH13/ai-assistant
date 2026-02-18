@@ -1,5 +1,5 @@
 import { useState, KeyboardEvent, ClipboardEvent, useRef, useEffect } from "react";
-import { Image, X, Search, Mic, Volume2 } from "lucide-react";
+import { Image, X, Search, Mic, Volume2, SendHorizontal } from "lucide-react";
 import { AppMode } from "../types";
 import { Button } from "./ui/Button";
 import { cn } from "../lib/utils";
@@ -217,7 +217,7 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
             placeholder={placeholder}
             disabled={disabled}
             rows={1}
-            className="flex-1 resize-none bg-transparent py-2.5 text-sm sm:text-base text-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50 min-h-[44px]"
+            className="flex-1 resize-none bg-transparent py-2.5 text-[13px] sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50 min-h-[44px]"
             style={{
               maxHeight: "200px",
               overflowY: input.split("\n").length > 3 ? "auto" : "hidden",
@@ -234,13 +234,13 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
                   onClick={handleModeToggle}
                   disabled={disabled}
                   className={cn(
-                    "h-9 w-9 min-h-[36px] min-w-[36px] hover:bg-accent/50",
+                    "h-8 w-8 min-h-[32px] min-w-[32px] hover:bg-accent/50",
                     mode === "search" ? "text-primary hover:text-primary" : "text-muted-foreground hover:text-muted-foreground"
                   )}
                   aria-label={mode === "search" ? "Cambiar a modo chat" : "Cambiar a modo búsqueda"}
                   title={mode === "search" ? "Modo chat" : "Búsqueda semántica"}
                 >
-                  <Search size={20} />
+                  <Search size={18} />
                 </Button>
               )}
 
@@ -259,51 +259,69 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
                     size="icon"
                     onClick={handleImageButtonClick}
                     disabled={disabled}
-                    className="h-9 w-9 min-h-[36px] min-w-[36px] hover:bg-accent/50 text-muted-foreground hover:text-muted-foreground"
+                    className="h-8 w-8 min-h-[32px] min-w-[32px] hover:bg-accent/50 text-muted-foreground hover:text-muted-foreground"
                     aria-label="Añadir imagen"
                     title="Añadir imagen"
                   >
-                    <Image size={20} />
+                    <Image size={18} />
                   </Button>
                 </>
               )}
             </div>
 
-            {/* Right side buttons - Voice AI */}
+            {/* Right side buttons - Voice AI & Send */}
             <div className="flex items-center gap-1">
               {onModeChange && (
                 <>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleConversationalToggle}
-                    disabled={disabled}
-                    className={cn(
-                      "h-9 w-9 min-h-[36px] min-w-[36px] hover:bg-accent/50",
-                      mode === "conversational" ? "bg-primary/10 text-primary hover:text-primary" : "text-muted-foreground hover:text-muted-foreground"
-                    )}
-                    aria-label="Modo IA conversacional"
-                    title="IA conversacional"
-                  >
-                    <Mic size={20} />
-                  </Button>
-                  
+                  {/* TTS Button */}
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={handleTTSToggle}
                     disabled={disabled}
                     className={cn(
-                      "h-9 w-9 min-h-[36px] min-w-[36px] hover:bg-accent/50",
+                      "h-8 w-8 min-h-[32px] min-w-[32px] hover:bg-accent/50",
                       mode === "tts" ? "text-primary hover:text-primary" : "text-muted-foreground hover:text-muted-foreground"
                     )}
                     aria-label="Modo texto a voz"
                     title="Texto a voz"
                   >
-                    <Volume2 size={20} />
+                    <Volume2 size={18} />
+                  </Button>
+
+                  {/* Conversational AI Button - Hidden on mobile when typing */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleConversationalToggle}
+                    disabled={disabled}
+                    className={cn(
+                      "h-8 w-8 min-h-[32px] min-w-[32px] hover:bg-accent/50",
+                      mode === "conversational" ? "bg-primary/10 text-primary hover:text-primary" : "text-muted-foreground hover:text-muted-foreground",
+                      (input.trim() || imageBase64) ? "hidden md:flex" : "flex"
+                    )}
+                    aria-label="Modo IA conversacional"
+                    title="IA conversacional"
+                  >
+                    <Mic size={18} />
                   </Button>
                 </>
               )}
+              
+              {/* Send button - Shown on mobile only when typing */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleSubmit}
+                disabled={disabled || (!input.trim() && !imageBase64)}
+                className={cn(
+                  "h-8 w-8 min-h-[32px] min-w-[32px] hover:bg-accent/50 text-primary hover:text-primary",
+                  (input.trim() || imageBase64) ? "flex md:hidden" : "hidden"
+                )}
+                aria-label="Enviar mensaje"
+              >
+                <SendHorizontal size={18} />
+              </Button>
             </div>
           </div>
         </div>

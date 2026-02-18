@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Settings, Palette, FileText, Menu, Search, Volume2, MessageSquare, Pencil, Trash2, Mic, MessageSquareDashed } from "lucide-react";
 import { Theme } from "../utils/theme";
 import { Conversation } from "../types";
@@ -49,6 +49,13 @@ export function Sidebar({
   const [editTitleId, setEditTitleId] = useState<string | null>(null);
   const [editTitleValue, setEditTitleValue] = useState("");
 
+  // Cierra el panel de configuración si el menú se cierra en móvil/tablet
+  useEffect(() => {
+    if (!isOpen && window.innerWidth < 768) {
+      setShowFloatingSettings(false);
+    }
+  }, [isOpen]);
+
   const handleSettingsClick = () => {
     setShowFloatingSettings(!showFloatingSettings);
   };
@@ -56,6 +63,9 @@ export function Sidebar({
   const handleNewConversationClick = () => {
     onCloseSearch();
     onNewConversation();
+    if (window.innerWidth < 768 && isOpen) {
+      onToggleSidebar();
+    }
   };
 
   const handleMenuToggle = () => {
@@ -84,10 +94,21 @@ export function Sidebar({
 
   return (
     <>
+      {/* Backdrop for mobile */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 md:hidden animate-fade-in"
+          onClick={onToggleSidebar}
+        />
+      )}
+
       <div
         className={cn(
-          "h-full bg-slate-200 dark:bg-slate-900 transition-all duration-300 ease-in-out overflow-hidden flex-shrink-0",
-          isOpen ? "w-88" : "w-16"
+          "bg-slate-200 dark:bg-slate-900 transition-all duration-150 md:duration-300 ease-in-out overflow-hidden flex-shrink-0 z-50",
+          "fixed inset-y-0 left-0 md:relative h-full",
+          isOpen
+            ? "w-88 translate-x-0 shadow-2xl md:shadow-none"
+            : "w-88 -translate-x-full md:translate-x-0 md:w-16"
         )}
       >
         <div className="flex flex-col h-full">
@@ -107,7 +128,12 @@ export function Sidebar({
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={onSearchClick}
+                  onClick={() => {
+                    onSearchClick();
+                    if (window.innerWidth < 768 && isOpen) {
+                      onToggleSidebar();
+                    }
+                  }}
                   disabled={showSearchView}
                   title={showSearchView ? "Búsqueda activa" : "Buscar conversaciones"}
                   className="hover:bg-accent/50"
@@ -146,6 +172,9 @@ export function Sidebar({
                    } else {
                      onNewTemporaryConversation();
                    }
+                   if (window.innerWidth < 768 && isOpen) {
+                     onToggleSidebar();
+                   }
                 }}
                 className={cn(
                   "shrink-0 transition-colors",
@@ -163,9 +192,9 @@ export function Sidebar({
           {/* Historial de Conversaciones */}
           <ScrollArea className="flex-1 w-full">
             {isOpen && (
-              <div className="px-4 space-y-2 w-full overflow-hidden animate-in fade-in duration-300">
+              <div className="px-4 space-y-2 w-full overflow-hidden animate-in fade-in duration-150 md:duration-300">
                 <div className="w-full overflow-hidden">
-                  <h3 className="text-sm font-semibold text-muted-foreground mb-3 px-2 whitespace-nowrap overflow-hidden transition-opacity duration-300">
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-3 px-2 whitespace-nowrap overflow-hidden transition-opacity duration-150 md:duration-300">
                     Historial
                   </h3>
                   {conversations.length === 0 ? (
