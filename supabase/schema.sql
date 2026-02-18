@@ -3,6 +3,7 @@
 -- ============================================
 create extension if not exists "uuid-ossp";
 create extension if not exists pgcrypto;
+create extension if not exists vector; -- Para búsqueda semántica
 
 -- ============================================
 -- TABLA: profiles
@@ -93,20 +94,54 @@ create trigger update_conversations_updated_at
     execute function update_updated_at_column();
 
 -- ============================================
--- TABLA: voice_sessions (MODIFICADO)
+-- TABLA: voice_sessions
 -- ============================================
 create table if not exists public.voice_sessions (
     id uuid primary key default uuid_generate_v4(),
     user_id uuid not null references auth.users(id) on delete cascade,
-    conversation_id text, -- AHORA ES TEXT (Desacoplado de conversations.id)
+    conversation_id text, 
     transcript jsonb not null default '[]'::jsonb,
-    audio_url text,
+    audio_url text, -- Guardaremos el PATH relativo (ej: "user_123/audio.mp3")
     created_at timestamptz not null default now()
 );
 
 create index if not exists idx_voice_sessions_user_id on public.voice_sessions(user_id);
--- Index importante para buscar por el ID de texto externo
 create index if not exists idx_voice_sessions_conversation_id on public.voice_sessions(conversation_id);
+
+-- ============================================
+-- TABLA: documents (Base de Conocimiento)
+-- ============================================
+create table if not exists public.documents (
+  id bigserial primary key,
+  content text,
+  embedding vector(1536)
+);
+
+-- Función de búsqueda vectorial
+create or replace function match_documents (
+  query_embedding vector(1536),
+  match_threshold float,
+  match_count int
+)
+returns table (
+  id bigint,
+  content text,
+  similarity float
+)
+language plpgsql
+as $$
+begin
+  return query
+  select
+    documents.id,
+    documents.content,
+    1 - (documents.embedding <=> query_embedding) as similarity
+  from documents
+  where 1 - (documents.embedding <=> query_embedding) > match_threshold
+  order by similarity desc
+  limit match_count;
+end;
+$$;
 
 -- ============================================
 -- ROW LEVEL SECURITY (RLS) - DATOS
@@ -130,32 +165,48 @@ create policy "Users can select own voice sessions" on public.voice_sessions for
 create policy "Users can insert own voice sessions" on public.voice_sessions for insert with check (auth.uid() = user_id);
 
 -- ============================================
--- STORAGE & POLICIES (ARCHIVOS)
+-- STORAGE & POLICIES (SECURE / PRIVATE)
 -- ============================================
 
--- 1. BUCKET: chat-assets
+-- 1. BUCKET: chat-assets (Privado)
 insert into storage.buckets (id, name, public)
-values ('chat-assets', 'chat-assets', true)
-on conflict (id) do nothing;
+values ('chat-assets', 'chat-assets', false) -- CAMBIADO A FALSE
+on conflict (id) do update set public = false;
 
-create policy "Authenticated users can upload chat assets"
+create policy "Auth users select own chat assets"
+on storage.objects for select to authenticated
+using (bucket_id = 'chat-assets' AND auth.uid()::text = (storage.foldername(name))[1]);
+-- Nota: La política asume estructura de carpeta: user_id/archivo.ext
+
+create policy "Auth users upload chat assets"
 on storage.objects for insert to authenticated
-with check (bucket_id = 'chat-assets');
+with check (bucket_id = 'chat-assets' AND auth.uid()::text = (storage.foldername(name))[1]);
 
-create policy "Public can view chat assets"
-on storage.objects for select to public
-using (bucket_id = 'chat-assets');
 
--- 2. BUCKET: voice-sessions (NUEVO)
+-- 2. BUCKET: voice-sessions (Privado)
 insert into storage.buckets (id, name, public)
-values ('voice-sessions', 'voice-sessions', false) -- Privado por defecto (acceso vía RLS)
-on conflict (id) do nothing;
+values ('voice-sessions', 'voice-sessions', false)
+on conflict (id) do update set public = false;
 
--- NUEVA POLÍTICA: Solo SELECT para authenticated
-create policy "Authenticated users can listen to voice sessions"
-on storage.objects for select
-to authenticated
-using (bucket_id = 'voice-sessions');
+create policy "Auth users listen own voice sessions"
+on storage.objects for select to authenticated
+using (
+    bucket_id = 'voice-sessions' 
+    AND 
+    auth.uid()::text = (storage.foldername(name))[1]
+);
 
--- Nota: No se añaden políticas INSERT/UPDATE/DELETE para 'authenticated' 
--- porque la subida de audio se gestionará desde el Backend (Service Role).
+
+-- 3. BUCKET: media-uploads (Privado)
+insert into storage.buckets (id, name, public)
+values ('media-uploads', 'media-uploads', false) -- CAMBIADO A FALSE
+on conflict (id) do update set public = false;
+
+create policy "Auth users select own media"
+on storage.objects for select to authenticated
+using (bucket_id = 'media-uploads');
+
+create policy "Auth users upload media"
+on storage.objects for insert to authenticated
+with check (bucket_id = 'media-uploads');
+

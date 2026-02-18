@@ -3,17 +3,14 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "bun run cleanup && concurrently --kill-others \"bun run dev:server\" \"bun run dev:voice\" \"bun run dev:client\"",
-    "dev:with-ngrok": "bun run cleanup && concurrently --kill-others \"bun run dev:server\" \"bun run dev:voice\" \"bun run dev:client\" \"bun run dev:ngrok\"",
-    "dev:server": "powershell -Command \"cd server; python -m uvicorn main:app --reload --port 3001\"",
-    "dev:voice": "cd server && bun run --env-file=.env index.ts",
+    "dev": "bun run cleanup && bun run dev:client",
     "dev:client": "cd client && bun run dev",
-    "dev:ngrok": "ngrok http 3002 --log=stdout",
     "cleanup": "powershell -ExecutionPolicy Bypass -File ./cleanup-ports.ps1",
     "build": "cd client && bun run build",
-    "install:all": "bun install && cd client && bun install && cd ../server && bun install"
+    "install:all": "bun install && cd client && bun install"
   },
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "concurrently": "^9.2.1",
+    "supabase": "^2.76.10"
   }
 }
