@@ -13,18 +13,7 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      "/api/conversation": {
-        target: "http://localhost:3002",
-        changeOrigin: true,
-      },
-      "/api/voices": {
-        target: "http://localhost:3002",
-        changeOrigin: true,
-      },
-      "/api/speak": {
-        target: "http://localhost:3002",
-        changeOrigin: true,
-      },
+
       "/api": {
         target: "http://localhost:3001",
         changeOrigin: true,

@@ -33,6 +33,18 @@ class ElevenLabsService:
             
         return response.content
 
+    def get_voices(self) -> dict:
+        """
+        Fetch all available voices from ElevenLabs.
+        """
+        url = f"{self.api_url}/voices"
+        response = requests.get(url, headers=self.headers)
+        
+        if response.status_code != 200:
+             raise Exception(f"ElevenLabs API Error (get_voices): {response.status_code} - {response.text}")
+             
+        return response.json()
+
     def stream_text_to_speech(self, text: str, voice_id: str = "21m00Tcm4TlvDq8ikWAM") -> Iterator[bytes]:
         url = f"{self.api_url}/text-to-speech/{voice_id}/stream"
         

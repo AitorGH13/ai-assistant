@@ -32,4 +32,21 @@ class StorageService:
         public_url_response = self.client.storage.from_(target_bucket).get_public_url(path)
         return public_url_response
 
+    def list_files(self, bucket_name: str, path: Optional[str] = None) -> List[Any]:
+        """
+        Lists files in a bucket, optionally filtering by path prefix.
+        """
+        try:
+            res = self.client.storage.from_(bucket_name).list(path)
+            return res
+        except Exception as e:
+            print(f"Error listing files in storage: {e}")
+            return []
+
+    def get_public_url(self, bucket_name: str, path: str) -> str:
+        """
+        Get public URL for a file.
+        """
+        return self.client.storage.from_(bucket_name).get_public_url(path)
+
 storage_service = StorageService()

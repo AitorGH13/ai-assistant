@@ -20,22 +20,25 @@ class VoiceService:
         # 1. Audio Persistence
         audio_url = None
         audio_content = None
-        
-        # Try Local Webhook Server (Bun) first (faster, avoids 404 race condition)
-        try:
-            local_url = f"http://localhost:3002/api/conversation-audio/{conversation_id}"
-            print(f"Attempting to fetch audio from local webhook server: {local_url}")
-            resp = requests.get(local_url, timeout=5)
-            if resp.status_code == 200:
-                audio_content = resp.content
-                print("Successfully fetched audio from local server.")
-            else:
-                print(f"Local server returned {resp.status_code}. Falling back to ElevenLabs API.")
-        except Exception as e:
-            print(f"Error fetching from local server: {e}. Falling back to ElevenLabs API.")
+        bucket_name = "voice-sessions" 
+        file_name = f"{conversation_id}.mp3"
 
-        # Fallback to ElevenLabs API with retry
-        if not audio_content:
+        # Check Supabase Storage first (Webhook might have saved it)
+        try:
+            print(f"Checking storage for audio: {file_name}")
+            # list_files returns list of FileObjects. match exactly.
+            files = storage_service.list_files(bucket_name, file_name)
+            # Supabase storage list might return prefix matches, so check name
+            if files and any(f.get('name') == file_name for f in files):
+                print(f"Audio found in storage: {file_name}")
+                audio_url = storage_service.get_public_url(bucket_name, file_name)
+            else:
+                 print("Audio not found in storage. Falling back to ElevenLabs API.")
+        except Exception as e:
+            print(f"Error checking storage: {e}")
+
+        # Fallback to ElevenLabs API with retry (only if not found in storage)
+        if not audio_url and not audio_content:
             max_retries = 3
             for attempt in range(max_retries):
                 try:
@@ -49,10 +52,8 @@ class VoiceService:
                     else:
                         break # Don't retry other errors or if max retries reached
         
-        if audio_content:
+        if audio_content and not audio_url:
             try:
-                bucket_name = "voice-sessions" 
-                file_name = f"{conversation_id}.mp3"
                 print(f"Uploading audio to bucket: {bucket_name}")
                 
                 # Upload using original name so we can find it easily if needed
@@ -72,7 +73,7 @@ class VoiceService:
                 print(f"Audio uploaded. URL: {audio_url}")
             except Exception as e:
                 print(f"Error uploading audio to storage: {e}")
-        else:
+        elif not audio_url:
             print("Failed to retrieve audio content from any source.")
 
         # 2. Transcript Retrieval & Reliability

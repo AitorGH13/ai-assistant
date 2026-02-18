@@ -3,9 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "uvicorn main:app --reload --port 3001",
-    "dev:voice": "bun run index.ts",
-    "start": "uvicorn main:app --port 3001",
-    "start:voice": "bun run index.ts"
+    "start": "uvicorn main:app --port 3001"
   },
   "dependencies": {
     "@elevenlabs/elevenlabs-js": "^2.35.0",

@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     
     # ElevenLabs
     ELEVENLABS_API_KEY: str
+    ELEVENLABS_AGENT_ID: str
+    ELEVENLABS_WEBHOOK_SECRET: str
     
     # Cors
     BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:5173"]
