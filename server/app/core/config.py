@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
@@ -15,8 +16,8 @@ class Settings(BaseSettings):
     
     # ElevenLabs
     ELEVENLABS_API_KEY: str
-    ELEVENLABS_AGENT_ID: str
-    ELEVENLABS_WEBHOOK_SECRET: str
+    ELEVENLABS_AGENT_ID: Optional[str] = None
+    ELEVENLABS_WEBHOOK_SECRET: Optional[str] = None
     
     # Cors
     BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:5173"]
