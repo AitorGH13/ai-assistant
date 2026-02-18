@@ -260,7 +260,11 @@ function App() {
 
       
       try {
-        const response = await fetch("/functions/v1/voice-tts", {
+        const API_URL = import.meta.env.PROD 
+          ? '/functions/v1' 
+          : (import.meta.env.VITE_API_URL || 'https://nbleuwsnbxrmcxpmueeh.supabase.co/functions/v1');
+          
+        const response = await fetch(`${API_URL}/voice-tts`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text: text.trim(), voiceId: selectedVoiceId }),
@@ -312,7 +316,11 @@ function App() {
             formData.append('file', imageFile);
             
 
-            const uploadRes = await fetch(`/functions/v1/upload-file`, {
+            const API_URL = import.meta.env.PROD 
+              ? '/functions/v1' 
+              : (import.meta.env.VITE_API_URL || 'https://nbleuwsnbxrmcxpmueeh.supabase.co/functions/v1');
+
+            const uploadRes = await fetch(`${API_URL}/upload-file`, {
                  method: 'POST',
                  headers: {
                     // Content-Type header must be undefined for FormData to set boundary
@@ -393,7 +401,11 @@ function App() {
              messagesPayload = [{ role: userMessage.role, content: userMessage.content }];
         }
 
-        const response = await fetch(`/functions/v1/chat/${conversationId}/message`, {
+        const API_URL = import.meta.env.PROD 
+          ? '/functions/v1' 
+          : (import.meta.env.VITE_API_URL || 'https://nbleuwsnbxrmcxpmueeh.supabase.co/functions/v1');
+
+        const response = await fetch(`${API_URL}/chat/${conversationId}/message`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

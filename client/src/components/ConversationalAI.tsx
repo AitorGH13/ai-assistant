@@ -128,7 +128,10 @@ export function ConversationalAI({
     const fetchAgentId = async () => {
       try {
         setIsInitializing(true);
-        const response = await fetch("/functions/v1/voice-signature");
+        const API_URL = import.meta.env.PROD 
+          ? '/functions/v1' 
+          : (import.meta.env.VITE_API_URL || 'https://nbleuwsnbxrmcxpmueeh.supabase.co/functions/v1');
+        const response = await fetch(`${API_URL}/voice-signature`);
         if (response.ok) {
           const data = await response.json();
           if (mounted) {

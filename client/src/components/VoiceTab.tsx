@@ -30,7 +30,10 @@ export function VoiceTab() {
 
   const fetchVoices = async () => {
     try {
-      const response = await fetch("/functions/v1/voice-tts");
+      const API_URL = import.meta.env.PROD 
+        ? '/functions/v1' 
+        : (import.meta.env.VITE_API_URL || 'https://nbleuwsnbxrmcxpmueeh.supabase.co/functions/v1');
+      const response = await fetch(`${API_URL}/voice-tts`);
       if (!response.ok) {
         throw new Error("Failed to fetch voices");
       }
@@ -52,7 +55,10 @@ export function VoiceTab() {
 
     setIsGenerating(true);
     try {
-      const response = await fetch("/functions/v1/voice-tts", {
+      const API_URL = import.meta.env.PROD 
+        ? '/functions/v1' 
+        : (import.meta.env.VITE_API_URL || 'https://nbleuwsnbxrmcxpmueeh.supabase.co/functions/v1');
+      const response = await fetch(`${API_URL}/voice-tts`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

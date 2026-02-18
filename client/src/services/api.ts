@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 const api = axios.create({
   baseURL: import.meta.env.PROD
     ? 'functions/v1'
-    : (import.meta.env.VITE_API_URL || 'http://127.0.0.1:54321/functions/v1'),
+    : (import.meta.env.VITE_API_URL || 'https://nbleuwsnbxrmcxpmueeh.supabase.co/functions/v1'),
   headers: {
     'Content-Type': 'application/json',
   },

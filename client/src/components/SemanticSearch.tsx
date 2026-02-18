@@ -14,7 +14,10 @@ export function SemanticSearch() {
     setError(null);
     setShowSuggestions(false);
     try {
-      const response = await fetch("/functions/v1/search", {
+      const API_URL = import.meta.env.PROD 
+        ? '/functions/v1' 
+        : (import.meta.env.VITE_API_URL || 'https://nbleuwsnbxrmcxpmueeh.supabase.co/functions/v1');
+      const response = await fetch(`${API_URL}/search`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
