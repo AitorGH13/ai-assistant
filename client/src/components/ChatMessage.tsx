@@ -7,6 +7,7 @@ import { Copy, Check, Wrench } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../context/AuthProvider";
 import { cn } from "../lib/utils";
+import { SecureAsset } from "./SecureAsset";
 
 interface Props {
   message: ChatMessageType;
@@ -67,9 +68,11 @@ export function ChatMessage({ message, theme = 'dark' }: Props) {
           }
           if (content.type === 'image_url' && content.image_url?.url) {
             return (
-              <img
+              <SecureAsset
                 key={index}
-                src={content.image_url.url}
+                type="image"
+                bucket="media-uploads"
+                path={content.image_url.url}
                 alt="Uploaded image"
                 className="max-w-full max-h-64 rounded-lg"
               />

@@ -4,12 +4,13 @@ import { supabase } from '../lib/supabase';
 // Create Axios instance
 const api = axios.create({
   baseURL: import.meta.env.PROD
-  ? 'api'
-  : (import.meta.env.VITE_API_URL || 'http://localhost:3001/api'),
+    ? 'functions/v1'
+    : (import.meta.env.VITE_API_URL || 'http://127.0.0.1:54321/functions/v1'),
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
 
 // Request interceptor to add Auth Token
 api.interceptors.request.use(async (config) => {

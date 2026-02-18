@@ -58,7 +58,8 @@ export function ConversationalAI({
                     message: msg.message
                 }));
 
-                await api.post(`/voice/process/${convId}`, {
+                await api.post(`/voice-webhook`, {
+                    conversation_id: convId,
                     transcript: fallbackTranscript,
                     app_conversation_id: currentAppConvId
                 });
@@ -127,7 +128,7 @@ export function ConversationalAI({
     const fetchAgentId = async () => {
       try {
         setIsInitializing(true);
-        const response = await fetch("/api/conversation-signature");
+        const response = await fetch("/functions/v1/voice-signature");
         if (response.ok) {
           const data = await response.json();
           if (mounted) {
@@ -176,9 +177,28 @@ export function ConversationalAI({
 
       if (session && typeof session === 'string') {
         elevenLabsConversationIdRef.current = session;
+        // Register session with backend immediately to link it to the user
+        // This ensures the webhook knows which user this conversation belongs to
+        try {
+            api.post('/voice-webhook', {
+                action: 'register',
+                conversation_id: session
+            });
+        } catch (err) {
+            console.error("Failed to register session:", err);
+        }
       } else if (session) {
         const sessionId = (session as any).conversationId || (session as any).id || session;
         elevenLabsConversationIdRef.current = sessionId;
+        
+        try {
+            api.post('/voice-webhook', {
+                action: 'register',
+                conversation_id: sessionId
+            });
+        } catch (err) {
+            console.error("Failed to register session:", err);
+        }
       }
 
     } catch (error: any) {

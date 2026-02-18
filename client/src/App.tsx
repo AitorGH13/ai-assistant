@@ -260,7 +260,7 @@ function App() {
 
       
       try {
-        const response = await fetch("/api/voice/speak", {
+        const response = await fetch("/functions/v1/voice-tts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text: text.trim(), voiceId: selectedVoiceId }),
@@ -312,7 +312,7 @@ function App() {
             formData.append('file', imageFile);
             
 
-            const uploadRes = await fetch(`/api/chat/upload`, {
+            const uploadRes = await fetch(`/functions/v1/upload-file`, {
                  method: 'POST',
                  headers: {
                     // Content-Type header must be undefined for FormData to set boundary
@@ -393,7 +393,7 @@ function App() {
              messagesPayload = [{ role: userMessage.role, content: userMessage.content }];
         }
 
-        const response = await fetch(`/api/chat/${conversationId}/message`, {
+        const response = await fetch(`/functions/v1/chat/${conversationId}/message`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

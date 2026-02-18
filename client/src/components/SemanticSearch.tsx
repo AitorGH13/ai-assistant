@@ -14,7 +14,7 @@ export function SemanticSearch() {
     setError(null);
     setShowSuggestions(false);
     try {
-      const response = await fetch("/api/search", {
+      const response = await fetch("/functions/v1/search", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

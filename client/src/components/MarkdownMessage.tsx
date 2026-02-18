@@ -50,6 +50,7 @@ SyntaxHighlighter.registerLanguage('md', markdown);
 import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Copy, Check } from 'lucide-react';
 import { useState } from 'react';
+import { SecureAsset } from './SecureAsset';
 
 interface MarkdownMessageProps {
   content: string;
@@ -154,6 +155,17 @@ export function MarkdownMessage({ content, theme = 'dark' }: MarkdownMessageProp
               </blockquote>
             );
           },
+          img({ src, alt, className }) {
+              return (
+                  <SecureAsset 
+                    type="image"
+                    bucket="media-uploads"
+                    path={src}
+                    alt={alt}
+                    className={className || "rounded-lg max-w-full h-auto my-2"}
+                  />
+              );
+          }
         }}
       >
         {content}
