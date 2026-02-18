@@ -30,7 +30,7 @@ export function VoiceTab() {
 
   const fetchVoices = async () => {
     try {
-      const response = await fetch("/api/voices");
+      const response = await fetch("/api/voice/voices");
       if (!response.ok) {
         throw new Error("Failed to fetch voices");
       }
@@ -52,7 +52,7 @@ export function VoiceTab() {
 
     setIsGenerating(true);
     try {
-      const response = await fetch("/api/speak", {
+      const response = await fetch("/api/voice/speak", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

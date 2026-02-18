@@ -127,7 +127,7 @@ export function ConversationalAI({
     const fetchAgentId = async () => {
       try {
         setIsInitializing(true);
-        const response = await fetch("/api/conversation-signature");
+        const response = await fetch("/api/voice/conversation-signature");
         if (response.ok) {
           const data = await response.json();
           if (mounted) {
