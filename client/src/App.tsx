@@ -4,7 +4,7 @@ import { ChatInput } from "./components/ChatInput";
 import { Sidebar } from "./components/Sidebar";
 import { SemanticSearch } from "./components/SemanticSearch";
 import { ConversationalAI } from "./components/ConversationalAI";
-import { TTSAudioList } from "./components/TTSAudioList";
+import { AudioList } from "./components/AudioList";
 import { AuthScreen } from "./components/AuthScreen";
 import { ProfileView } from "./components/ProfileView";
 import { Input } from "./components/ui/Input";
@@ -733,7 +733,7 @@ function App() {
                   </div>
                 </div>
               ) : (
-                <TTSAudioList 
+                <AudioList 
                   audios={currentTTSHistory}
                   onDelete={deleteTTSAudio}
                 />
@@ -750,7 +750,7 @@ function App() {
                           IA Conversacional
                         </h3>
                       </div>
-                      <TTSAudioList 
+                      <AudioList 
                         audios={currentTTSHistory} 
                         onDelete={deleteTTSAudio} 
                       />
@@ -846,7 +846,7 @@ function App() {
                     <Mic className="h-4 w-4" />
                     Historial de Conversación de Voz
                   </h3>
-                  <TTSAudioList 
+                  <AudioList 
                     audios={currentTTSHistory} 
                     onDelete={deleteTTSAudio}
                   />

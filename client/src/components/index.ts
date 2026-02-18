@@ -7,7 +7,7 @@ export { ModeSelector } from "./ModeSelector";
 export { SemanticSearch } from "./SemanticSearch";
 export { VoiceSelector } from "./VoiceSelector";
 export { ConversationalAI } from "./ConversationalAI";
-export { TTSAudioList } from "./TTSAudioList";
+export { AudioList } from "./AudioList";
 export { VoiceTab } from "./VoiceTab";
 export { Sidebar } from "./Sidebar";
 

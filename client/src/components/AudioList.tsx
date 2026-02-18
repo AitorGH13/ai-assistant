@@ -13,7 +13,7 @@ interface Props {
   onDelete: (id: string) => void;
 }
 
-export function TTSAudioList({ audios, onDelete }: Props) {
+export function AudioList({ audios, onDelete }: Props) {
   const { user } = useAuth();
   const userName = user?.user_metadata?.full_name || "Tú";
   const [playingId, setPlayingId] = useState<string | null>(null);
