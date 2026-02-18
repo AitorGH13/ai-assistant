@@ -171,7 +171,7 @@ export function AudioList({ audios, onDelete }: Props) {
                                     variant="ghost"
                                     size="icon"
                                     onClick={() => handleDownload(audio)}
-                                    className="text-muted-foreground hover:text-primary hover:bg-white dark:hover:bg-background h-9 w-9"
+                                    className="text-primary hover:bg-white dark:hover:bg-background h-9 w-9"
                                     title="Descargar audio"
                                 >
                                     <Download size={18} />
@@ -181,7 +181,7 @@ export function AudioList({ audios, onDelete }: Props) {
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => onDelete(audio.id)}
-                                className="text-muted-foreground hover:text-red-500 hover:bg-white dark:hover:bg-background h-9 w-9"
+                                className="text-primary hover:bg-white dark:hover:bg-background h-9 w-9"
                                 title="Eliminar conversación"
                             >
                                 <Trash2 size={18} />
