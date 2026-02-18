@@ -5,7 +5,6 @@ export { SettingsPanel } from "./SettingsPanel";
 export { MarkdownMessage } from "./MarkdownMessage";
 export { ModeSelector } from "./ModeSelector";
 export { SemanticSearch } from "./SemanticSearch";
-export { VoiceSelector } from "./VoiceSelector";
 export { ConversationalAI } from "./ConversationalAI";
 export { AudioList } from "./AudioList";
 export { VoiceTab } from "./VoiceTab";

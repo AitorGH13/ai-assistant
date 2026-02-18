@@ -31,4 +31,20 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom'],
+          'ui-vendor': ['@radix-ui/react-collapsible', '@radix-ui/react-label', '@radix-ui/react-popover', '@radix-ui/react-scroll-area', '@radix-ui/react-select', '@radix-ui/react-separator', '@radix-ui/react-slot', '@radix-ui/react-tabs', '@radix-ui/react-toggle', '@radix-ui/react-tooltip', 'lucide-react'],
+          'syntax-highlighter': ['react-syntax-highlighter'],
+          'markdown': ['react-markdown'],
+          'supabase': ['@supabase/supabase-js'],
+          'elevenlabs': ['@elevenlabs/react'],
+          'utils': ['axios', 'clsx', 'tailwind-merge', 'class-variance-authority'],
+        }
+      }
+    }
+  }
 });
