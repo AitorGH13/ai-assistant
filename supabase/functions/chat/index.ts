@@ -1,13 +1,11 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7'
 import { corsHeaders } from '../_shared/cors.ts'
 import { createAuthClient } from '../_shared/supabaseClient.ts'
-import OpenAI from 'openai'
+import OpenAI from 'https://esm.sh/openai@4.28.0'
 
-const openai = new OpenAI({
-  apiKey: Deno.env.get('OPENAI_API_KEY'),
-})
 
 Deno.serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -25,6 +23,17 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
+
+    // Initialize OpenAI client inside the handler
+    const apiKey = Deno.env.get('OPENAI_API_KEY')
+    if (!apiKey) {
+      console.error('OPENAI_API_KEY is not set')
+      throw new Error('Server configuration error: Missing OpenAI API Key')
+    }
+    
+    const openai = new OpenAI({
+      apiKey: apiKey,
+    })
 
     const url = new URL(req.url)
     // URL Pattern Matching

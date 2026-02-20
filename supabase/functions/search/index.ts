@@ -1,10 +1,7 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7'
 import { corsHeaders } from '../_shared/cors.ts'
-import OpenAI from 'openai'
+import OpenAI from 'https://esm.sh/openai@4.28.0'
 
-const openai = new OpenAI({
-  apiKey: Deno.env.get('OPENAI_API_KEY'),
-})
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')
 const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
@@ -24,6 +21,16 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Initialize OpenAI client inside the handler
+    const apiKey = Deno.env.get('OPENAI_API_KEY')
+    if (!apiKey) {
+      console.error('OPENAI_API_KEY is not set')
+      throw new Error('Server configuration error: Missing OpenAI API Key')
+    }
+    
+    const openai = new OpenAI({
+      apiKey: apiKey,
+    })
     const { query } = await req.json()
     
     if (!query) {
