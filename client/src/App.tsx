@@ -441,8 +441,9 @@ function App() {
                     if (data === "[DONE]") break;
                     try {
                         const parsed = JSON.parse(data);
-                        if (parsed.content) {
-                            assistantContent += parsed.content;
+                        const content = parsed.choices?.[0]?.delta?.content || parsed.content;
+                        if (content) {
+                            assistantContent += content;
                             updateCurrentMessages(prev => prev.map(m => 
                                 m.id === assistantMessageId ? { ...m, content: assistantContent } : m
                             ));

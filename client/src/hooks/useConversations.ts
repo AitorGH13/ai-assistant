@@ -52,7 +52,7 @@ export function useConversations(): {
     }
     setIsLoading(true);
     try {
-      const response = await api.get('/chat/');
+      const response = await api.get('/chat');
       const apiConversations = response.data.map((c: any) => {
         // Map history to messages (minimal mapping for icons)
         const messages = (c.history || []).map((m: any, idx: number) => ({
@@ -91,8 +91,9 @@ export function useConversations(): {
         
         return sortConversations([...apiConversations, ...localConversations]);
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to fetch conversations:", error);
+      console.error("Error data:", error.response?.data);
     } finally {
       setIsLoading(false);
       setIsInitialized(true);

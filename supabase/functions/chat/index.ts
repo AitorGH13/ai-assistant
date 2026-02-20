@@ -58,24 +58,16 @@ Deno.serve(async (req) => {
     })
 
     const url = new URL(req.url)
-    // URL Pattern Matching
-    // Note: URLPattern is available in Deno
-    // Patterns:
-    // GET /chat -> List
-    // GET /chat/:id -> Details
-    // POST /chat/:id/message -> Send Message
-    // DELETE /chat/:id -> Delete Conversation
-    // PATCH /chat/:id/title -> Update Title
-    // POST /chat/:id/tts -> Add TTS
-    // DELETE /chat/:id/tts/:audioId -> Delete TTS
-
-    // We need to strip the /chat prefix if we are mounting on /functions/v1/chat
-    // But usually pathname includes it. Let's assume the function is mapped to /chat
-    // So paths will be / or /:id etc. relative to the function, OR full path.
-    // Deno serve receives full URL.
-    // If deployed as 'chat' function: url.pathname ends with /chat/...
-
-    const pathname = url.pathname.replace(/\/functions\/v1\/chat/, '') || '/'
+    let pathname = url.pathname;
+    
+    if (pathname.startsWith('/functions/v1/chat')) {
+        pathname = pathname.slice('/functions/v1/chat'.length);
+    } else if (pathname.startsWith('/chat')) {
+        pathname = pathname.slice('/chat'.length);
+    }
+    if (!pathname || pathname === '') {
+        pathname = '/';
+    }
 
     // 1. List Conversations (GET /)
     if (req.method === 'GET' && (pathname === '/' || pathname === '')) {
@@ -148,14 +140,14 @@ Deno.serve(async (req) => {
             
             const { data: conversation } = await supabase
                 .from('conversations')
-                .select('history')
+                .select('title, history')
                 .eq('id', conversationId)
                 .single()
             
             currentHistory = conversation?.history || []
             
             const userMsgEntry = {
-                id: 0,
+                id: currentHistory.length,
                 role: 'user',
                 msg: lastMessage.content,
                 date: new Date().toISOString()
@@ -163,10 +155,31 @@ Deno.serve(async (req) => {
             
             currentHistory.push(userMsgEntry)
             
-            await supabase
-                .from('conversations')
-                .update({ history: currentHistory, updated_at: new Date().toISOString() })
-                .eq('id', conversationId)
+            if (!conversation) {
+                 let title = "Nueva conversación"
+                 if (typeof lastMessage.content === 'string') {
+                     title = lastMessage.content.substring(0, 30) + '...'
+                 } else if (Array.isArray(lastMessage.content)) {
+                     const textPart = lastMessage.content.find((p: any) => p.type === 'text')
+                     if (textPart && textPart.text) {
+                         title = textPart.text.substring(0, 30) + '...'
+                     }
+                 }
+                 
+                 await supabase
+                     .from('conversations')
+                     .insert({
+                         id: conversationId,
+                         user_id: user.id,
+                         title: title,
+                         history: currentHistory
+                     })
+            } else {
+                await supabase
+                    .from('conversations')
+                    .update({ history: currentHistory, updated_at: new Date().toISOString() })
+                    .eq('id', conversationId)
+            }
         } else {
              // For temp chat, we use messages as is for context
              currentHistory = messages.map((m: any) => ({
@@ -220,7 +233,7 @@ Deno.serve(async (req) => {
                 // After stream, save complete message if not temporary
                 if (!is_temporary) {
                     const aiMsgEntry = {
-                        id: 1,
+                        id: currentHistory.length,
                         role: 'assistant',
                         msg: fullContent,
                         date: new Date().toISOString()
@@ -248,6 +261,7 @@ Deno.serve(async (req) => {
     
     // 4. Create Conversation (POST /new) - Special case
     if (req.method === 'POST' && (pathname === '/new')) {
+         const body = await req.json()
          const { messages } = body
          
          const firstMsgContent = messages[0].content
