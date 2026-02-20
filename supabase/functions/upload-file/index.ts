@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
     
     // Create unique path
     const fileExt = file.name.split('.').pop()
-    const fileName = \`\${user.id}/\${Date.now()}.\${fileExt}\`
+    const fileName = user.id + '/' + Date.now() + '.' + fileExt
 
     const { data, error } = await supabase
         .storage
