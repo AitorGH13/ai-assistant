@@ -12,13 +12,35 @@ Deno.serve(async (req) => {
 
   try {
     const supabase = createAuthClient(req)
-    // Verify user is authenticated
+    
+    // Get the User. We explicitly pass the token from the header 
+    // to avoid any ambiguity with the global client config.
+    const authHeader = req.headers.get('Authorization')
+    const token = authHeader?.replace('Bearer ', '')
+    
+    if (!token) {
+        console.error('Missing Authorization header')
+        return new Response(JSON.stringify({ error: 'Missing Authorization header' }), {
+            status: 401,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+    }
+
     const {
       data: { user },
-    } = await supabase.auth.getUser()
+      error: authError,
+    } = await supabase.auth.getUser(token)
+
+    if (authError) {
+      console.error('Auth User Error:', authError)
+    }
 
     if (!user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      console.error('Request Headers Keys:', [...req.headers.keys()])
+      // Log part of the token for debugging (security: do not log full token)
+      console.error('Token provided:', token ? token.substring(0, 10) + '...' : 'none')
+      
+      return new Response(JSON.stringify({ error: 'Unauthorized', details: authError?.message }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
