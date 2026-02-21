@@ -265,9 +265,17 @@ function App() {
           ? '/functions/v1' 
           : (import.meta.env.VITE_API_URL || 'https://nbleuwsnbxrmcxpmueeh.supabase.co/functions/v1');
           
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+          
         const response = await fetch(`${API_URL}/voice-tts`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`,
+            "apikey": anonKey
+          },
           body: JSON.stringify({ text: text.trim(), voiceId: selectedVoiceId }),
         });
 

@@ -4,6 +4,7 @@ import { SearchResponse } from "../types";
 import { Button } from "./ui/Button";
 import { Card, CardContent } from "./ui/Card";
 import { Badge } from "./ui/Badge";
+import { supabase } from "../lib/supabase";
 
 export function SemanticSearch() {
   const [result, setResult] = useState<SearchResponse | null>(null);
@@ -17,10 +18,17 @@ export function SemanticSearch() {
       const API_URL = import.meta.env.PROD 
         ? '/functions/v1' 
         : (import.meta.env.VITE_API_URL || 'https://nbleuwsnbxrmcxpmueeh.supabase.co/functions/v1');
+        
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
       const response = await fetch(`${API_URL}/search`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+          "apikey": anonKey,
         },
         body: JSON.stringify({ query: query.trim() }),
       });
