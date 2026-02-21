@@ -284,7 +284,11 @@ function App() {
           body: JSON.stringify({ text: text.trim(), voiceId: selectedVoiceId }),
         });
 
-        if (!response.ok) throw new Error("Error al generar el audio");
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error("Server error generating audio:", errorData);
+          throw new Error(errorData.details || errorData.error || "Error al generar el audio");
+        }
 
         const audioBlob = await response.blob();
         const audioUrl = URL.createObjectURL(audioBlob); 

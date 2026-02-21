@@ -71,14 +71,29 @@ Deno.serve(async (req) => {
 
     // 1. List Conversations (GET /)
     if (req.method === 'GET' && (pathname === '/' || pathname === '')) {
-      const { data, error } = await supabase
+      const { data: conversations, error: convError } = await supabase
         .from('conversations')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
 
-      if (error) throw error
-      return new Response(JSON.stringify(data), {
+      if (convError) throw convError
+
+      // Since there is no foreign key between conversations and voice_sessions, 
+      // we fetch separately and combine in code to avoid 500 error.
+      const { data: voiceSessions, error: voiceError } = await supabase
+        .from('voice_sessions')
+        .select('*')
+        .eq('user_id', user.id)
+
+      if (voiceError) throw voiceError
+
+      const combined = conversations.map(c => ({
+          ...c,
+          voice_sessions: voiceSessions.filter(vs => vs.conversation_id === (c.id as string))
+      }))
+
+      return new Response(JSON.stringify(combined), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }

@@ -31,8 +31,8 @@ export function SecureAsset({
       return;
     }
 
-    // If it's already a full URL (legacy or public), just use it
-    if (path.startsWith('http')) {
+    // If it's already a full URL (legacy or public) or a data URL (Base64), just use it
+    if (path.startsWith('http') || path.startsWith('data:')) {
       setSignedUrl(path);
       setLoading(false);
       return;

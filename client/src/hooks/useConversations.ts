@@ -68,8 +68,10 @@ export function useConversations(): {
           const meta = transcripts[0] || {};
           return {
             id: session.id,
-            voiceId: meta.voice_id || 'conversational-ai',
-            text: meta.msg || meta.text || 'Audio',
+            voiceId: meta.voice_id || meta.voiceId || (session.voice_id) || 'conversational-ai',
+            text: meta.msg || meta.text || session.text || 'Audio',
+            audioUrl: session.audio_url || session.audioUrl || "",
+            timestamp: session.created_at ? new Date(session.created_at).getTime() : Date.now(),
             transcript: transcripts
           };
         });
@@ -112,7 +114,6 @@ export function useConversations(): {
     const local = conversations.find(c => c.id === id);
     if (local && (local.messages.length > 0 || (local.ttsHistory && local.ttsHistory.length > 0))) {
       setCurrentMessages(local.messages);
-      // We still fetch to ensure we have the latest, but we don't necessarily need to set global loading
     } else {
       setCurrentMessages([]);
       setIsLoading(true); // Only show loader if we have NO cache
@@ -132,7 +133,18 @@ export function useConversations(): {
 
         setCurrentMessages(messages);
         
-        const ttsHistory = data.ttsHistory || [];
+        const ttsHistory = (data.voice_sessions || data.ttsHistory || []).map((session: any) => {
+            const transcripts = session.transcript || [];
+            const meta = transcripts[0] || {};
+            return {
+              id: session.id,
+              voiceId: meta.voice_id || meta.voiceId || session.voice_id || 'conversational-ai',
+              text: meta.msg || meta.text || session.text || 'Audio',
+              audioUrl: session.audio_url || session.audioUrl || "",
+              timestamp: session.created_at ? new Date(session.created_at).getTime() : Date.now(),
+              transcript: transcripts
+            };
+        });
         
         // Update local cache with messages, TTS history, AND title
         setConversations(prev => prev.map(c => 
