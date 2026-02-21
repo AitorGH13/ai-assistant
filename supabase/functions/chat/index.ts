@@ -172,12 +172,16 @@ Deno.serve(async (req) => {
             
             if (!conversation) {
                  let title = "Nueva conversación"
-                 if (typeof lastMessage.content === 'string') {
-                     title = lastMessage.content.substring(0, 30) + '...'
-                 } else if (Array.isArray(lastMessage.content)) {
-                     const textPart = lastMessage.content.find((p: any) => p.type === 'text')
-                     if (textPart && textPart.text) {
-                         title = textPart.text.substring(0, 30) + '...'
+                 const rawContent = typeof lastMessage.content === 'string' 
+                     ? lastMessage.content 
+                     : lastMessage.content.find((p: any) => p.type === 'text')?.text || '';
+                 
+                 if (rawContent) {
+                     const cleanContent = rawContent.trim();
+                     if (cleanContent.length > 40) {
+                         title = cleanContent.substring(0, 40) + '...';
+                     } else {
+                         title = cleanContent;
                      }
                  }
                  
@@ -242,22 +246,16 @@ Deno.serve(async (req) => {
                 // --- Hardcoded Fallbacks for requested Tools ---
                 const lowerQuery = queryText.toLowerCase();
                 
-                // Fallback for Developer questions (Aitor)
+                // Fallback for Developer questions
                 if (!toolResponse && (lowerQuery.includes("desarrollador") || lowerQuery.includes("desarrolló") || lowerQuery.includes("aitor"))) {
-                    // Try to find the Aitor document explicitly if semantic search was too strict
-                    const { data: aitorDoc } = await supabase
-                        .from('documents')
-                        .select('content')
-                        .ilike('content', '%Aitor%')
-                        .limit(1);
-                    if (aitorDoc && aitorDoc.length > 0) {
-                        toolResponse = aitorDoc[0].content;
-                    }
+                    const { data: aitorDoc } = await supabase.from('documents').select('content').ilike('content', '%Aitor%').limit(1);
+                    if (aitorDoc && aitorDoc.length > 0) toolResponse = aitorDoc[0].content;
                 }
 
                 // Fallback for Weather
                 if (!toolResponse && (lowerQuery.includes("clima") || lowerQuery.includes("tiempo"))) {
-                    toolResponse = "Actualmente puedo informarte que estoy integrado con una base de conocimientos semántica, pero la función de clima en tiempo real está en desarrollo. ¡Pronto podré darte el pronóstico exacto!";
+                    const { data: weatherDoc } = await supabase.from('documents').select('content').ilike('content', '%clima%desarrollo%').limit(1);
+                    if (weatherDoc && weatherDoc.length > 0) toolResponse = weatherDoc[0].content;
                 }
             }
         } catch (err) {
@@ -302,10 +300,13 @@ Deno.serve(async (req) => {
         }
 
         // Prepare OpenAI messages for standard response
-        const openAIMessages = messages.map((m: any) => ({
-            role: m.role,
-            content: m.content
-        }))
+        const openAIMessages = [
+            { role: 'system', content: 'Debes responder siempre en español, independientemente del idioma que utilice el usuario.' },
+            ...messages.map((m: any) => ({
+                role: m.role,
+                content: m.content
+            }))
+        ]
 
         const stream = await openai.chat.completions.create({
             model: 'gpt-4-turbo-preview', // Or gpt-3.5-turbo
