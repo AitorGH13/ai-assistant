@@ -26,6 +26,7 @@ build/
 # Editor directories and files
 .idea/
 .vscode/*
+!.vscode/settings.json
 !.vscode/extensions.json
 *.suo
 *.ntvs*

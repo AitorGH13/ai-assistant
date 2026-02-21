@@ -188,7 +188,8 @@ function App() {
     }
   };
 
-  const normalizeText = (text: string) => {
+  const normalizeText = (text: string | undefined | null) => {
+    if (!text) return "";
     return text
       .toLowerCase()
       .normalize('NFD')

@@ -1,6 +1,10 @@
 {
   "compilerOptions": {
-    "lib": ["deno.window"],
+    "lib": [
+      "deno.window",
+      "deno.ns",
+      "deno.unstable"
+    ],
     "strict": false
   },
   "imports": {
