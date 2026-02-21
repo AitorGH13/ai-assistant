@@ -204,7 +204,104 @@ Deno.serve(async (req) => {
              }))
         }
 
-        // Prepare OpenAI messages
+        // --- Tool Check with Embeddings ---
+        let toolResponse = null;
+        try {
+            const queryText = typeof lastMessage.content === 'string' 
+                ? lastMessage.content 
+                : lastMessage.content.find((p: any) => p.type === 'text')?.text || '';
+
+            if (queryText.trim().length > 3) {
+                const embeddingResponse = await openai.embeddings.create({
+                    model: 'text-embedding-3-small',
+                    input: queryText,
+                });
+                const embedding = embeddingResponse.data[0].embedding;
+
+                // Check and fix NULLs (Initialization)
+                const { data: nullDocs } = await supabase.from('documents').select('id, content').is('embedding', null).limit(10);
+                if (nullDocs && nullDocs.length > 0) {
+                    for (const doc of nullDocs) {
+                        try {
+                            const eRes = await openai.embeddings.create({ model: 'text-embedding-3-small', input: doc.content });
+                            await supabase.from('documents').update({ embedding: eRes.data[0].embedding }).eq('id', doc.id);
+                        } catch (e) { console.error("Fix error:", e); }
+                    }
+                }
+
+                const { data: documents } = await supabase.rpc('match_documents', {
+                    query_embedding: embedding,
+                    match_threshold: 0.35, // More lenient for pre-defined knowledge
+                    match_count: 1
+                });
+
+                if (documents && documents.length > 0) {
+                    toolResponse = documents[0].content;
+                }
+                
+                // --- Hardcoded Fallbacks for requested Tools ---
+                const lowerQuery = queryText.toLowerCase();
+                
+                // Fallback for Developer questions (Aitor)
+                if (!toolResponse && (lowerQuery.includes("desarrollador") || lowerQuery.includes("desarrolló") || lowerQuery.includes("aitor"))) {
+                    // Try to find the Aitor document explicitly if semantic search was too strict
+                    const { data: aitorDoc } = await supabase
+                        .from('documents')
+                        .select('content')
+                        .ilike('content', '%Aitor%')
+                        .limit(1);
+                    if (aitorDoc && aitorDoc.length > 0) {
+                        toolResponse = aitorDoc[0].content;
+                    }
+                }
+
+                // Fallback for Weather
+                if (!toolResponse && (lowerQuery.includes("clima") || lowerQuery.includes("tiempo"))) {
+                    toolResponse = "Actualmente puedo informarte que estoy integrado con una base de conocimientos semántica, pero la función de clima en tiempo real está en desarrollo. ¡Pronto podré darte el pronóstico exacto!";
+                }
+            }
+        } catch (err) {
+            console.error("[ToolCheck] Error:", err);
+        }
+
+        if (toolResponse) {
+            const encoder = new TextEncoder();
+            const readable = new ReadableStream({
+                async start(controller) {
+                    const sseChunk = `data: ${JSON.stringify({ content: toolResponse, tool_used: true })}\n\n`;
+                    controller.enqueue(encoder.encode(sseChunk));
+                    
+                    const doneChunk = `data: [DONE]\n\n`;
+                    controller.enqueue(encoder.encode(doneChunk));
+                    
+                    if (!is_temporary) {
+                        const aiMsgEntry = {
+                            id: currentHistory.length,
+                            role: 'assistant',
+                            msg: toolResponse,
+                            date: new Date().toISOString()
+                        };
+                        currentHistory.push(aiMsgEntry);
+                        await supabase
+                            .from('conversations')
+                            .update({ history: currentHistory, updated_at: new Date().toISOString() })
+                            .eq('id', conversationId);
+                    }
+                    controller.close();
+                }
+            });
+
+            return new Response(readable, {
+                headers: {
+                    ...corsHeaders,
+                    'Content-Type': 'text/event-stream',
+                    'Cache-Control': 'no-cache',
+                    'Connection': 'keep-alive',
+                }
+            });
+        }
+
+        // Prepare OpenAI messages for standard response
         const openAIMessages = messages.map((m: any) => ({
             role: m.role,
             content: m.content
