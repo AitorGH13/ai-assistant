@@ -21,9 +21,12 @@ export function ChatMessage({ message, theme = 'dark' }: Props) {
   const userName = user?.user_metadata?.full_name || "Tú";
 
   const handleCopy = async () => {
-    const textContent = typeof message.content === 'string' 
-      ? message.content 
-      : message.content.find(c => c.type === 'text')?.text || '';
+    let textContent = '';
+    if (typeof message.content === 'string') {
+      textContent = message.content;
+    } else if (Array.isArray(message.content)) {
+      textContent = message.content.find(c => c.type === 'text')?.text || '';
+    }
     await navigator.clipboard.writeText(textContent);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -39,6 +42,8 @@ export function ChatMessage({ message, theme = 'dark' }: Props) {
   };
 
   const renderContent = () => {
+    if (!message.content) return null;
+
     if (typeof message.content === 'string') {
       return isUser ? (
         <p className="whitespace-pre-wrap break-words text-[13px] leading-relaxed">
@@ -52,36 +57,40 @@ export function ChatMessage({ message, theme = 'dark' }: Props) {
     }
 
     // Handle multimodal content
-    return (
-      <div className="space-y-2">
-        {message.content.map((content: MessageContent, index: number) => {
-          if (content.type === 'text' && content.text) {
-            return (
-              <div key={index} className="text-[13px] leading-relaxed">
-                {isUser ? (
-                  <p className="whitespace-pre-wrap break-words">{content.text}</p>
-                ) : (
-                  <MarkdownMessage content={content.text} theme={theme} />
-                )}
-              </div>
-            );
-          }
-          if (content.type === 'image_url' && content.image_url?.url) {
-            return (
-              <SecureAsset
-                key={index}
-                type="image"
-                bucket="media-uploads"
-                path={content.image_url.url}
-                alt="Uploaded image"
-                className="max-w-full max-h-64 rounded-lg"
-              />
-            );
-          }
-          return null;
-        })}
-      </div>
-    );
+    if (Array.isArray(message.content)) {
+      return (
+        <div className="space-y-2">
+          {message.content.map((content: MessageContent, index: number) => {
+            if (content.type === 'text' && content.text) {
+              return (
+                <div key={index} className="text-[13px] leading-relaxed">
+                  {isUser ? (
+                    <p className="whitespace-pre-wrap break-words">{content.text}</p>
+                  ) : (
+                    <MarkdownMessage content={content.text} theme={theme} />
+                  )}
+                </div>
+              );
+            }
+            if (content.type === 'image_url' && content.image_url?.url) {
+              return (
+                <SecureAsset
+                  key={index}
+                  type="image"
+                  bucket="media-uploads"
+                  path={content.image_url.url}
+                  alt="Uploaded image"
+                  className="max-w-full max-h-64 rounded-lg"
+                />
+              );
+            }
+            return null;
+          })}
+        </div>
+      );
+    }
+
+    return null;
   };
 
   return (

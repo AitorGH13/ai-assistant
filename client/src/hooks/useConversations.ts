@@ -126,8 +126,8 @@ export function useConversations(): {
         const messages: ChatMessage[] = (data.history || []).map((m: any, idx: number) => ({
             id: m.id !== undefined && m.id !== null ? `${m.id}-${idx}` : `msg-${id}-${idx}`,
             role: m.role,
-            content: m.content,
-            timestamp: m.created_at
+            content: m.msg || m.content || "",
+            timestamp: m.date || m.created_at || new Date().toISOString()
         }));
 
         setCurrentMessages(messages);
