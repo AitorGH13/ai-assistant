@@ -53,7 +53,34 @@ Deno.serve(async (req) => {
         throw new Error('Query is required')
     }
     
-    // 1. Generate Embedding
+    // 0. Auto-update NULL embeddings (Initialization logic)
+    // Check if there are any documents with NULL embeddings
+    const { data: nullDocs, error: nullError } = await supabase
+        .from('documents')
+        .select('id, content')
+        .is('embedding', null)
+        .limit(10) // Process in small batches
+        
+    if (!nullError && nullDocs && nullDocs.length > 0) {
+        console.log(`Generating embeddings for ${nullDocs.length} documents...`)
+        for (const doc of nullDocs) {
+            try {
+                const embRes = await openai.embeddings.create({
+                    model: 'text-embedding-3-small',
+                    input: doc.content,
+                })
+                const emb = embRes.data[0].embedding
+                await supabase
+                    .from('documents')
+                    .update({ embedding: emb })
+                    .eq('id', doc.id)
+            } catch (e) {
+                console.error(`Failed to generate embedding for doc ${doc.id}:`, e)
+            }
+        }
+    }
+
+    // 1. Generate Embedding for the query
     const embeddingResponse = await openai.embeddings.create({
         model: 'text-embedding-3-small',
         input: query,
@@ -62,17 +89,33 @@ Deno.serve(async (req) => {
     const embedding = embeddingResponse.data[0].embedding
     
     // 2. Call Supabase RPC 'match_documents'
-    // This assumes the user has set up pgvector and the function
+    // Simplified search: if similarity is NULL (placeholder), we skip it in the filter
     const { data: documents, error } = await supabase
         .rpc('match_documents', {
             query_embedding: embedding,
-            match_threshold: 0.5, // Adjust as needed
-            match_count: 5
+            match_threshold: 0.1, // Lowered threshold for testing
+            match_count: 3
         })
         
     if (error) throw error
     
-    return new Response(JSON.stringify(documents), {
+    // Transform documents to match the SearchResponse interface expected by the frontend
+    const results = documents && documents.length > 0 
+      ? {
+          result: documents[0].content,
+          similarity: documents[0].similarity,
+          all_results: documents.map((doc: any) => ({
+            text: doc.content,
+            similarity: doc.similarity
+          }))
+        }
+      : {
+          result: "No se encontraron resultados relevantes.",
+          similarity: 0,
+          all_results: []
+        };
+    
+    return new Response(JSON.stringify(results), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
 

@@ -127,12 +127,12 @@ export function SemanticSearch() {
                 </CardContent>
               </Card>
 
-              {result.all_results.length > 1 && (
+              {(result?.all_results?.length ?? 0) > 1 && (
                 <div className="space-y-2">
                   <h4 className="text-sm font-semibold text-foreground px-1">
                     Otros resultados relevantes:
                   </h4>
-                  {result.all_results.slice(1).map((item, index) => (
+                  {result?.all_results?.slice(1).map((item, index) => (
                     <Card key={index} className="bg-muted/50">
                       <CardContent className="p-3 sm:p-4">
                         <p className="text-sm text-foreground">
