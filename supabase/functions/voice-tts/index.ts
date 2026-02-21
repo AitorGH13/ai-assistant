@@ -1,8 +1,29 @@
 import { corsHeaders } from '../_shared/cors.ts'
+import { createAuthClient } from '../_shared/supabaseClient.ts'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
+  }
+  
+  const supabase = createAuthClient(req)
+  const authHeader = req.headers.get('Authorization')
+  const token = authHeader?.replace('Bearer ', '')
+  
+  if (!token) {
+      return new Response(JSON.stringify({ error: 'No token provided' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+  }
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+  
+  if (authError || !user) {
+    return new Response(JSON.stringify({ error: 'Unauthorized', details: authError?.message }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   }
   
 const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY')

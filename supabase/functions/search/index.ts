@@ -1,18 +1,34 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7'
 import { corsHeaders } from '../_shared/cors.ts'
+import { createAuthClient } from '../_shared/supabaseClient.ts'
 import OpenAI from 'https://esm.sh/openai@4.28.0'
 
-
-const supabaseUrl = Deno.env.get('SUPABASE_URL')
-const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
-
-const supabase = createClient(supabaseUrl!, supabaseAnonKey!)
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
   
+  const supabase = createAuthClient(req)
+  const authHeader = req.headers.get('Authorization')
+  const token = authHeader?.replace('Bearer ', '')
+  
+  if (!token) {
+      return new Response(JSON.stringify({ error: 'No token provided' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+  }
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+  
+  if (authError || !user) {
+    return new Response(JSON.stringify({ error: 'Unauthorized', details: authError?.message }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
   if (req.method !== 'POST') {
       return new Response(JSON.stringify({ error: 'Method not allowed' }), {
           status: 405,

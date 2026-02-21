@@ -15,10 +15,20 @@ Deno.serve(async (req) => {
 
   try {
     const supabase = createAuthClient(req)
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    const authHeader = req.headers.get('Authorization')
+    const token = authHeader?.replace('Bearer ', '')
+    
+    if (!token) {
+        return new Response(JSON.stringify({ error: 'No token provided' }), {
+            status: 401,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+    }
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token)
     
     if (userError || !user) {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        return new Response(JSON.stringify({ error: 'Unauthorized', details: userError?.message }), {
             status: 401,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })

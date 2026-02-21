@@ -263,11 +263,16 @@ function App() {
       try {
         const API_URL = import.meta.env.PROD 
           ? '/functions/v1' 
-          : (import.meta.env.VITE_API_URL || 'https://nbleuwsnbxrmcxpmueeh.supabase.co/functions/v1');
+          : (import.meta.env.VITE_API_URL || `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`);
           
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
         const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+        if (!token) {
+          console.error("No se pudo obtener el token de sesión");
+          return;
+        }
           
         const response = await fetch(`${API_URL}/voice-tts`, {
           method: "POST",
@@ -327,13 +332,17 @@ function App() {
 
             const API_URL = import.meta.env.PROD 
               ? '/functions/v1' 
-              : (import.meta.env.VITE_API_URL || 'https://nbleuwsnbxrmcxpmueeh.supabase.co/functions/v1');
+              : (import.meta.env.VITE_API_URL || `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`);
+
+            const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+            const { data: { session } } = await supabase.auth.getSession();
 
             const uploadRes = await fetch(`${API_URL}/upload-file`, {
                  method: 'POST',
                  headers: {
                     // Content-Type header must be undefined for FormData to set boundary
-                    "Authorization": `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+                    "Authorization": `Bearer ${session?.access_token}`,
+                    "apikey": anonKey
                  },
                  body: formData
             });
@@ -393,6 +402,11 @@ function App() {
 
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
+
+        if (!token) {
+          console.error("No se pudo obtener el token de sesión para el chat");
+          throw new Error("No session token");
+        }
         
         const isTemporary = conversations.find(c => c.id === conversationId)?.isTemporary;
         
@@ -412,13 +426,15 @@ function App() {
 
         const API_URL = import.meta.env.PROD 
           ? '/functions/v1' 
-          : (import.meta.env.VITE_API_URL || 'https://nbleuwsnbxrmcxpmueeh.supabase.co/functions/v1');
+          : (import.meta.env.VITE_API_URL || `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`);
 
+        const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
         const response = await fetch(`${API_URL}/chat/${conversationId}/message`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
+                "Authorization": `Bearer ${token}`,
+                "apikey": anonKey
             },
             body: JSON.stringify({
                 messages: messagesPayload,

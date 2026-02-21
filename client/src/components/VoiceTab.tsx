@@ -3,6 +3,7 @@ import { Mic, Square, Volume2, Loader2 } from "lucide-react";
 import { Voice, SpeakRequest } from "../types";
 // IMPORTANTE: Importamos el hook oficial
 import { useConversation } from "@elevenlabs/react";
+import { supabase } from "../lib/supabase";
 
 type VoiceMode = "tts" | "conversational";
 
@@ -32,8 +33,15 @@ export function VoiceTab() {
     try {
       const API_URL = import.meta.env.PROD 
         ? '/functions/v1' 
-        : (import.meta.env.VITE_API_URL || 'https://nbleuwsnbxrmcxpmueeh.supabase.co/functions/v1');
-      const response = await fetch(`${API_URL}/voice-tts`);
+        : (import.meta.env.VITE_API_URL || `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`);
+      const { data: { session } } = await supabase.auth.getSession();
+      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const response = await fetch(`${API_URL}/voice-tts`, {
+          headers: {
+              "Authorization": `Bearer ${session?.access_token}`,
+              "apikey": anonKey
+          }
+      });
       if (!response.ok) {
         throw new Error("Failed to fetch voices");
       }
@@ -57,11 +65,15 @@ export function VoiceTab() {
     try {
       const API_URL = import.meta.env.PROD 
         ? '/functions/v1' 
-        : (import.meta.env.VITE_API_URL || 'https://nbleuwsnbxrmcxpmueeh.supabase.co/functions/v1');
+        : (import.meta.env.VITE_API_URL || `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`);
+      const { data: { session } } = await supabase.auth.getSession();
+      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
       const response = await fetch(`${API_URL}/voice-tts`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${session?.access_token}`,
+          "apikey": anonKey
         },
         body: JSON.stringify({
           text,

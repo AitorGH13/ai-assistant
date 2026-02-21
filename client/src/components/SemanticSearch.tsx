@@ -17,7 +17,7 @@ export function SemanticSearch() {
     try {
       const API_URL = import.meta.env.PROD 
         ? '/functions/v1' 
-        : (import.meta.env.VITE_API_URL || 'https://nbleuwsnbxrmcxpmueeh.supabase.co/functions/v1');
+        : (import.meta.env.VITE_API_URL || `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`);
         
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
