@@ -100,6 +100,7 @@ export function SecureAsset({
         src={signedUrl} 
         alt={alt} 
         className={className}
+        crossOrigin="anonymous"
         onError={() => setError('Failed to load image')}
       />
     );
@@ -112,6 +113,7 @@ export function SecureAsset({
         controls={controls}
         autoPlay={autoPlay}
         className={className}
+        crossOrigin="anonymous"
         onError={() => setError('Failed to load audio')}
       />
     );
@@ -124,6 +126,7 @@ export function SecureAsset({
         controls={controls}
         autoPlay={autoPlay}
         className={className}
+        crossOrigin="anonymous"
         onError={() => setError('Failed to load video')}
       />
     );

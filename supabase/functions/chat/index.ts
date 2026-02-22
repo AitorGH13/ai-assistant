@@ -3,6 +3,11 @@ import { corsHeaders } from '../_shared/cors.ts'
 import { createAuthClient } from '../_shared/supabaseClient.ts'
 import OpenAI from 'https://esm.sh/openai@4.28.0'
 
+// Constants for role identification (0: User, 1: AI Assistant)
+const ROLE_ID = {
+  USER: 0,
+  ASSISTANT: 1
+} as const;
 
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
@@ -170,7 +175,7 @@ Deno.serve(async (req) => {
             currentHistory = conversation?.history || []
             
             const userMsgEntry = {
-                id: currentHistory.length,
+                id: ROLE_ID.USER,
                 role: 'user',
                 msg: lastMessage.content,
                 date: new Date().toISOString()
@@ -282,7 +287,7 @@ Deno.serve(async (req) => {
                     
                     if (!is_temporary) {
                         const aiMsgEntry = {
-                            id: currentHistory.length,
+                            id: ROLE_ID.ASSISTANT,
                             role: 'assistant',
                             msg: toolResponse,
                             date: new Date().toISOString()
@@ -354,7 +359,7 @@ Deno.serve(async (req) => {
                 // After stream, save complete message if not temporary
                 if (!is_temporary) {
                     const aiMsgEntry = {
-                        id: currentHistory.length,
+                        id: ROLE_ID.ASSISTANT,
                         role: 'assistant',
                         msg: fullContent,
                         date: new Date().toISOString()
@@ -400,7 +405,7 @@ Deno.serve(async (req) => {
          const title = firstMsgText.substring(0, 30) + '...'
          
          const initialMsg = {
-             id: 0,
+             id: ROLE_ID.USER,
              role: 'user',
              msg: firstMsgContent, // Store original content
              date: new Date().toISOString()

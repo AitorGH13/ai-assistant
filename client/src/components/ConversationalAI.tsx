@@ -153,7 +153,15 @@ export function ConversationalAI({
               }
           }
         } else {
-            if (mounted) setConnectionError("Error contactando al servidor");
+            let errorMsg = "Error contactando al servidor";
+            try {
+                const errorData = await response.json();
+                if (errorData.error) errorMsg = errorData.error;
+            } catch (e) {
+                console.error("No JSON response:", e);
+            }
+            console.error("Server signature error:", errorMsg);
+            if (mounted) setConnectionError(errorMsg);
         }
       } catch (error) {
         console.error("Error fetching agent ID:", error);
