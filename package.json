@@ -3,9 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "bun run cleanup && bun run dev:client",
+    "dev": "bun run dev:client",
     "dev:client": "cd client && bun run dev",
-    "cleanup": "powershell -ExecutionPolicy Bypass -File ./cleanup-ports.ps1",
     "build": "cd client && bun run build",
     "install:all": "bun install && cd client && bun install"
   },
