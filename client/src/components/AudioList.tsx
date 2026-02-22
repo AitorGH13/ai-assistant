@@ -21,6 +21,22 @@ export function AudioList({ audios, onDelete }: Props) {
   
   const fetchedUrlsRef = useRef<Record<string, boolean>>({});
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+  const [durations, setDurations] = useState<Record<string, number>>({});
+
+  const formatDurationRaw = (seconds: number) => {
+    if (seconds === undefined || seconds === null || isNaN(seconds) || seconds === Infinity) return "--:--";
+    const roundedSeconds = Math.round(seconds);
+    const m = Math.floor(roundedSeconds / 60);
+    const s = roundedSeconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const handleLoadedMetadata = (e: React.SyntheticEvent<HTMLAudioElement, Event>, id: string) => {
+    const target = e.target as HTMLAudioElement;
+    if (target.duration && target.duration !== Infinity && !isNaN(target.duration)) {
+      setDurations(prev => ({ ...prev, [id]: target.duration }));
+    }
+  };
 
   useEffect(() => {
     audios.forEach(audio => {
@@ -195,10 +211,13 @@ export function AudioList({ audios, onDelete }: Props) {
                         )}
                       </Button>
                       
-                      <div className="flex-1">
-                        <div className="h-1 bg-slate-200 dark:bg-muted rounded-full overflow-hidden">
+                      <div className="flex-1 flex items-center gap-3">
+                        <div className="flex-1 h-1 bg-slate-200 dark:bg-muted rounded-full overflow-hidden">
                           <div className={cn("h-full bg-primary transition-all duration-500", playingId === audio.id ? "w-full animate-pulse" : "w-0")} />
                         </div>
+                        <span className="text-xs font-medium text-muted-foreground flex-shrink-0">
+                          {durations[audio.id] ? formatDurationRaw(durations[audio.id]) : "--:--"}
+                        </span>
                       </div>
 
                       <div className="flex items-center gap-1">
@@ -227,11 +246,14 @@ export function AudioList({ audios, onDelete }: Props) {
                 </CardContent>
 
                 <audio
+                    preload="metadata"
                     ref={el => {
                         if (el) audioRefs.current[audio.id] = el;
                     }}
                     src={urlForAudio}
                     onEnded={handleAudioEnded}
+                    onLoadedMetadata={(e) => handleLoadedMetadata(e, audio.id)}
+                    onDurationChange={(e) => handleLoadedMetadata(e, audio.id)}
                 />
              </Card>
           );
@@ -243,7 +265,7 @@ export function AudioList({ audios, onDelete }: Props) {
             <div className="bg-muted/30 px-4 py-2 border-b border-border/50 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground font-medium">
-                    {formatTime(audio.timestamp)} — {audio.voiceName || "Personalizada"}
+                    {formatTime(audio.timestamp)} — {audio.voiceName || "Roger - Laid-Back, Casual, Resonant"}
                 </span>
               </div>
             </div>
@@ -275,10 +297,13 @@ export function AudioList({ audios, onDelete }: Props) {
                   )}
                 </Button>
                 
-                <div className="flex-1">
-                  <div className="h-1 bg-slate-200 dark:bg-muted rounded-full overflow-hidden">
+                <div className="flex-1 flex items-center gap-3">
+                  <div className="flex-1 h-1 bg-slate-200 dark:bg-muted rounded-full overflow-hidden">
                     <div className={cn("h-full bg-primary transition-all duration-500", playingId === audio.id ? "w-full animate-pulse" : "w-0")} />
                   </div>
+                  <span className="text-xs font-medium text-muted-foreground flex-shrink-0">
+                    {durations[audio.id] ? formatDurationRaw(durations[audio.id]) : "--:--"}
+                  </span>
                 </div>
 
                 <div className="flex items-center gap-1">
@@ -307,11 +332,14 @@ export function AudioList({ audios, onDelete }: Props) {
             </CardContent>
 
             <audio
+              preload="metadata"
               ref={el => {
                 if (el) audioRefs.current[audio.id] = el;
               }}
               src={urlForAudio}
               onEnded={handleAudioEnded}
+              onLoadedMetadata={(e) => handleLoadedMetadata(e, audio.id)}
+              onDurationChange={(e) => handleLoadedMetadata(e, audio.id)}
             />
           </Card>
         );

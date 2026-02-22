@@ -44,6 +44,8 @@ export function ConversationalAI({
     },
     onDisconnect: () => {
       
+      const currentDurationMs = conversationStartTimeRef.current ? Date.now() - conversationStartTimeRef.current : 0;
+
       // Guardar la conversación cuando se desconecta
       if (conversationIdRef.current && conversationStartTimeRef.current) {
         const elevenLabsConvId = elevenLabsConversationIdRef.current; // The ID we need for backend
@@ -54,8 +56,7 @@ export function ConversationalAI({
             try {
                 // Collect transcript from Ref (fallback)
                 const fallbackTranscript = conversationMessagesRef.current.map(msg => ({
-                    role: msg.role === 'assistant' ? 'agent' : 'user', // Map back to ElevenLabs/Backend terms if needed, or just send as is and let backend handle.
-                    // Backend expects 'agent' or 'user'. Frontend uses 'assistant'.
+                    role: msg.role === 'assistant' ? 'agent' : 'user', 
                     message: msg.message
                 }));
 
@@ -63,6 +64,16 @@ export function ConversationalAI({
                     conversation_id: convId,
                     transcript: fallbackTranscript,
                     app_conversation_id: currentAppConvId
+                });
+                
+                // Calculate and update the duration title using the synchronously captured duration
+                const durationSecs = Math.round(currentDurationMs / 1000);
+                const minutes = Math.floor(durationSecs / 60);
+                const seconds = durationSecs % 60;
+                const durationStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                
+                await api.patch(`/chat/${currentAppConvId}/title`, {
+                   title: `Conversación - ${durationStr}`
                 });
                 
                 if (currentAppConvId) {

@@ -69,6 +69,7 @@ export function useConversations(): {
           return {
             id: session.id,
             voiceId: meta.voice_id || meta.voiceId || (session.voice_id) || 'conversational-ai',
+            voiceName: session.voiceName || session.voice_name || meta.voiceName || meta.voice_name || "Roger - Laid-Back, Casual, Resonant",
             text: meta.msg || meta.text || session.text || 'Audio',
             audioUrl: session.audio_url || session.audioUrl || "",
             timestamp: session.created_at ? new Date(session.created_at).getTime() : Date.now(),
@@ -139,6 +140,7 @@ export function useConversations(): {
             return {
               id: session.id,
               voiceId: meta.voice_id || meta.voiceId || session.voice_id || 'conversational-ai',
+              voiceName: session.voiceName || session.voice_name || meta.voiceName || meta.voice_name || "Roger - Laid-Back, Casual, Resonant",
               text: meta.msg || meta.text || session.text || 'Audio',
               audioUrl: session.audio_url || session.audioUrl || "",
               timestamp: session.created_at ? new Date(session.created_at).getTime() : Date.now(),
