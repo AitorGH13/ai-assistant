@@ -275,10 +275,15 @@ export function useConversations(): {
       });
 
       try {
-          const conversation = conversations.find(c => c.id === targetId);
-          if (conversation?.isTemporary) {
+          // Check if it's a temporary conversation using the ref (avoids stale closures)
+          if (temporaryConversationIds.current.has(targetId)) {
               // For temporary conversations, we do not save TTS history to the backend.
               // We just keep the optimistic update in local state.
+              return;
+          }
+
+          const conversation = conversations.find(c => c.id === targetId);
+          if (conversation?.isTemporary) {
               return;
           }
 

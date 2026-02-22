@@ -212,27 +212,31 @@ export function ConversationalAI({
         elevenLabsConversationIdRef.current = session;
         // Register session with backend immediately to link it to the user
         // This ensures the webhook knows which user this conversation belongs to
-        try {
-            api.post('/voice-webhook', {
-                action: 'register',
-                conversation_id: session,
-                app_conversation_id: conversationIdRef.current
-            });
-        } catch (err) {
-            console.error("Failed to register session:", err);
+        if (!isTemporary) {
+          try {
+              api.post('/voice-webhook', {
+                  action: 'register',
+                  conversation_id: session,
+                  app_conversation_id: conversationIdRef.current
+              });
+          } catch (err) {
+              console.error("Failed to register session:", err);
+          }
         }
       } else if (session) {
         const sessionId = (session as any).conversationId || (session as any).id || session;
         elevenLabsConversationIdRef.current = sessionId;
         
-        try {
-            api.post('/voice-webhook', {
-                action: 'register',
-                conversation_id: sessionId,
-                app_conversation_id: conversationIdRef.current
-            });
-        } catch (err) {
-            console.error("Failed to register session:", err);
+        if (!isTemporary) {
+          try {
+              api.post('/voice-webhook', {
+                  action: 'register',
+                  conversation_id: sessionId,
+                  app_conversation_id: conversationIdRef.current
+              });
+          } catch (err) {
+              console.error("Failed to register session:", err);
+          }
         }
       }
 

@@ -197,6 +197,9 @@ function App() {
   };
 
   const filteredConversations = conversations.filter((conv: Conversation) => {
+    // Si es temporal, no mostrar en la búsqueda
+    if (conv.isTemporary) return false;
+
     // If it's a local draft (not yet in DB), only show if it has content
     if (conv.isLocal) {
       const hasContent = (conv.messages && conv.messages.length > 0) || (conv.ttsHistory && conv.ttsHistory.length > 0);

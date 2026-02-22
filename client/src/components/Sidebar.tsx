@@ -73,11 +73,9 @@ export function Sidebar({
   };
 
   const filteredConversations = conversations.filter((conversation) => {
-    // Si es temporal, solo mostrar si tiene contenido
+    // Si es temporal, NO mostrar nunca en el historial
     if (conversation.isTemporary) {
-      const hasMessages = conversation.messages && conversation.messages.length > 0;
-      const hasTTSAudios = conversation.ttsHistory && conversation.ttsHistory.length > 0;
-      return hasMessages || hasTTSAudios;
+      return false;
     }
     
     // Si es un borrador local (isLocal=true), NO mostrar hasta que tenga contenido
