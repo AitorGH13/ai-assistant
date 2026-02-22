@@ -1,4 +1,4 @@
-import { corsHeaders } from '../_shared/cors.ts'
+import { getCorsHeaders } from '../_shared/cors.ts'
 import { createAdminClient } from '../_shared/supabaseClient.ts'
 import { ROLE_ID } from '../_shared/constants.ts'
 
@@ -45,6 +45,8 @@ async function fetchAudio(conversationId: string) {
 
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req)
+
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }

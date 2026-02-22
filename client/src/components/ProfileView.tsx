@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import { useAuth } from "../context/AuthProvider";
 import { LogOut, Mail, Calendar, User as UserIcon, Pencil, Loader2 } from "lucide-react";
 import { Button } from "./ui/Button";
@@ -38,7 +39,7 @@ export function ProfileView(_props: ProfileViewProps) {
     setIsSaving(false);
 
     if (error) {
-        alert("Error al actualizar: " + error);
+        toast.error("Error al actualizar: " + error);
     } else {
         setIsEditing(false);
     }

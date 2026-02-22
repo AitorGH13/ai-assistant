@@ -2,6 +2,11 @@ import { useState, useEffect } from 'react';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
+// Module-level cache: avoids re-fetching signed URLs on every component mount/render.
+// URLs are generated with 1h (3600s) validity; we cache for 50 minutes to avoid stale URLs.
+const signedUrlCache = new Map<string, { url: string; expiresAt: number }>();
+const CACHE_TTL_MS = 50 * 60 * 1000; // 50 minutes
+
 interface SecureAssetProps {
   bucket: string;
   path: string | null | undefined;
@@ -44,6 +49,17 @@ export function SecureAsset({
       try {
         setLoading(true);
         setError(null);
+
+        // Check module-level cache first
+        const cacheKey = `${bucket}:${path}`;
+        const cached = signedUrlCache.get(cacheKey);
+        if (cached && Date.now() < cached.expiresAt) {
+          if (isMounted) {
+            setSignedUrl(cached.url);
+            setLoading(false);
+          }
+          return;
+        }
         
         // Create a signed URL valid for 1 hour (3600 seconds)
         const { data, error } = await supabase
@@ -55,6 +71,11 @@ export function SecureAsset({
 
         if (isMounted) {
           setSignedUrl(data.signedUrl);
+          // Store in module-level cache
+          signedUrlCache.set(cacheKey, {
+            url: data.signedUrl,
+            expiresAt: Date.now() + CACHE_TTL_MS,
+          });
         }
       } catch (err) {
         // signed URL fetch failed

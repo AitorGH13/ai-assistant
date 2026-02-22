@@ -1,4 +1,5 @@
 import { useState, KeyboardEvent, ClipboardEvent, useRef, useEffect } from "react";
+import { toast } from "sonner";
 import { Image, X, Search, Mic, Volume2, SendHorizontal } from "lucide-react";
 import { AppMode } from "../types";
 import { Button } from "./ui/Button";
@@ -80,7 +81,7 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
             const file = items[i].getAsFile();
             if (file) {
                  if (file.size > 20 * 1024 * 1024) {
-                    alert("Image size must be less than 20MB");
+                    toast.error("Image size must be less than 20MB");
                     return;
                 }
                 
@@ -104,12 +105,12 @@ export function ChatInput({ onSend, onSearch, disabled, showImageUpload = false,
     if (!file) return;
 
     if (file.size > 20 * 1024 * 1024) {
-      alert("Image size must be less than 20MB");
+      toast.error("Image size must be less than 20MB");
       return;
     }
 
     if (!file.type.startsWith("image/")) {
-      alert("Please select an image file");
+      toast.error("Please select an image file");
       return;
     }
 

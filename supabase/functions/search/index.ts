@@ -1,9 +1,11 @@
-import { corsHeaders } from '../_shared/cors.ts'
+import { getCorsHeaders } from '../_shared/cors.ts'
 import { createAuthClient } from '../_shared/supabaseClient.ts'
 import OpenAI from 'https://esm.sh/openai@4.28.0'
 
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req)
+
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }

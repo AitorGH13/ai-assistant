@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import { useAuth } from "../context/AuthProvider";
 import { Loader2 } from "lucide-react";
 import { Button } from "./ui/Button";
@@ -61,7 +62,7 @@ export function AuthScreen() {
         setFullName("");
         setPassword("");
         setConfirmPassword("");
-        alert("Cuenta creada exitosamente. Por favor inicia sesión.");
+        toast.success("Cuenta creada exitosamente. Por favor inicia sesión.");
       }
     } catch {
       setError("Ocurrió un error inesperado. Inténtalo de nuevo.");

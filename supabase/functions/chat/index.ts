@@ -1,9 +1,11 @@
-import { corsHeaders } from '../_shared/cors.ts'
+import { getCorsHeaders } from '../_shared/cors.ts'
 import { createAuthClient } from '../_shared/supabaseClient.ts'
 import { ROLE_ID } from '../_shared/constants.ts'
 import OpenAI from 'https://esm.sh/openai@4.28.0'
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req)
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })

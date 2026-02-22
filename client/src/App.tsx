@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { toast } from "sonner";
 import { ChatMessage } from "./components/ChatMessage";
 import { ChatInput } from "./components/ChatInput";
 import { Sidebar } from "./components/Sidebar";
@@ -252,7 +253,7 @@ function App() {
   const handleTTSGenerate = async (text: string) => {
 
       if (!text.trim()) {
-        alert("Por favor, escribe un texto para convertir a voz");
+        toast.warning("Por favor, escribe un texto para convertir a voz");
         return;
       }
 

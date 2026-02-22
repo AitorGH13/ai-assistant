@@ -1,4 +1,5 @@
 import { Volume2, Play, Pause, Download, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { useState, useRef, useEffect } from "react";
 import { TTSAudio } from "../types";
 import { Button } from "./ui/Button";
@@ -60,7 +61,7 @@ export function AudioList({ audios, onDelete }: Props) {
 
   const handlePlayPause = (audio: TTSAudio) => {
     if (!audio.audioUrl) {
-      alert("Este audio no está disponible para reproducción");
+      toast.warning("Este audio no está disponible para reproducción");
       return;
     }
     
@@ -77,7 +78,7 @@ export function AudioList({ audios, onDelete }: Props) {
         audioElement.play().catch(() => { /* play failed */ });
         setPlayingId(audio.id);
       } else {
-        alert("Audio no cargado aún. Intenta en un momento.");
+        toast.warning("Audio no cargado aún. Intenta en un momento.");
       }
     }
   };
