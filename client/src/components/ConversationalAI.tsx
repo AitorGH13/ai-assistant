@@ -72,7 +72,7 @@ export function ConversationalAI({
                 const seconds = durationSecs % 60;
                 const durationStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
                 
-                await api.patch(`/chat/${currentAppConvId}/title`, {
+                await api.patch(`/conversations/${currentAppConvId}/title`, {
                    title: `Conversación - ${durationStr}`
                 });
                 

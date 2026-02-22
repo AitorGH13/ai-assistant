@@ -166,6 +166,32 @@ create policy "Users can insert own voice sessions" on public.voice_sessions for
 create policy "Users can delete own voice sessions" on public.voice_sessions for delete using (auth.uid() = user_id);
 
 -- ============================================
+-- TABLA: rate_limits
+-- ============================================
+create table if not exists public.rate_limits (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  endpoint text not null,
+  request_count integer not null default 1,
+  window_start timestamptz not null default now(),
+  unique(user_id, endpoint)
+);
+
+create index if not exists idx_rate_limits_user_endpoint on public.rate_limits(user_id, endpoint);
+
+alter table public.rate_limits enable row level security;
+
+create policy "Service role full access on rate_limits"
+  on rate_limits for all using (true) with check (true);
+
+create or replace function cleanup_stale_rate_limits()
+returns void as $$
+begin
+  delete from rate_limits where window_start < now() - interval '5 minutes';
+end;
+$$ language plpgsql security definer;
+
+-- ============================================
 -- STORAGE & POLICIES (SECURE / PRIVATE)
 -- ============================================
 

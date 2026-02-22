@@ -1,6 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { toast } from "sonner";
-import { ChatMessage } from "./components/ChatMessage";
+import { useRef, useEffect } from "react";
+import { ChatMessage as ChatMessageComponent } from "./components/ChatMessage";
 import { ChatInput } from "./components/ChatInput";
 import { Sidebar } from "./components/Sidebar";
 import { SemanticSearch } from "./components/SemanticSearch";
@@ -10,75 +9,122 @@ import { AuthScreen } from "./components/AuthScreen";
 import { ProfileView } from "./components/ProfileView";
 import { Input } from "./components/ui/Input";
 import { Button } from "./components/ui/Button";
-import { ChatMessage as ChatMessageType, AppMode, MessageContent, TTSAudio, Conversation } from "./types";
+import { ChatMessage as ChatMessageType, TTSAudio, Conversation } from "./types";
 import { useTheme } from "./utils/theme";
 import { MessageSquare, Volume2, Mic, Trash2, UserCircle2, Pencil, MessageSquareDashed, Loader2, Menu } from "lucide-react";
-import { useConversations } from "./hooks/useConversations";
 import { useAuth } from "./context/AuthProvider";
-import { supabase } from "./lib/supabase";
 import { cn } from "./lib/utils";
+import { useAppStore } from "./stores/appStore";
+import { useConversationStore } from "./stores/conversationStore";
 
 function App() {
+  const { theme, toggleTheme } = useTheme();
+  const { user, loading: authLoading } = useAuth();
+  const prevUserIdRef = useRef<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // App store
+  const mode = useAppStore((s) => s.mode);
+  const setMode = useAppStore((s) => s.setMode);
+  const view = useAppStore((s) => s.view);
+  const setView = useAppStore((s) => s.setView);
+  const isSidebarOpen = useAppStore((s) => s.isSidebarOpen);
+  const setIsSidebarOpen = useAppStore((s) => s.setIsSidebarOpen);
+  const showSearchView = useAppStore((s) => s.showSearchView);
+  const setShowSearchView = useAppStore((s) => s.setShowSearchView);
+  const searchQuery = useAppStore((s) => s.searchQuery);
+  const setSearchQuery = useAppStore((s) => s.setSearchQuery);
+  const editTitleId = useAppStore((s) => s.editTitleId);
+  const setEditTitleId = useAppStore((s) => s.setEditTitleId);
+  const editTitleValue = useAppStore((s) => s.editTitleValue);
+  const setEditTitleValue = useAppStore((s) => s.setEditTitleValue);
+  const systemPrompt = useAppStore((s) => s.systemPrompt);
+  const setSystemPrompt = useAppStore((s) => s.setSystemPrompt);
+  const handleCloseSearch = useAppStore((s) => s.handleCloseSearch);
+  const handleSearchClick = useAppStore((s) => s.handleSearchClick);
+  const resetForNewUser = useAppStore((s) => s.resetForNewUser);
+
+  // Conversation store
+  const conversations = useConversationStore((s) => s.conversations);
+  const currentConversationId = useConversationStore((s) => s.currentConversationId);
+  const currentMessages = useConversationStore((s) => s.currentMessages);
+  const isLoading = useConversationStore((s) => s.isLoading);
+  const isInitialized = useConversationStore((s) => s.isInitialized);
+  const createConversation = useConversationStore((s) => s.createConversation);
+  const loadConversation = useConversationStore((s) => s.loadConversation);
+  const deleteConversation = useConversationStore((s) => s.deleteConversation);
+  const deleteTTSAudio = useConversationStore((s) => s.deleteTTSAudio);
+  const updateConversationTitle = useConversationStore((s) => s.updateConversationTitle);
+  const fetchConversations = useConversationStore((s) => s.fetchConversations);
+  const handleSendMessage = useConversationStore((s) => s.handleSendMessage);
+  const handleTTSGenerate = useConversationStore((s) => s.handleTTSGenerate);
+  const getCurrentTTSHistory = useConversationStore((s) => s.getCurrentTTSHistory);
+  const getIsConversationalHistory = useConversationStore((s) => s.getIsConversationalHistory);
+
+  const currentTTSHistory = getCurrentTTSHistory();
+  const isConversationalHistory = getIsConversationalHistory();
+
+  // Force chat mode event listener
   useEffect(() => {
     const handler = () => setMode("chat");
     window.addEventListener("forceChatMode", handler);
     return () => window.removeEventListener("forceChatMode", handler);
-  }, []);
+  }, [setMode]);
 
-  const [mode, setMode] = useState<AppMode>("chat");
-  const selectedVoiceId = "IKne3meq5aSn9XLyUdCD";
-  const [systemPrompt, setSystemPrompt] = useState(() => {
-    const saved = localStorage.getItem("systemPrompt");
-    return saved || "";
-  });
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [showSearchView, setShowSearchView] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [view, setView] = useState<"chat" | "profile">("chat");
-  const [editTitleId, setEditTitleId] = useState<string | null>(null);
-  const [editTitleValue, setEditTitleValue] = useState("");
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { theme, toggleTheme } = useTheme();
-  const { user, loading: authLoading } = useAuth();
-  
-  const prevUserIdRef = useRef<string | null>(null);
+  // Fetch conversations when user changes
+  useEffect(() => {
+    if (user) {
+      void fetchConversations();
+    }
+  }, [user, fetchConversations]);
 
+  // Reset UI on user change
   useEffect(() => {
     if (user && user.id !== prevUserIdRef.current) {
-      setView("chat");
-      setMode("chat");
-      setShowSearchView(false);
+      resetForNewUser();
       prevUserIdRef.current = user.id;
     } else if (!user) {
       prevUserIdRef.current = null;
     }
-  }, [user]);
+  }, [user, resetForNewUser]);
 
-  const {
-    conversations,
-    currentConversationId,
-    currentMessages,
-    currentTTSHistory,
-    isLoading: isMessagesLoading,
-    isInitialized,
-    createConversation,
-    loadConversation,
-    deleteConversation,
-    updateCurrentMessages,
-    addTTSAudio,
-    deleteTTSAudio,
-    updateConversationTitle,
-    fetchConversations,
-  } = useConversations();
+  // Sync mode based on conversation content
+  useEffect(() => {
+    if (!currentConversationId) return;
+    const conversation = conversations.find((c: Conversation) => c.id === currentConversationId);
+    if (conversation) {
+      const hasConversationalAudio = conversation.ttsHistory?.some(audio => audio.voiceId === 'conversational-ai');
+      const hasTTSAudios = conversation.ttsHistory && conversation.ttsHistory.length > 0;
+      const hasMessages = conversation.messages && conversation.messages.length > 0;
 
+      if (hasConversationalAudio) {
+        if (mode !== "conversational") setMode("conversational");
+      } else if (hasTTSAudios) {
+        if (mode !== "tts") setMode("tts");
+      } else if (hasMessages) {
+        if (mode !== "chat") setMode("chat");
+      }
+    }
+  }, [currentConversationId, conversations]);
+
+  // Scroll behavior
+  useEffect(() => {
+    const isConv = currentTTSHistory?.some(
+      (audio: TTSAudio) => audio.voiceId === "conversational-ai"
+    );
+    if (mode === 'tts' || isConv) {
+      scrollContainerRef.current && (scrollContainerRef.current.scrollTop = 0);
+    } else {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [currentMessages, mode, currentTTSHistory]);
+
+  // ---- Handlers ----
   const handleEditConversationTitle = (id: string, newTitle: string) => {
     if (!newTitle.trim()) return;
     updateConversationTitle(id, newTitle.trim());
   };
-
-  useEffect(() => {
-    localStorage.setItem("systemPrompt", systemPrompt);
-  }, [systemPrompt]);
 
   const handleNewConversation = () => {
     createConversation();
@@ -95,409 +141,39 @@ function App() {
   };
 
   const handleLoadConversation = (conversationId: string) => {
-
     const conversation = conversations.find(c => c.id === conversationId);
     if (conversation) {
       const hasConversationalAudio = conversation.ttsHistory?.some(audio => audio.voiceId === 'conversational-ai');
       const hasTTSAudios = conversation.ttsHistory && conversation.ttsHistory.length > 0;
       const hasMessages = conversation.messages && conversation.messages.length > 0;
-
-      if (hasConversationalAudio) {
-        setMode("conversational");
-      } else if (hasTTSAudios) {
-        setMode("tts");
-      } else if (hasMessages) {
-        setMode("chat");
-      }
+      if (hasConversationalAudio) setMode("conversational");
+      else if (hasTTSAudios) setMode("tts");
+      else if (hasMessages) setMode("chat");
     }
-
     loadConversation(conversationId);
     handleCloseSearch();
     setView("chat");
   };
 
-  const handleModeChange = (newMode: AppMode) => {
+  const handleModeChange = (newMode: typeof mode) => {
     if (newMode === mode) return;
-
-
     const conversation = conversations.find(c => c.id === currentConversationId);
     const hasContent = conversation && (
-      (conversation.messages && conversation.messages.length > 0) || 
+      (conversation.messages && conversation.messages.length > 0) ||
       (conversation.ttsHistory && conversation.ttsHistory.length > 0)
     );
-
     if (hasContent) {
       createConversation(conversation.isTemporary);
     }
-    
     setMode(newMode);
     setShowSearchView(false);
     setView("chat");
   };
 
-  // Sync mode based on conversation content ONLY when a conversation is loaded or updated from outside
-  useEffect(() => {
-    if (!currentConversationId) return;
-    
-
-    const conversation = conversations.find((c: Conversation) => c.id === currentConversationId);
-    if (conversation) {
-      const hasConversationalAudio = conversation.ttsHistory?.some(audio => audio.voiceId === 'conversational-ai');
-      const hasTTSAudios = conversation.ttsHistory && conversation.ttsHistory.length > 0;
-      const hasMessages = conversation.messages && conversation.messages.length > 0;
-
-
-      if (hasConversationalAudio) {
-        if (mode !== "conversational") setMode("conversational");
-      } else if (hasTTSAudios) {
-
-        if (mode !== "tts") setMode("tts");
-      } else if (hasMessages) {
-
-        if (mode !== "chat") setMode("chat");
-      }
-    }
-  }, [currentConversationId, conversations]); // REMOVED 'mode' dependency to allow manual switching within a conversation
-
   const handleDeleteConversation = (conversationId: string) => {
     deleteConversation(conversationId);
     if (conversationId === currentConversationId) {
       handleNewConversation();
-    }
-  };
-
-  const handleSearchClick = () => {
-    if (view === "profile") {
-      setShowSearchView(true);
-      setView("chat");
-    } else {
-      const nextShowSearch = !showSearchView;
-      setShowSearchView(nextShowSearch);
-      
-      if (nextShowSearch) {
-        createConversation(); 
-      } else {
-        setSearchQuery("");
-      }
-    }
-  };
-
-  const handleCloseSearch = () => {
-    if (showSearchView) {
-      setShowSearchView(false);
-      setSearchQuery("");
-    }
-  };
-
-  const normalizeText = (text: string | undefined | null) => {
-    if (!text) return "";
-    return text
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '');
-  };
-
-  const filteredConversations = conversations.filter((conv: Conversation) => {
-    // Si es temporal, no mostrar en la búsqueda
-    if (conv.isTemporary) return false;
-
-    // If it's a local draft (not yet in DB), only show if it has content
-    if (conv.isLocal) {
-      const hasContent = (conv.messages && conv.messages.length > 0) || (conv.ttsHistory && conv.ttsHistory.length > 0);
-      if (!hasContent) return false;
-    }
-    
-    // For persisted conversations (non-local), they already have content in DB,
-    // so we want to search them by title at least.
-    
-    const titleMatch = normalizeText(conv.title).includes(normalizeText(searchQuery));
-    
-    const messageMatch = conv.messages?.some((msg: ChatMessageType) => {
-      const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
-      return normalizeText(content).includes(normalizeText(searchQuery));
-    }) || conv.ttsHistory?.some((audio: TTSAudio) => 
-      audio.transcript?.some(t => normalizeText(t.msg).includes(normalizeText(searchQuery)))
-    ) || false;
-
-    const audioMatch = conv.ttsHistory?.some((audio: TTSAudio) => 
-      normalizeText(audio.text).includes(normalizeText(searchQuery))
-    ) || false;
-    
-    return titleMatch || messageMatch || audioMatch;
-  });
-
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  const scrollToTop = () => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTop = 0;
-    }
-  };
-
-  useEffect(() => {
-    const isConversational = currentTTSHistory?.some(
-      (audio: TTSAudio) => audio.voiceId === "conversational-ai"
-    );
-
-    if (mode === 'tts' || isConversational) {
-      scrollToTop();
-    } else {
-      scrollToBottom();
-    }
-  }, [currentMessages, mode, currentTTSHistory]);
-
-  const handleTTSGenerate = async (text: string) => {
-
-      if (!text.trim()) {
-        toast.warning("Por favor, escribe un texto para convertir a voz");
-        return;
-      }
-
-      let conversationId = currentConversationId;
-      if (!conversationId) {
-        conversationId = createConversation();
-      }
-
-
-      
-      try {
-        const API_URL = import.meta.env.PROD 
-          ? '/functions/v1' 
-          : (import.meta.env.VITE_API_URL || `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`);
-          
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-        const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-        if (!token) {
-          // no session token
-          return;
-        }
-          
-        const response = await fetch(`${API_URL}/voice-tts`, {
-          method: "POST",
-          headers: { 
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
-            "apikey": anonKey
-          },
-          body: JSON.stringify({ text: text.trim(), voiceId: selectedVoiceId }),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          // server error generating audio
-          throw new Error(errorData.details || errorData.error || "Error al generar el audio");
-        }
-
-        const audioBlob = await response.blob();
-        const audioUrl = URL.createObjectURL(audioBlob); 
-        
-        // Transform the blob to Base64 to ensure it's persistent across refreshes
-        // (Blob URLs are temporary and die on page reload)
-        const reader = new FileReader();
-        const base64Audio = await new Promise<string>((resolve) => {
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(audioBlob);
-        });
-        
-        const ttsAudio: TTSAudio = {
-          id: crypto.randomUUID(),
-          text: text.trim(),
-          audioUrl: base64Audio,
-          timestamp: Date.now(),
-          voiceId: selectedVoiceId,
-          voiceName: "Roger - Laid-Back, Casual, Resonant",
-        };
-        
-        addTTSAudio(ttsAudio, conversationId);
-        // Play using the temporary URL for immediate response
-        new Audio(audioUrl).play();
-      } catch (error) {
-        // speech generation error
-      }
-  };
-
-  const handleSendMessage = async (content: string, imageBase64?: string, imageName?: string, imageFile?: File) => {
-    let conversationId = currentConversationId;
-    if (!conversationId) {
-      conversationId = createConversation();
-    }
-
-    let messageContent: string | MessageContent[];
-    let finalImageUrl = imageBase64;
-
-
-    if (imageFile) {
-        try {
-            const formData = new FormData();
-            formData.append('file', imageFile);
-            
-
-            const API_URL = import.meta.env.PROD 
-              ? '/functions/v1' 
-              : (import.meta.env.VITE_API_URL || `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`);
-
-            const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-            const { data: { session } } = await supabase.auth.getSession();
-
-            const uploadRes = await fetch(`${API_URL}/upload-file`, {
-                 method: 'POST',
-                 headers: {
-                    // Content-Type header must be undefined for FormData to set boundary
-                    "Authorization": `Bearer ${session?.access_token}`,
-                    "apikey": anonKey
-                 },
-                 body: formData
-            });
-            
-            if (uploadRes.ok) {
-                const data = await uploadRes.json();
-
-                if (data.url) {
-                    finalImageUrl = data.url;
-                }
-            } else {
-                // image upload failed
-
-            }
-        } catch (e) {
-            // error uploading image
-        }
-    }
-    
-    if (finalImageUrl) {
-      const textWithFilename = imageName 
-        ? (content ? `${imageName}\n${content}` : imageName)
-        : (content || "Imagen adjunta");
-      messageContent = [
-        { type: "text" as const, text: textWithFilename },
-        { type: "image_url" as const, image_url: { url: finalImageUrl! } }
-      ];
-    } else {
-      messageContent = content;
-    }
-
-    const userMessage: ChatMessageType = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content: messageContent,
-      timestamp: new Date().toISOString(),
-    };
-
-    updateCurrentMessages(prev => [...prev, userMessage]);
-    
-
-
-    
-    const assistantMessageId = crypto.randomUUID();
-    const assistantMessage: ChatMessageType = {
-      id: assistantMessageId,
-      role: "assistant",
-      content: "",
-      timestamp: new Date().toISOString(),
-    };
-    
-    updateCurrentMessages(prev => [...prev, assistantMessage]);
-
-    try {
-
-        
-
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-
-        if (!token) {
-          // no session token for chat
-          throw new Error("No session token");
-        }
-        
-        const isTemporary = conversations.find(c => c.id === conversationId)?.isTemporary;
-        
-        let messagesPayload;
-        if (isTemporary) {
-             // For temporary chat, we must send the full history because backend won't save it.
-             // currentMessages is the state BEFORE this new message (React state update is async)
-             // We need to map ChatMessage to the API format { role, content }
-             messagesPayload = [...currentMessages, userMessage].map(m => ({
-                 role: m.role,
-                 content: m.content
-             }));
-        } else {
-
-             messagesPayload = [{ role: userMessage.role, content: userMessage.content }];
-        }
-
-        const API_URL = import.meta.env.PROD 
-          ? '/functions/v1' 
-          : (import.meta.env.VITE_API_URL || `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`);
-
-        const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-        const response = await fetch(`${API_URL}/chat/${conversationId}/message`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`,
-                "apikey": anonKey
-            },
-            body: JSON.stringify({
-                messages: messagesPayload,
-                is_temporary: !!isTemporary
-            })
-        });
-
-        if (!response.ok) throw new Error("Network response was not ok");
-        
-        // Refresh conversation list so the new chat (and its title) appears in sidebar
-        void fetchConversations();
-        
-        const reader = response.body?.getReader();
-        const decoder = new TextDecoder();
-        let assistantContent = "";
-        
-        if (!reader) throw new Error("No reader");
-        
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            
-            const chunk = decoder.decode(value);
-            const lines = chunk.split("\n");
-            
-            for (const line of lines) {
-                if (line.startsWith("data: ")) {
-                    const data = line.slice(6);
-                    if (data === "[DONE]") break;
-                    try {
-                        const parsed = JSON.parse(data);
-                        const content = parsed.choices?.[0]?.delta?.content || parsed.content;
-                        if (content) {
-                            assistantContent += content;
-                            updateCurrentMessages(prev => prev.map(m => 
-                                m.id === assistantMessageId ? { ...m, content: assistantContent } : m
-                            ));
-                        }
-                        if (parsed.tool_used) {
-                            updateCurrentMessages(prev => prev.map(m => 
-                                m.id === assistantMessageId ? { ...m, toolUsed: true } : m
-                            ));
-                        }
-                    } catch (e) {
-                         // Ignore parse errors for partial chunks
-                    }
-                }
-            }
-        }
-        
-    } catch (e) {
-        // message send error
-        updateCurrentMessages(prev => prev.map(m => 
-            m.id === assistantMessageId ? { ...m, content: "Error sending message." } : m
-        ));
     }
   };
 
@@ -511,6 +187,32 @@ function App() {
     }
   };
 
+  // ---- Filtering ----
+  const normalizeText = (text: string | undefined | null) => {
+    if (!text) return "";
+    return text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  };
+
+  const filteredConversations = conversations.filter((conv: Conversation) => {
+    if (conv.isTemporary) return false;
+    if (conv.isLocal) {
+      const hasContent = (conv.messages && conv.messages.length > 0) || (conv.ttsHistory && conv.ttsHistory.length > 0);
+      if (!hasContent) return false;
+    }
+    const titleMatch = normalizeText(conv.title).includes(normalizeText(searchQuery));
+    const messageMatch = conv.messages?.some((msg: ChatMessageType) => {
+      const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
+      return normalizeText(content).includes(normalizeText(searchQuery));
+    }) || conv.ttsHistory?.some((audio: TTSAudio) =>
+      audio.transcript?.some(t => normalizeText(t.msg).includes(normalizeText(searchQuery)))
+    ) || false;
+    const audioMatch = conv.ttsHistory?.some((audio: TTSAudio) =>
+      normalizeText(audio.text).includes(normalizeText(searchQuery))
+    ) || false;
+    return titleMatch || messageMatch || audioMatch;
+  });
+
+  // ---- Constants ----
   const suggestions = [
     "¿Quién ha desarrollado esta aplicación?",
     "Explica la computación cuántica en términos simples",
@@ -518,10 +220,7 @@ function App() {
     "¿Cuál es el clima en Tokio?",
   ];
 
-  const isConversationalHistory = currentTTSHistory.some(
-    (audio: TTSAudio) => audio.voiceId === "conversational-ai" || audio.transcript?.some(t => t.role === 'user')
-  );
-
+  // ---- Render ----
   if (authLoading) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-background gap-3">
@@ -549,7 +248,7 @@ function App() {
         currentConversationId={currentConversationId}
         onLoadConversation={handleLoadConversation}
         onDeleteConversation={handleDeleteConversation}
-        onSearchClick={handleSearchClick}
+        onSearchClick={() => handleSearchClick(createConversation)}
         showSearchView={showSearchView}
         onCloseSearch={handleCloseSearch}
         onNewTemporaryConversation={handleNewTemporaryConversation}
@@ -613,13 +312,13 @@ function App() {
                 ) : (
                   <div className="space-y-2">
                     {filteredConversations.map((conversation: Conversation) => {
-                      const hasMessages = (conversation.messages && conversation.messages.length > 0) || 
+                      const hasMessages = (conversation.messages && conversation.messages.length > 0) ||
                                           (conversation.ttsHistory && conversation.ttsHistory.some(t => t.transcript && t.transcript.length > 0));
                       const hasTTSAudios = conversation.ttsHistory && conversation.ttsHistory.length > 0;
                       const hasConversationalAudio = hasTTSAudios && conversation.ttsHistory?.some(
                         (audio: TTSAudio) => audio.voiceId === "conversational-ai"
                       );
-                      
+
                       let IconComponent;
                       if (hasConversationalAudio) {
                         IconComponent = Mic;
@@ -655,7 +354,7 @@ function App() {
                               <Pencil size={16} className="text-muted-foreground hover:text-primary transition-colors" />
                             </button>
                           </div>
-                          
+
                           <div className="flex-1 min-w-0 flex flex-col justify-center">
                             {isEditing ? (
                               <Input
@@ -715,7 +414,7 @@ function App() {
                 )}
               </div>
             </div>
-          ) : isMessagesLoading && currentMessages.length === 0 && currentTTSHistory.length === 0 ? (
+          ) : isLoading && currentMessages.length === 0 && currentTTSHistory.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center bg-background gap-3">
               <Loader2 className="animate-spin h-8 w-8 text-primary" />
               <span className="text-sm text-muted-foreground">Cargando conversación...</span>
@@ -725,7 +424,7 @@ function App() {
               {currentTTSHistory.length > 0 && (
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                    {isConversationalHistory && mode !== "tts" ? ( 
+                    {isConversationalHistory && mode !== "tts" ? (
                       <>
                         <Mic className="h-5 w-5 text-black dark:text-white" />
                         IA Conversacional
@@ -739,7 +438,7 @@ function App() {
                   </h3>
                 </div>
               )}
-              
+
               {currentTTSHistory.length === 0 ? (
                 <div className="flex flex-col items-center mb-8 mt-4">
                   <div className="mb-4 sm:mb-6 inline-flex p-3 sm:p-4 rounded-full bg-primary/20 dark:bg-primary/20 ring-8 ring-primary/10 shadow-inner">
@@ -754,7 +453,7 @@ function App() {
                   </h2>
                   <p className="text-sm sm:text-base text-muted-foreground mb-6 sm:mb-8 text-center">
                     {isConversationalHistory && mode !== "tts"
-                      ? "Inicia una conversación de voz o revisa el historial" 
+                      ? "Inicia una conversación de voz o revisa el historial"
                       : "Escribe un mensaje abajo o prueba una de estas sugerencias"}
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 w-full">
@@ -768,18 +467,16 @@ function App() {
                         key={index}
                         variant="outline"
                         onClick={() => handleTTSGenerate(example)}
-                        disabled={isMessagesLoading || !isInitialized}
+                        disabled={isLoading || !isInitialized}
                         className="p-3 sm:p-4 h-auto text-left justify-start hover:border-primary hover:shadow-md transition-all duration-200"
                       >
-                        <p className="text-xs sm:text-sm">
-                          {example}
-                        </p>
+                        <p className="text-xs sm:text-sm">{example}</p>
                       </Button>
                     ))}
                   </div>
                 </div>
               ) : (
-                <AudioList 
+                <AudioList
                   audios={currentTTSHistory}
                   onDelete={deleteTTSAudio}
                 />
@@ -796,14 +493,14 @@ function App() {
                           IA Conversacional
                         </h3>
                       </div>
-                      <AudioList 
-                        audios={currentTTSHistory} 
-                        onDelete={deleteTTSAudio} 
+                      <AudioList
+                        audios={currentTTSHistory}
+                        onDelete={deleteTTSAudio}
                       />
                    </div>
                 </div>
               ) : (
-                <ConversationalAI 
+                <ConversationalAI
                   createConversation={createConversation}
                   loadConversation={loadConversation}
                   isTemporary={conversations.find(c => c.id === currentConversationId)?.isTemporary}
@@ -812,7 +509,7 @@ function App() {
             </div>
           ) : mode === "search" ? (
             <SemanticSearch />
-          ) : (  
+          ) : (
             <div className="mx-auto max-w-4xl">
               {currentMessages.length === 0 ? (
                 <div className="flex h-full items-center justify-center">
@@ -828,11 +525,11 @@ function App() {
                        {conversations.find(c => c.id === currentConversationId)?.isTemporary ? "Chat Temporal" : "Inicia una conversación"}
                     </h2>
                     <p className="text-sm sm:text-base text-muted-foreground mb-6 sm:mb-8">
-                       {conversations.find(c => c.id === currentConversationId)?.isTemporary 
-                         ? "Los mensajes no se guardan y se borrarán al salir o refrescar la página." 
+                       {conversations.find(c => c.id === currentConversationId)?.isTemporary
+                         ? "Los mensajes no se guardan y se borrarán al salir o refrescar la página."
                          : "Escribe un mensaje abajo o prueba una de estas sugerencias"}
                     </p>
-                    
+
                     {!conversations.find(c => c.id === currentConversationId)?.isTemporary && (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                         {suggestions.map((suggestion, index) => (
@@ -843,9 +540,7 @@ function App() {
                             disabled={!isInitialized}
                             className="p-3 sm:p-4 h-auto text-left justify-start hover:border-primary hover:shadow-md transition-all duration-200"
                           >
-                            <p className="text-xs sm:text-sm">
-                              {suggestion}
-                            </p>
+                            <p className="text-xs sm:text-sm">{suggestion}</p>
                           </Button>
                         ))}
                       </div>
@@ -871,7 +566,7 @@ function App() {
                       </h3>
                     </div>
                     {currentMessages.map((message: ChatMessageType, index: number) => (
-                      <ChatMessage key={`${message.id}-${index}`} message={message} theme={theme} />
+                      <ChatMessageComponent key={`${message.id}-${index}`} message={message} theme={theme} />
                     ))}
                   </div>
                 </>
@@ -884,7 +579,6 @@ function App() {
 
         {view === "chat" && !showSearchView && mode !== "conversational" && (
           isConversationalHistory ? (
-
             mode !== "tts" ? (
               <div className="bg-background p-3 sm:p-4 border-t border-border transition-colors duration-200">
                 <div className="max-w-4xl mx-auto">
@@ -892,19 +586,18 @@ function App() {
                     <Mic className="h-4 w-4" />
                     Historial de Conversación de Voz
                   </h3>
-                  <AudioList 
-                    audios={currentTTSHistory} 
+                  <AudioList
+                    audios={currentTTSHistory}
                     onDelete={deleteTTSAudio}
                   />
                 </div>
               </div>
             ) : null
           ) : (
-
-            <ChatInput 
+            <ChatInput
               onSend={mode === "tts" ? handleTTSGenerate : handleSendMessage}
               onSearch={handleSemanticSearch}
-              disabled={isMessagesLoading || !isInitialized} 
+              disabled={isLoading || !isInitialized}
               showImageUpload={mode === "chat"}
               mode={mode}
               onModeChange={handleModeChange}
