@@ -67,7 +67,7 @@ You will also need accounts for:
 ```env
 VITE_SUPABASE_URL=https://<YOUR_PROJECT_REF>.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJ...
-VITE_API_URL=http://127.0.0.1:54321/functions/v1   # local dev only
+VITE_API_URL=https://YOUR_PROJECT_ID.supabase.co/functions/v1
 ```
 
 ### Supabase Secrets (Edge Functions)
@@ -91,7 +91,7 @@ ELEVENLABS_AGENT_ID=...           # optional, for Conversational AI
 ```bash
 git clone https://github.com/AitorGH13/ai-assistant.git
 cd ai-assistant
-cd client && bun install
+bun install:all
 ```
 
 ### 2. Start Supabase locally
