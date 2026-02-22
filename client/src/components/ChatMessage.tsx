@@ -77,7 +77,7 @@ export function ChatMessage({ message, theme = 'dark' }: Props) {
                 <SecureAsset
                   key={index}
                   type="image"
-                  bucket="media-uploads"
+                  bucket="chat-assets"
                   path={content.image_url.url}
                   alt="Uploaded image"
                   className="max-w-full max-h-64 rounded-lg"

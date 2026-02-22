@@ -312,17 +312,36 @@ Deno.serve(async (req) => {
             });
         }
 
+        // Prepare the history to send to OpenAI
+        const historyToUse = is_temporary ? messages : currentHistory;
+
+        const processedMessages = await Promise.all(historyToUse.map(async (m: any) => {
+            let processedContent = m.content || m.msg || '';
+            if (Array.isArray(processedContent)) {
+                processedContent = await Promise.all(processedContent.map(async (part: any) => {
+                    if (part.type === 'image_url' && part.image_url?.url && !part.image_url.url.startsWith('http') && !part.image_url.url.startsWith('data:')) {
+                        const { data } = await supabase.storage.from('chat-assets').createSignedUrl(part.image_url.url, 60 * 5); // 5 mins valid
+                        if (data?.signedUrl) {
+                            return { ...part, image_url: { url: data.signedUrl } };
+                        }
+                    }
+                    return part;
+                }));
+            }
+            return {
+                role: m.role,
+                content: processedContent
+            };
+        }));
+
         // Prepare OpenAI messages for standard response
         const openAIMessages = [
             { role: 'system', content: 'Debes responder siempre en español, independientemente del idioma que utilice el usuario.' },
-            ...messages.map((m: any) => ({
-                role: m.role,
-                content: m.content
-            }))
+            ...processedMessages
         ]
 
         const stream = await openai.chat.completions.create({
-            model: 'gpt-4-turbo-preview', // Or gpt-3.5-turbo
+            model: 'gpt-4o-mini', // Model updated to support vision/images
             messages: openAIMessages,
             stream: true,
         })

@@ -372,7 +372,7 @@ function App() {
     if (finalImageUrl) {
       const textWithFilename = imageName 
         ? (content ? `${imageName}\n${content}` : imageName)
-        : content;
+        : (content || "Imagen adjunta");
       messageContent = [
         { type: "text" as const, text: textWithFilename },
         { type: "image_url" as const, image_url: { url: finalImageUrl! } }

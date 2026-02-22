@@ -50,11 +50,11 @@ Deno.serve(async (req) => {
     // User task didn't specify bucket.
     // Based on `voice_svc.py`, bucket is 'voice-sessions'.
     // `chat.py` calls `storage_service.upload_file` defaults to `media-uploads`.
-    const bucketName = 'media-uploads'
+    const bucketName = 'chat-assets'
     
     // Create unique path
     const fileExt = file.name.split('.').pop()
-    const fileName = user.id + '/' + Date.now() + '.' + fileExt
+    const fileName = user.id + '/' + crypto.randomUUID() + '.' + fileExt
 
     const { data, error } = await supabase
         .storage
