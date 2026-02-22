@@ -28,12 +28,13 @@ A full-stack AI assistant combining **ChatGPT-style conversations**, **semantic 
 ┌────────────▼────────────────┐
 │   Supabase Edge Functions   │   Deno runtime (supabase/functions/)
 │   ┌──────────────────────┐  │
-│   │ chat    search       │  │   OpenAI API  (GPT-4o-mini, embeddings)
-│   │ upload-file          │  │   ElevenLabs API (TTS, Conversational AI)
-│   │ voice-tts            │  │
-│   │ voice-signature      │  │
-│   │ voice-webhook        │  │
-│   └──────────────────────┘  │
+│   │ conversations  search    │  │   OpenAI API  (GPT-4o-mini, embeddings)
+│   │ messages     upload-file │  │   ElevenLabs API (TTS, Conversational AI)
+│   │ voice-sessions           │  │
+│   │ voice-tts                │  │
+│   │ voice-signature          │  │
+│   │ voice-webhook            │  │
+│   └──────────────────────────┘  │
 └────────────┬────────────────┘
              │  PostgreSQL + Storage
 ┌────────────▼────────────────┐
@@ -49,7 +50,7 @@ A full-stack AI assistant combining **ChatGPT-style conversations**, **semantic 
 | ---------------------------------------------------- | ------- | ------------------------------------- |
 | [Bun](https://bun.sh/)                               | ≥ 1.0   | Package manager & script runner       |
 | [Supabase CLI](https://supabase.com/docs/guides/cli) | ≥ 1.100 | Local dev & Edge Function deployment  |
-| [Node.js](https://nodejs.org/)                       | ≥ 18    | Vite dev server (Bun delegates to it) |
+| [Node.js](https://nodejs.org/)                       | ≥ 24    | Vite dev server (Bun delegates to it) |
 
 You will also need accounts for:
 
@@ -128,12 +129,7 @@ supabase functions serve --env-file supabase/.env.local
 
 ```bash
 # Deploy all functions at once
-supabase functions deploy chat
-supabase functions deploy search
-supabase functions deploy upload-file
-supabase functions deploy voice-tts
-supabase functions deploy voice-signature
-supabase functions deploy voice-webhook --no-verify-jwt   # webhook receives external calls
+bunx supabase functions deploy --no-verify-jwt
 ```
 
 ### Set production secrets
@@ -179,20 +175,23 @@ ai-assistant/
 │       │   ├── SecureAsset.tsx      # Signed-URL asset loader
 │       │   ├── Sidebar.tsx          # Conversation history
 │       │   └── ...
-│       ├── hooks/                   # useConversations (state management)
+│       ├── stores/                  # Zustand state (appStore, conversationStore)
 │       ├── context/                 # AuthProvider (Supabase Auth)
 │       ├── lib/                     # supabase client, api-url, auth-headers
 │       ├── services/                # Axios API client with auth interceptor
 │       └── App.tsx                  # Root application shell
 ├── supabase/
 │   ├── functions/                   # Deno Edge Functions
-│   │   ├── _shared/                 # Shared modules (CORS, client, constants)
-│   │   ├── chat/                    # CRUD conversations + OpenAI streaming
+│   │   ├── _shared/                 # Shared modules (CORS, client, constants, auth, rateLimit)
+│   │   ├── conversations/           # GET/DELETE/PATCH conversations
+│   │   ├── messages/                # POST new messages + OpenAI streaming
+│   │   ├── voice-sessions/          # TTS Audio DB sync and deletion
 │   │   ├── search/                  # Semantic search with embeddings
 │   │   ├── upload-file/             # Supabase Storage image upload
 │   │   ├── voice-tts/               # ElevenLabs text-to-speech
 │   │   ├── voice-signature/         # ElevenLabs signed URL for agent
 │   │   └── voice-webhook/           # ElevenLabs webhook processor
+│   ├── migrations/                  # Rate limits and DB schema upgrades
 │   └── schema.sql                   # Database schema & RLS policies
 ├── PROPOSED_OPTIMIZATIONS.md        # Future improvement proposals
 └── README.md
