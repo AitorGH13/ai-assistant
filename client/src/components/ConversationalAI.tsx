@@ -196,7 +196,8 @@ export function ConversationalAI({
         try {
             api.post('/voice-webhook', {
                 action: 'register',
-                conversation_id: session
+                conversation_id: session,
+                app_conversation_id: conversationIdRef.current
             });
         } catch (err) {
             console.error("Failed to register session:", err);
@@ -208,7 +209,8 @@ export function ConversationalAI({
         try {
             api.post('/voice-webhook', {
                 action: 'register',
-                conversation_id: sessionId
+                conversation_id: sessionId,
+                app_conversation_id: conversationIdRef.current
             });
         } catch (err) {
             console.error("Failed to register session:", err);

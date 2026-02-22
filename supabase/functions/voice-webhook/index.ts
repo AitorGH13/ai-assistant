@@ -73,16 +73,18 @@ Deno.serve(async (req) => {
              })
          }
          
-         // Upsert session to link it to user
+         // Insert session to link it to user (use insert to avoid unique constraint issues if any)
          const { error } = await supabase
              .from('voice_sessions')
-             .upsert({
-                 conversation_id: conversationId,
+             .insert({
+                 conversation_id: appConversationId || conversationId, // Link to app conversation!
                  user_id: userId,
-                 transcript: [] // Placeholders
-             }, { onConflict: 'conversation_id' })
+                 transcript: [{ _elevenlabs_id: conversationId }] // Store ID in transcript temporarily
+             })
              
-         if (error) throw error
+         if (error && !error.message.includes('duplicate')) {
+             console.error("Register Error:", error);
+         }
          
          return new Response(JSON.stringify({ success: true }), {
              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -146,15 +148,49 @@ Deno.serve(async (req) => {
         date: item.time_in_call_secs || 0
     })).filter((t: any) => t.msg)
     
-    // 5. Save to DB
+    // 5. Ensure a conversations row exists
+    const finalAppConvId = appConversationId || conversationId;
+    
+    // Attempt to update/insert the conversation parent record 
+    // (if finalAppConvId is a UUID, which it generally is from our frontend)
+    if (finalAppConvId && finalAppConvId.length === 36) { 
+         const { data: existingConv } = await supabase
+             .from('conversations')
+             .select('id')
+             .eq('id', finalAppConvId)
+             .maybeSingle()
+             
+         if (!existingConv) {
+             await supabase
+                 .from('conversations')
+                 .insert({
+                     id: finalAppConvId,
+                     user_id: userId,
+                     title: 'IA Conversacional',
+                     history: []
+                 })
+         } else {
+             await supabase
+                .from('conversations')
+                .update({ updated_at: new Date().toISOString() })
+                .eq('id', finalAppConvId)
+         }
+    }
+
+    // 6. Save to DB (voice_sessions)
+    // We update the row created during 'register' or just insert if it didn't exist
+    // Since we don't know the exact voice_session ID without a unique constraint,
+    // we use insert if this was called by webhook or process.
+    // The safest is just to insert the processed session and let the audio stay there.
+    
     const { data: sessionData, error: sessionError } = await supabase
         .from('voice_sessions')
-        .upsert({
+        .insert({
             user_id: userId,
-            conversation_id: conversationId,
+            conversation_id: finalAppConvId, // This links it to GET /chat correctly!
             transcript: processedTranscript,
-            audio_url: relativePath // Saving relative path
-        }, { onConflict: 'conversation_id' })
+            audio_url: relativePath 
+        })
         .select()
         .single()
         

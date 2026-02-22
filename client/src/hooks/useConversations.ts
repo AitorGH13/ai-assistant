@@ -282,14 +282,21 @@ export function useConversations(): {
 
           const res = await api.post(`/chat/${targetId}/tts`, audio);
           
-          // If successful, mark as not local (synced) and update title if provided
-          setConversations(prev => prev.map(c => 
-               c.id === targetId ? { 
-                   ...c, 
-                   isLocal: false, 
-                   title: res.data.title || c.title 
-               } : c
-          ));
+          // If successful, update the ID to backend ID, mark as synced and update title
+          setConversations(prev => prev.map(c => {
+               if (c.id === targetId) {
+                   const updatedHistory = (c.ttsHistory || []).map(a => 
+                       a.id === audio.id ? { ...a, id: res.data.id } : a
+                   );
+                   return {
+                       ...c,
+                       ttsHistory: updatedHistory,
+                       isLocal: false,
+                       title: res.data.title || c.title
+                   }
+               }
+               return c;
+          }));
           
       } catch (e) {
           console.error("Failed to save TTS audio", e);
@@ -297,11 +304,12 @@ export function useConversations(): {
   }, [currentConversationId]);
 
   const deleteTTSAudio = useCallback(async (audioId: string) => {
-      if (!currentConversationId) return;
+      const targetId = currentConversationId;
+      if (!targetId) return;
 
       // Optimistic Update
       setConversations(prev => prev.map(c => {
-          if (c.id === currentConversationId) {
+          if (c.id === targetId) {
               const newHistory = (c.ttsHistory || []).filter(a => a.id !== audioId);
               return { ...c, ttsHistory: newHistory };
           }
@@ -309,7 +317,15 @@ export function useConversations(): {
       }));
 
       try {
-          await api.delete(`/chat/${currentConversationId}/tts/${audioId}`);
+          const res = await api.delete(`/chat/${targetId}/tts/${audioId}`);
+
+          if (res.data?.conversation_deleted) {
+              setConversations(prev => prev.filter(c => c.id !== targetId));
+              if (currentConversationId === targetId) {
+                  setCurrentConversationId(null);
+                  setCurrentMessages([]);
+              }
+          }
       } catch (e) {
           console.error("Failed to delete TTS audio", e);
           // Optional: Re-fetch or revert on error

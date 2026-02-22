@@ -163,6 +163,7 @@ create policy "Users can delete own conversations" on public.conversations for d
 -- POLICIES: voice_sessions
 create policy "Users can select own voice sessions" on public.voice_sessions for select using (auth.uid() = user_id);
 create policy "Users can insert own voice sessions" on public.voice_sessions for insert with check (auth.uid() = user_id);
+create policy "Users can delete own voice sessions" on public.voice_sessions for delete using (auth.uid() = user_id);
 
 -- ============================================
 -- STORAGE & POLICIES (SECURE / PRIVATE)
@@ -190,6 +191,14 @@ on conflict (id) do update set public = false;
 
 create policy "Auth users listen own voice sessions"
 on storage.objects for select to authenticated
+using (
+    bucket_id = 'voice-sessions' 
+    AND 
+    auth.uid()::text = (storage.foldername(name))[1]
+);
+
+create policy "Auth users delete own voice sessions"
+on storage.objects for delete to authenticated
 using (
     bucket_id = 'voice-sessions' 
     AND 

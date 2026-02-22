@@ -109,9 +109,9 @@ Deno.serve(async (req) => {
         .select('*')
         .eq('id', id)
         .eq('user_id', user.id)
-        .single()
+        .maybeSingle()
 
-      if (error) throw error
+      if (error && error.code !== 'PGRST116') throw error
       
       // Also fetch voice sessions if needed, matching Python logic
       const { data: voiceSessions } = await supabase
@@ -120,7 +120,15 @@ Deno.serve(async (req) => {
         .eq('conversation_id', id)
         .order('created_at', { ascending: true })
 
-      return new Response(JSON.stringify({ ...data, voice_sessions: voiceSessions }), {
+      // Default response struct if we couldn't find a base conversation record
+      const defaultData = data || {
+        id,
+        title: "Conversación de Voz",
+        history: [],
+        created_at: new Date().toISOString()
+      };
+
+      return new Response(JSON.stringify({ ...defaultData, voice_sessions: voiceSessions || [] }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
@@ -418,6 +426,32 @@ Deno.serve(async (req) => {
     const matchDelete = new URLPattern({ pathname: '/:id' }).exec({ pathname })
     if (req.method === 'DELETE' && matchDelete) {
         const id = matchDelete.pathname.groups.id
+        
+        // Find all voice sessions related to this conversation
+        const { data: relatedSessions } = await supabase
+            .from('voice_sessions')
+            .select('id, audio_url')
+            .eq('conversation_id', id)
+            .eq('user_id', user.id)
+            
+        // Delete physical files
+        if (relatedSessions && relatedSessions.length > 0) {
+            const filesToRemove = relatedSessions
+                .map(s => s.audio_url)
+                .filter(url => url && !url.startsWith('data:'))
+                
+            if (filesToRemove.length > 0) {
+                await supabase.storage.from('voice-sessions').remove(filesToRemove).catch(console.error)
+            }
+            
+            // Delete the voice_sessions rows
+            await supabase
+                .from('voice_sessions')
+                .delete()
+                .eq('conversation_id', id)
+                .eq('user_id', user.id)
+        }
+
         const { error } = await supabase
             .from('conversations')
             .delete()
@@ -450,8 +484,6 @@ Deno.serve(async (req) => {
     if (req.method === 'POST' && matchTTS) {
         const id = matchTTS.pathname.groups.id // conversation_id
         const body = await req.json()
-        // Body matches TTSAudio interface roughly or Python's expectation
-        // Python: text, audioUrl, timestamp, voiceId, voiceName
         
         const transcriptEntry = {
             msg: body.text,
@@ -459,6 +491,40 @@ Deno.serve(async (req) => {
             timestamp: body.timestamp,
             voice_id: body.voiceId,
             voice_name: body.voiceName
+        }
+
+        // Check if conversation exists, if not create it
+        const { data: convData, error: convCheckError } = await supabase
+            .from('conversations')
+            .select('id, title')
+            .eq('id', id)
+            .maybeSingle()
+
+        let title = convData?.title || 'Conversación de Voz';
+
+        if (!convData) {
+            // Determine a better title if possible
+            if (body.text && body.text.trim()) {
+                const cleanText = body.text.trim();
+                title = cleanText.length > 40 ? cleanText.substring(0, 40) + '...' : cleanText;
+            }
+
+            const { error: insertConvError } = await supabase
+                .from('conversations')
+                .insert({
+                    id: id,
+                    user_id: user.id,
+                    title: title,
+                    history: [] // or initial empty history
+                })
+            
+            if (insertConvError) throw insertConvError
+        } else {
+            // Update updated_at
+            await supabase
+                .from('conversations')
+                .update({ updated_at: new Date().toISOString() })
+                .eq('id', id)
         }
         
         // Insert into voice_sessions
@@ -474,15 +540,25 @@ Deno.serve(async (req) => {
             .single()
             
          if (error) throw error
-         return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+         
+         // Return data with title included so frontend can update optimistic local state
+         return new Response(JSON.stringify({ ...data, title }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
     
     // 8. Delete TTS (DELETE /:id/tts/:audioId)
     const matchDeleteTTS = new URLPattern({ pathname: '/:id/tts/:audioId' }).exec({ pathname })
     if (req.method === 'DELETE' && matchDeleteTTS) {
-         // const id = matchDeleteTTS.pathname.groups.id // conversation_id (used validation?)
+         const conversationId = matchDeleteTTS.pathname.groups.id // conversation_id
          const audioId = matchDeleteTTS.pathname.groups.audioId
          
+         // Select the audio_url first so we know what to optionally delete from storage
+         const { data: sessionInfo } = await supabase
+            .from('voice_sessions')
+            .select('audio_url')
+            .eq('id', audioId)
+            .eq('user_id', user.id)
+            .maybeSingle()
+
          const { error } = await supabase
             .from('voice_sessions')
             .delete()
@@ -490,7 +566,42 @@ Deno.serve(async (req) => {
             .eq('user_id', user.id)
             
          if (error) throw error
-         return new Response(JSON.stringify({ status: 'ok' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+         
+         // Clean up potentially orphaned storage files
+         if (sessionInfo?.audio_url && !sessionInfo.audio_url.startsWith('data:')) {
+             await supabase.storage.from('voice-sessions').remove([sessionInfo.audio_url]).catch(console.error)
+         }
+
+         let conversation_deleted = false;
+
+         // Check if there are any other voice_sessions or messages for this conversation
+         const { data: remainingSessions } = await supabase
+            .from('voice_sessions')
+            .select('id')
+            .eq('conversation_id', conversationId)
+            .limit(1)
+
+         const { data: conversation } = await supabase
+            .from('conversations')
+            .select('history')
+            .eq('id', conversationId)
+            .maybeSingle()
+
+         // If no remaining sessions and no messages in history, delete conversation
+         if (
+             (!remainingSessions || remainingSessions.length === 0) &&
+             (!conversation?.history || conversation.history.length === 0)
+         ) {
+             await supabase
+                .from('conversations')
+                .delete()
+                .eq('id', conversationId)
+                .eq('user_id', user.id)
+             
+             conversation_deleted = true;
+         }
+
+         return new Response(JSON.stringify({ status: 'ok', conversation_deleted }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     return new Response(JSON.stringify({ error: 'Not Found' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
