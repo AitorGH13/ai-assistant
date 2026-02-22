@@ -1,12 +1,12 @@
-import { Volume2, Trash2 } from "lucide-react";
+import { Volume2, Play, Pause, Download, Trash2 } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 import { TTSAudio } from "../types";
 import { Button } from "./ui/Button";
 import { Card, CardContent } from "./ui/Card";
 import { cn } from "../lib/utils";
 import { useAuth } from "../context/AuthProvider";
 import { Avatar } from "./ui/Avatar";
-import { SecureAsset } from "./SecureAsset";
-
+import { supabase } from "../lib/supabase";
 
 interface Props {
   audios: TTSAudio[];
@@ -16,7 +16,80 @@ interface Props {
 export function AudioList({ audios, onDelete }: Props) {
   const { user } = useAuth();
   const userName = user?.user_metadata?.full_name || "Tú";
+  const [playingId, setPlayingId] = useState<string | null>(null);
+  const audioRefs = useRef<{ [key: string]: HTMLAudioElement }>({});
+  
+  const fetchedUrlsRef = useRef<Record<string, boolean>>({});
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
 
+  useEffect(() => {
+    audios.forEach(audio => {
+      const path = audio.audioUrl;
+      if (path && !fetchedUrlsRef.current[path]) {
+        fetchedUrlsRef.current[path] = true; // Mark as fetched/fetching
+        if (path.startsWith('http') || path.startsWith('data:')) {
+          setSignedUrls(prev => ({ ...prev, [path]: path }));
+        } else {
+          supabase.storage.from('voice-sessions').createSignedUrl(path, 3600)
+            .then(({ data }) => {
+              if (data) {
+                setSignedUrls(prev => ({ ...prev, [path]: data.signedUrl }));
+              }
+            })
+            .catch(console.error);
+        }
+      }
+    });
+  }, [audios]);
+
+  const handlePlayPause = (audio: TTSAudio) => {
+    if (!audio.audioUrl) {
+      alert("Este audio no está disponible para reproducción");
+      return;
+    }
+    
+    const audioElement = audioRefs.current[audio.id];
+    
+    if (!audioElement) return;
+
+    if (playingId === audio.id) {
+      audioElement.pause();
+      setPlayingId(null);
+    } else {
+      Object.values(audioRefs.current).forEach(el => el.pause());
+      if (audioElement.src) {
+        audioElement.play().catch(e => console.error(e));
+        setPlayingId(audio.id);
+      } else {
+        alert("Audio no cargado aún. Intenta en un momento.");
+      }
+    }
+  };
+
+  const handleAudioEnded = () => {
+    setPlayingId(null);
+  };
+
+  const handleDownload = async (audio: TTSAudio) => {
+    if (!audio.audioUrl) return;
+    const url = signedUrls[audio.audioUrl];
+    if (!url) return;
+    
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = `audio-${audio.timestamp}.mp3`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 100);
+    } catch (e) {
+      console.error("Error al descargar el audio:", e);
+    }
+  };
 
   const formatTime = (timestamp: number) => {
     const date = new Date(timestamp);
@@ -56,6 +129,7 @@ export function AudioList({ audios, onDelete }: Props) {
       {[...audios].sort((a, b) => b.timestamp - a.timestamp).map((audio) => {
         // Only treat as "Voice Session" (Conversational) if it has a transcript AND the voiceId is specific to conversational mode
         const isVoiceSession = !!audio.transcript && audio.transcript.length > 0 && audio.voiceId === 'conversational-ai';
+        const urlForAudio = audio.audioUrl ? signedUrls[audio.audioUrl] : undefined;
 
         if (isVoiceSession) {
           return (
@@ -100,28 +174,65 @@ export function AudioList({ audios, onDelete }: Props) {
                         })}
                     </div>
 
-                    {/* Audio Controls Footer - Replaced with SecureAsset */}
-                    <div className="p-4 bg-gray-50 dark:bg-muted/30 border-t border-border">
-                        <SecureAsset 
-                            type="audio"
-                            bucket="voice-sessions"
-                            path={audio.audioUrl}
-                            className="w-full"
-                            controls
-                        />
-                         <div className="flex justify-end mt-2">
-                             <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => onDelete(audio.id)}
-                                className="text-destructive hover:bg-destructive/10 h-8 w-8"
-                                title="Eliminar conversación"
-                            >
-                                <Trash2 size={16} />
-                            </Button>
-                         </div>
+                    {/* Audio Controls Footer */}
+                    <div className="p-3 bg-card border-t border-border flex items-center gap-3">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handlePlayPause(audio)}
+                        disabled={!audio.audioUrl}
+                        className={cn(
+                          "flex-shrink-0 rounded-full h-10 w-10 min-h-[40px] min-w-[40px]",
+                          audio.audioUrl 
+                            ? "bg-primary/10 text-primary hover:bg-primary/20" 
+                            : "text-muted-foreground"
+                        )}
+                      >
+                        {playingId === audio.id ? (
+                          <Pause size={20} fill="currentColor" />
+                        ) : (
+                          <Play size={20} fill="currentColor" />
+                        )}
+                      </Button>
+                      
+                      <div className="flex-1">
+                        <div className="h-1 bg-slate-200 dark:bg-muted rounded-full overflow-hidden">
+                          <div className={cn("h-full bg-primary transition-all duration-500", playingId === audio.id ? "w-full animate-pulse" : "w-0")} />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1">
+                        {audio.audioUrl && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDownload(audio)}
+                            className="text-primary h-8 w-8"
+                            title="Descargar audio"
+                          >
+                            <Download size={16} />
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onDelete(audio.id)}
+                          className="text-primary h-8 w-8"
+                          title="Eliminar conversación"
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+                      </div>
                     </div>
                 </CardContent>
+
+                <audio
+                    ref={el => {
+                        if (el) audioRefs.current[audio.id] = el;
+                    }}
+                    src={urlForAudio}
+                    onEnded={handleAudioEnded}
+                />
              </Card>
           );
         }
@@ -143,28 +254,65 @@ export function AudioList({ audios, onDelete }: Props) {
                 </div>
               </div>
 
-              {/* Audio Controls Footer - Replaced with SecureAsset */}
-              <div className="p-3 bg-card border-t border-border">
-                <SecureAsset 
-                    type="audio"
-                    bucket="voice-sessions" 
-                    path={audio.audioUrl}
-                    className="w-full"
-                    controls
-                />
-                 <div className="flex justify-end mt-2">
+              {/* Audio Controls Footer */}
+              <div className="p-3 bg-card border-t border-border flex items-center gap-3">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handlePlayPause(audio)}
+                  disabled={!audio.audioUrl}
+                  className={cn(
+                    "flex-shrink-0 rounded-full h-10 w-10 min-h-[40px] min-w-[40px]",
+                    audio.audioUrl 
+                      ? "bg-primary/10 text-primary hover:bg-primary/20" 
+                      : "text-muted-foreground"
+                  )}
+                >
+                  {playingId === audio.id ? (
+                    <Pause size={20} fill="currentColor" />
+                  ) : (
+                    <Play size={20} fill="currentColor" />
+                  )}
+                </Button>
+                
+                <div className="flex-1">
+                  <div className="h-1 bg-slate-200 dark:bg-muted rounded-full overflow-hidden">
+                    <div className={cn("h-full bg-primary transition-all duration-500", playingId === audio.id ? "w-full animate-pulse" : "w-0")} />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  {audio.audioUrl && (
                     <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onDelete(audio.id)}
-                        className="text-destructive hover:bg-destructive/10 h-8 w-8"
-                        title="Eliminar audio"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDownload(audio)}
+                      className="text-primary h-8 w-8"
+                      title="Descargar audio"
                     >
-                        <Trash2 size={16} />
+                      <Download size={16} />
                     </Button>
-                 </div>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onDelete(audio.id)}
+                    className="text-primary h-8 w-8"
+                    title="Eliminar audio"
+                  >
+                    <Trash2 size={16} />
+                  </Button>
+                </div>
               </div>
             </CardContent>
+
+            <audio
+              ref={el => {
+                if (el) audioRefs.current[audio.id] = el;
+              }}
+              src={urlForAudio}
+              onEnded={handleAudioEnded}
+            />
           </Card>
         );
       })}
