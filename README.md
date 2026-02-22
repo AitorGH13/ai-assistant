@@ -94,50 +94,50 @@ cd ai-assistant
 bun install:all
 ```
 
-### 2. Start Supabase locally
+### 2. Connect to your Supabase project
+
+Authenticate with Supabase CLI and link your cloud project:
 
 ```bash
-supabase start          # starts local Supabase (Postgres, Auth, Storage, Edge Functions)
-supabase db reset       # applies supabase/schema.sql migrations
+bunx supabase login
+bunx supabase link --project-ref <YOUR_PROJECT_REF>
 ```
 
-### 3. Configure environment
+### 3. Configure environment & secrets
+
+Copy the `.env.example`:
 
 ```bash
 cp client/.env.example client/.env
-# Fill in the values printed by `supabase start` (API URL, anon key)
+# Update VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY and VITE_API_URL
 ```
 
-### 4. Run the frontend
+For the backend (Edge Functions), set the secrets directly in your Supabase project. You can either use a `.env` file or do it one by one:
 
 ```bash
-cd client
-bun run dev             # Vite dev server → http://localhost:5173
+# Option A: From a local .env file
+bunx supabase secrets set --env-file ./supabase/.env
+
+# Option B: One by one
+bunx supabase secrets set OPENAI_API_KEY=sk-...
+bunx supabase secrets set ELEVENLABS_API_KEY=...
+bunx supabase secrets set ELEVENLABS_AGENT_ID=...
 ```
 
-### 5. Serve Edge Functions locally
+### 4. Deploy Edge Functions
+
+Deploy all functions together. We use `--no-verify-jwt` because we handle JWT auth manually inside our Deno code:
 
 ```bash
-supabase functions serve --env-file supabase/.env.local
-```
-
----
-
-## 🌐 Deployment Guide
-
-### Deploy Edge Functions
-
-```bash
-# Deploy all functions at once
 bunx supabase functions deploy --no-verify-jwt
 ```
 
-### Set production secrets
+_(Note: the CLI automatically uses the `import-map` defined in `supabase/functions/deno.json`)._
+
+### 5. Run the frontend locally
 
 ```bash
-supabase secrets set OPENAI_API_KEY=sk-...
-supabase secrets set ELEVENLABS_API_KEY=...
-supabase secrets set ELEVENLABS_AGENT_ID=...
+bun run dev             # Vite dev server → http://localhost:5173
 ```
 
 ### Configure ElevenLabs Webhook
