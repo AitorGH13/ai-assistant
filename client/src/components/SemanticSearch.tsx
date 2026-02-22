@@ -40,7 +40,7 @@ export function SemanticSearch() {
       const data: SearchResponse = await response.json();
       setResult(data);
     } catch (err) {
-      console.error("Search failed:", err);
+      // search failed
       setError("Failed to perform search. Please try again.");
     }
   };

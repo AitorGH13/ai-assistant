@@ -273,7 +273,7 @@ function App() {
         const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
         if (!token) {
-          console.error("No se pudo obtener el token de sesión");
+          // no session token
           return;
         }
           
@@ -289,7 +289,7 @@ function App() {
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          console.error("Server error generating audio:", errorData);
+          // server error generating audio
           throw new Error(errorData.details || errorData.error || "Error al generar el audio");
         }
 
@@ -317,7 +317,7 @@ function App() {
         // Play using the temporary URL for immediate response
         new Audio(audioUrl).play();
       } catch (error) {
-        console.error("Error generating speech:", error);
+        // speech generation error
       }
   };
 
@@ -361,11 +361,11 @@ function App() {
                     finalImageUrl = data.url;
                 }
             } else {
-                console.error("Image upload failed");
+                // image upload failed
 
             }
         } catch (e) {
-            console.error("Error uploading image:", e);
+            // error uploading image
         }
     }
     
@@ -411,7 +411,7 @@ function App() {
         const token = session?.access_token;
 
         if (!token) {
-          console.error("No se pudo obtener el token de sesión para el chat");
+          // no session token for chat
           throw new Error("No session token");
         }
         
@@ -493,7 +493,7 @@ function App() {
         }
         
     } catch (e) {
-        console.error("Error sending message", e);
+        // message send error
         updateCurrentMessages(prev => prev.map(m => 
             m.id === assistantMessageId ? { ...m, content: "Error sending message." } : m
         ));
@@ -586,7 +586,7 @@ function App() {
         </div>
 
         {view === "profile" ? (
-          <ProfileView onBack={() => setView("chat")} />
+          <ProfileView />
         ) : (
         <div ref={scrollContainerRef} className={cn(
           "flex-1 p-3 sm:p-4 md:p-6",

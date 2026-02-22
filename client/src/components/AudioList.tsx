@@ -52,7 +52,7 @@ export function AudioList({ audios, onDelete }: Props) {
                 setSignedUrls(prev => ({ ...prev, [path]: data.signedUrl }));
               }
             })
-            .catch(console.error);
+            .catch(() => { /* signed URL fetch failed */ });
         }
       }
     });
@@ -74,7 +74,7 @@ export function AudioList({ audios, onDelete }: Props) {
     } else {
       Object.values(audioRefs.current).forEach(el => el.pause());
       if (audioElement.src) {
-        audioElement.play().catch(e => console.error(e));
+        audioElement.play().catch(() => { /* play failed */ });
         setPlayingId(audio.id);
       } else {
         alert("Audio no cargado aún. Intenta en un momento.");
@@ -103,7 +103,7 @@ export function AudioList({ audios, onDelete }: Props) {
       document.body.removeChild(link);
       setTimeout(() => URL.revokeObjectURL(objectUrl), 100);
     } catch (e) {
-      console.error("Error al descargar el audio:", e);
+      // download failed
     }
   };
 

@@ -1,13 +1,8 @@
 import { corsHeaders } from '../_shared/cors.ts'
 import { createAdminClient } from '../_shared/supabaseClient.ts'
+import { ROLE_ID } from '../_shared/constants.ts'
 
 const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY')
-
-// Role identifier constants for clean logic
-const ROLE_ID = {
-    USER: 0,
-    AGENT: 1
-} as const;
 
 const formatRole = (role: string) => {
     const isAgent = role === 'agent' || role === 'assistant';
@@ -62,10 +57,11 @@ Deno.serve(async (req) => {
      let conversationId = ''
      let userId = '' 
      let appConversationId = ''
-     let action = 'process' // default
+     let action = 'process'
+     let body: any = {}
      
      if (contentType.includes('application/json')) {
-         const body = await req.json()
+         body = await req.json()
          conversationId = body.conversation_id
          appConversationId = body.app_conversation_id
          action = body.action || 'process'
@@ -97,7 +93,7 @@ Deno.serve(async (req) => {
              })
              
          if (error && !error.message.includes('duplicate')) {
-             console.error("Register Error:", error);
+             // Registration failed
          }
          
          return new Response(JSON.stringify({ success: true }), {
@@ -139,20 +135,16 @@ Deno.serve(async (req) => {
             if (appSession && appSession.user_id) {
                 userId = appSession.user_id
             } else {
-                 console.error(`User not found for app conv ${appConversationId}`);
-                 // Don't fail immediately, we can act as anonymous or just throw
                  throw new Error(`User not found for conversation ${appConversationId}`);
             }
          } else {
-             console.error(`User not found for ElevenLabs conv ${conversationId}`);
-             throw new Error(`User not found for conversation ${conversationId}`);
+              throw new Error(`User not found for conversation ${conversationId}`);
          }
      }
 
     // 1. Fetch Audio (Conversational AI - With Retry since it might take a second to process)
     let relativePath = null;
     try {
-        console.log(`Fetching audio for ${conversationId}`);
         let audioBlob = null;
         let attempts = 0;
         let success = false;
@@ -164,7 +156,6 @@ Deno.serve(async (req) => {
             } catch (err) {
                 attempts++;
                 if (attempts >= 3) throw err;
-                console.log(`Audio not ready yet (attempt ${attempts}), waiting 1000ms...`);
                 await new Promise(r => setTimeout(r, 1000));
             }
         }
@@ -182,19 +173,18 @@ Deno.serve(async (req) => {
             });
 
         if (uploadError) {
-             console.error("Audio Upload Error:", uploadError);
+             // Audio upload failed
         } else {
              relativePath = fileName;
         }
-    } catch (e: any) {
-        console.error("Failed to fetch or upload audio, skipping...", e);
+    } catch (_e) {
+        // Failed to fetch or upload audio, skipping
     }
     
     // 3. Transform Transcript into our format
     // We prioritize ElevenLabs real transcript because frontend might disconnect early or send empty.
     let processedTranscript: any[] = [];
     try {
-        console.log(`Fetching transcript for ${conversationId}`);
         let apiTranscript: any[] = [];
         let tAttempts = 0;
         let tSuccess = false;
@@ -206,7 +196,6 @@ Deno.serve(async (req) => {
             } catch (err) {
                 tAttempts++;
                 if (tAttempts >= 3) throw err;
-                console.log(`Transcript not ready yet (attempt ${tAttempts}), waiting 1000ms...`);
                 await new Promise(r => setTimeout(r, 1000));
             }
         }
@@ -222,13 +211,12 @@ Deno.serve(async (req) => {
                 };
             }).filter((t: any) => t.msg);
         }
-    } catch (e) {
-        console.error("Failed to fetch transcript from ElevenLabs:", e);
+    } catch (_e) {
+        // Transcript fetch failed, will use fallback
     }
     
     // Fallback to exactly what the frontend passed ONLY if ElevenLabs failed or has no transcript
     if (processedTranscript.length === 0 && body.transcript && Array.isArray(body.transcript) && body.transcript.length > 0) {
-         console.log(`Using fallback transcript from frontend for ${conversationId}`);
          const nowMs = Date.now();
          processedTranscript = body.transcript.map((item: any) => {
             const roleData = formatRole(item.role);
@@ -311,7 +299,6 @@ Deno.serve(async (req) => {
     }
         
     if (sessionError) {
-        console.error("Session Update/Insert Error:", sessionError);
         throw sessionError;
     }
 
@@ -320,7 +307,6 @@ Deno.serve(async (req) => {
     })
 
   } catch (err: any) {
-    console.error("Webhook Error:", err)
     return new Response(JSON.stringify({ error: err.message || 'Unknown error' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

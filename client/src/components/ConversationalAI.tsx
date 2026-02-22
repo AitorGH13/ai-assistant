@@ -80,8 +80,8 @@ export function ConversationalAI({
                     loadConversation(currentAppConvId);
                 }
                 
-            } catch (e) {
-                console.error("Error saving session", e);
+            } catch (_e) {
+                // error saving session
             }
         };
         
@@ -128,8 +128,7 @@ export function ConversationalAI({
         }
       }
     },
-    onError: (error) => {
-        console.error("Error:", error);
+    onError: (_error) => {
         setConnectionError("Error de conexión. Inténtalo de nuevo.");
     },
   });
@@ -168,14 +167,13 @@ export function ConversationalAI({
             try {
                 const errorData = await response.json();
                 if (errorData.error) errorMsg = errorData.error;
-            } catch (e) {
-                console.error("No JSON response:", e);
+            } catch (_e) {
+                // no JSON response
             }
-            console.error("Server signature error:", errorMsg);
             if (mounted) setConnectionError(errorMsg);
         }
       } catch (error) {
-        console.error("Error fetching agent ID:", error);
+        // network error
         if (mounted) setConnectionError("Error de red");
       } finally {
         if (mounted) setIsInitializing(false);
@@ -219,8 +217,8 @@ export function ConversationalAI({
                   conversation_id: session,
                   app_conversation_id: conversationIdRef.current
               });
-          } catch (err) {
-              console.error("Failed to register session:", err);
+          } catch (_err) {
+              // register failed
           }
         }
       } else if (session) {
@@ -234,14 +232,14 @@ export function ConversationalAI({
                   conversation_id: sessionId,
                   app_conversation_id: conversationIdRef.current
               });
-          } catch (err) {
-              console.error("Failed to register session:", err);
+          } catch (_err) {
+              // register failed
           }
         }
       }
 
     } catch (error: any) {
-      console.error("Error starting conversation:", error);
+      // error starting conversation
       conversationIdRef.current = null;
       
       let errorMessage = "No se pudo iniciar la conversación.";

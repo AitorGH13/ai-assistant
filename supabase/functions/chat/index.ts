@@ -1,13 +1,7 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7'
 import { corsHeaders } from '../_shared/cors.ts'
 import { createAuthClient } from '../_shared/supabaseClient.ts'
+import { ROLE_ID } from '../_shared/constants.ts'
 import OpenAI from 'https://esm.sh/openai@4.28.0'
-
-// Constants for role identification (0: User, 1: AI Assistant)
-const ROLE_ID = {
-  USER: 0,
-  ASSISTANT: 1
-} as const;
 
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
@@ -24,7 +18,6 @@ Deno.serve(async (req) => {
     const token = authHeader?.replace('Bearer ', '')
     
     if (!token) {
-        console.error('Missing Authorization header')
         return new Response(JSON.stringify({ error: 'Missing Authorization header' }), {
             status: 401,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -36,15 +29,7 @@ Deno.serve(async (req) => {
       error: authError,
     } = await supabase.auth.getUser(token)
 
-    if (authError) {
-      console.error('Auth User Error:', authError)
-    }
-
     if (!user) {
-      console.error('Request Headers Keys:', [...req.headers.keys()])
-      // Log part of the token for debugging (security: do not log full token)
-      console.error('Token provided:', token ? token.substring(0, 10) + '...' : 'none')
-      
       return new Response(JSON.stringify({ error: 'Unauthorized', details: authError?.message }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -54,7 +39,6 @@ Deno.serve(async (req) => {
     // Initialize OpenAI client inside the handler
     const apiKey = Deno.env.get('OPENAI_API_KEY')
     if (!apiKey) {
-      console.error('OPENAI_API_KEY is not set')
       throw new Error('Server configuration error: Missing OpenAI API Key')
     }
     
@@ -242,7 +226,7 @@ Deno.serve(async (req) => {
                         try {
                             const eRes = await openai.embeddings.create({ model: 'text-embedding-3-small', input: doc.content });
                             await supabase.from('documents').update({ embedding: eRes.data[0].embedding }).eq('id', doc.id);
-                        } catch (e) { console.error("Fix error:", e); }
+                        } catch (_e) { /* embedding fix failed, continue */ }
                     }
                 }
 
@@ -271,8 +255,8 @@ Deno.serve(async (req) => {
                     if (weatherDoc && weatherDoc.length > 0) toolResponse = weatherDoc[0].content;
                 }
             }
-        } catch (err) {
-            console.error("[ToolCheck] Error:", err);
+        } catch (_err) {
+            // Tool check failed, continue without tool response
         }
 
         if (toolResponse) {
@@ -465,7 +449,7 @@ Deno.serve(async (req) => {
                 .filter(url => url && !url.startsWith('data:'))
                 
             if (filesToRemove.length > 0) {
-                await supabase.storage.from('voice-sessions').remove(filesToRemove).catch(console.error)
+                await supabase.storage.from('voice-sessions').remove(filesToRemove).catch(() => { /* storage cleanup failed */ })
             }
             
             // Delete the voice_sessions rows
@@ -593,7 +577,7 @@ Deno.serve(async (req) => {
          
          // Clean up potentially orphaned storage files
          if (sessionInfo?.audio_url && !sessionInfo.audio_url.startsWith('data:')) {
-             await supabase.storage.from('voice-sessions').remove([sessionInfo.audio_url]).catch(console.error)
+             await supabase.storage.from('voice-sessions').remove([sessionInfo.audio_url]).catch(() => { /* storage cleanup failed */ })
          }
 
          let conversation_deleted = false;
@@ -631,7 +615,6 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: 'Not Found' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 
   } catch (err) {
-    console.error(err)
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -95,8 +95,7 @@ export function useConversations(): {
         return sortConversations([...apiConversations, ...localConversations]);
       });
     } catch (error: any) {
-      console.error("Failed to fetch conversations:", error);
-      console.error("Error data:", error.response?.data);
+      // fetch failed
     } finally {
       setIsLoading(false);
       setIsInitialized(true);
@@ -161,7 +160,7 @@ export function useConversations(): {
             } : c
         ));
     } catch (error) {
-        console.error("Failed to load conversation:", error);
+        // load failed
     } finally {
         setIsLoading(false);
     }
@@ -234,7 +233,7 @@ export function useConversations(): {
           void fetchConversations();
 
       } catch (e) {
-          console.error("Failed to send message", e);
+          // send failed
       }
   }, [currentConversationId, createConversation, conversations, fetchConversations]);
 
@@ -251,7 +250,7 @@ export function useConversations(): {
               return (currentConversationId === id) ? [] : prev;
           });
       } catch (e) {
-          console.error("Failed to delete", e);
+          // delete failed
       }
   }, [currentConversationId]);
 
@@ -306,7 +305,7 @@ export function useConversations(): {
           }));
           
       } catch (e) {
-          console.error("Failed to save TTS audio", e);
+          // save failed
       }
   }, [currentConversationId]);
 
@@ -334,7 +333,7 @@ export function useConversations(): {
               }
           }
       } catch (e) {
-          console.error("Failed to delete TTS audio", e);
+          // delete failed
           // Optional: Re-fetch or revert on error
       }
   }, [currentConversationId]);
@@ -354,7 +353,7 @@ export function useConversations(): {
           
           await api.patch(`/chat/${id}/title`, { title: newTitle });
       } catch (e) {
-          console.error("Failed to update title", e);
+          // title update failed
       }
   }, []);
 

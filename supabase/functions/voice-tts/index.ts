@@ -10,7 +10,6 @@ Deno.serve(async (req) => {
   const token = authHeader?.replace('Bearer ', '')
   
   if (!token) {
-      console.error('No token provided in Authorization header')
       return new Response(JSON.stringify({ error: 'No token provided' }), {
           status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -21,7 +20,6 @@ Deno.serve(async (req) => {
   const { data: { user }, error: authError } = await supabase.auth.getUser(token)
   
   if (authError || !user) {
-    console.error('Auth error:', authError)
     return new Response(JSON.stringify({ error: 'Unauthorized', details: authError?.message }), {
       status: 401,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -30,7 +28,6 @@ Deno.serve(async (req) => {
   
   const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY')
   if (!ELEVENLABS_API_KEY) {
-      console.error('ELEVENLABS_API_KEY is not set')
       return new Response(JSON.stringify({ error: 'Server configuration error: Missing ElevenLabs API Key' }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -65,7 +62,6 @@ Deno.serve(async (req) => {
         })
 
       } catch (err) {
-        console.error('GET /voice-tts error:', err)
         return new Response(JSON.stringify({ error: err.message }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -88,8 +84,8 @@ Deno.serve(async (req) => {
         throw new Error('Text is required')
     }
     
-    const targetVoiceId = voiceId || "21m00Tcm4TlvDq8ikWAM" // Default
-    console.log(`Generating TTS for voice ${targetVoiceId}, text length: ${text.length}`)
+    const targetVoiceId = voiceId || "21m00Tcm4TlvDq8ikWAM"
+    
     
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${targetVoiceId}?output_format=mp3_44100_128`, {
         method: 'POST',
@@ -110,7 +106,6 @@ Deno.serve(async (req) => {
     if (!response.ok) {
         const status = response.status
         const errorText = await response.text()
-        console.error(`ElevenLabs error (${status}):`, errorText)
         return new Response(JSON.stringify({ 
             error: `ElevenLabs API Error: ${response.statusText}`,
             details: errorText,
@@ -131,7 +126,6 @@ Deno.serve(async (req) => {
     })
 
   } catch (err) {
-    console.error('POST /voice-tts error:', err)
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

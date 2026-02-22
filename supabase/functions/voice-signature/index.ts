@@ -31,7 +31,6 @@ Deno.serve(async (req) => {
     const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY')
 
     if (!ELEVENLABS_AGENT_ID || !ELEVENLABS_API_KEY) {
-      console.error('Missing ElevenLabs environment variables')
       throw new Error('Server configuration error')
     }
 
@@ -48,7 +47,6 @@ Deno.serve(async (req) => {
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('ElevenLabs API Error:', errorText)
       throw new Error('Failed to generate signed URL')
     }
 
@@ -65,7 +63,6 @@ Deno.serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Voice Signature Error:', error)
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

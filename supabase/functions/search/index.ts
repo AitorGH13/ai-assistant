@@ -1,4 +1,3 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7'
 import { corsHeaders } from '../_shared/cors.ts'
 import { createAuthClient } from '../_shared/supabaseClient.ts'
 import OpenAI from 'https://esm.sh/openai@4.28.0'
@@ -40,7 +39,6 @@ Deno.serve(async (req) => {
     // Initialize OpenAI client inside the handler
     const apiKey = Deno.env.get('OPENAI_API_KEY')
     if (!apiKey) {
-      console.error('OPENAI_API_KEY is not set')
       throw new Error('Server configuration error: Missing OpenAI API Key')
     }
     
@@ -62,7 +60,6 @@ Deno.serve(async (req) => {
         .limit(10) // Process in small batches
         
     if (!nullError && nullDocs && nullDocs.length > 0) {
-        console.log(`Generating embeddings for ${nullDocs.length} documents...`)
         for (const doc of nullDocs) {
             try {
                 const embRes = await openai.embeddings.create({
@@ -74,8 +71,8 @@ Deno.serve(async (req) => {
                     .from('documents')
                     .update({ embedding: emb })
                     .eq('id', doc.id)
-            } catch (e) {
-                console.error(`Failed to generate embedding for doc ${doc.id}:`, e)
+            } catch (_e) {
+                // embedding generation failed, continue
             }
         }
     }
@@ -120,7 +117,6 @@ Deno.serve(async (req) => {
     })
 
   } catch (err) {
-    console.error(err)
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

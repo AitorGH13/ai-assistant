@@ -57,7 +57,7 @@ export function SecureAsset({
           setSignedUrl(data.signedUrl);
         }
       } catch (err) {
-        console.error(`Error fetching signed URL for ${path}:`, err);
+        // signed URL fetch failed
         if (isMounted) {
           setError('Failed to load asset');
         }

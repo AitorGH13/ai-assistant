@@ -1,13 +1,10 @@
 // Feature components
 export { ChatMessage } from "./ChatMessage";
 export { ChatInput } from "./ChatInput";
-export { SettingsPanel } from "./SettingsPanel";
 export { MarkdownMessage } from "./MarkdownMessage";
-export { ModeSelector } from "./ModeSelector";
 export { SemanticSearch } from "./SemanticSearch";
 export { ConversationalAI } from "./ConversationalAI";
 export { AudioList } from "./AudioList";
-export { VoiceTab } from "./VoiceTab";
 export { Sidebar } from "./Sidebar";
 
 // UI components

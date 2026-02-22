@@ -24,14 +24,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .getSession()
       .then(({ data, error }) => {
         if (error) {
-          console.error("Failed to get session:", error);
+          // session fetch failed
         }
         setSession(data.session);
         setUser(data.session?.user ?? null);
         setLoading(false);
       })
-      .catch((err) => {
-        console.error("Unexpected error getting session:", err);
+      .catch((_err) => {
+        // unexpected error
         setLoading(false);
       });
 

@@ -1,358 +1,205 @@
-# AI Assistant
+# 🤖 AI Assistant
 
-A modern, professional ChatGPT-lite clone with a beautiful UI, built with Python FastAPI backend and React frontend.
+A full-stack AI assistant combining **ChatGPT-style conversations**, **semantic search**, **text-to-speech**, and **real-time voice AI** — all powered by Supabase, React, and Deno Edge Functions.
 
-## 🌟 Advanced Features
+---
 
-### Four Powerful Modes
+## ✨ Key Features
 
-1. **💬 Chat Mode** - AI conversation with function calling capabilities
-   - Agentic tool execution (e.g., getCurrentWeather)
-   - Visual indicators when tools are used
-   - Streaming responses
+| Mode                     | Description                                                            |
+| ------------------------ | ---------------------------------------------------------------------- |
+| 💬 **Chat**              | Streaming GPT-4o-mini conversations with image upload and tool calling |
+| 🔍 **Semantic Search**   | RAG-powered knowledge-base search via OpenAI embeddings                |
+| 🔊 **Text-to-Speech**    | Generate and save audio from text using ElevenLabs voices              |
+| 🎙️ **Conversational AI** | Real-time voice conversations with an ElevenLabs AI agent              |
 
-2. **🖼️ Vision Mode** - Multimodal image analysis
-   - Upload and analyze images
-   - Ask questions about visual content
-   - Powered by GPT-4o-mini vision capabilities
+**Additional highlights:** dark/light theme, temporary (unsaved) chats, markdown rendering with syntax highlighting, per-user Supabase Storage with signed URLs, RLS-secured data, fully responsive UI.
 
-3. **🔍 Search Mode** - Semantic search with embeddings
-   - Basic RAG (Retrieval-Augmented Generation)
-   - In-memory knowledge base
-   - Cosine similarity matching
-   - Top-3 relevant results
+---
 
-4. **🎙️ Voice AI Mode** - Text-to-Speech and Conversational AI (NEW!)
-   - **Text-to-Speech**: Convert text to natural-sounding speech with multiple voice options
-   - **Conversational AI**: Interactive voice conversations with AI agents
-   - Powered by ElevenLabs API
-   - Streaming audio playback
+## 🏗️ Architecture & Tech Stack
 
-👉 **See [FEATURES.md](FEATURES.md) for detailed documentation**
-
-## Features
-
-- 🚀 **Streaming responses** - See AI responses in real-time as they're generated
-- 🤖 **Function Calling** - AI can call tools for real-time information
-- 📸 **Vision Analysis** - Upload images and ask questions about them
-- 🔎 **Semantic Search** - Find relevant information using embeddings
-- 🎙️ **Voice AI** - Text-to-speech and conversational AI with ElevenLabs
-- 🎨 **Modern UI** - Professional minimalist design with light/dark themes
-- 📱 **Fully Responsive** - Optimized for mobile, tablet, and desktop
-- 🌓 **Dark/Light Mode** - Toggle between themes with persistent preference
-- 📝 **Markdown Support** - Rich text rendering with syntax-highlighted code blocks
-- 💬 **Message Timestamps** - Track conversation timeline
-- 📋 **Copy Code Blocks** - One-click copy for code snippets
-- 👤 **User Avatars** - Visual distinction between user and AI messages
-- ⚙️ **Custom System Prompts** - Configure the AI's behavior/personality
-- 🔒 **Secure** - API keys stay on the server, never exposed to the client
-- ✨ **Quick Suggestions** - Empty state with example prompts to get started
-
-## Tech Stack
-
-- **Backend**:
-  - Python + FastAPI + Uvicorn + NumPy (Main API server)
-  - Bun + TypeScript (Voice AI server)
-- **Frontend**: Vite + React + TypeScript + Tailwind CSS
-- **Package Manager**: Bun (for frontend and voice server) / pip (for backend)
-- **AI**:
-  - OpenAI API (gpt-4o-mini for chat/vision, text-embedding-3-small for search)
-  - ElevenLabs API (voice synthesis and conversational AI)
-- **UI Components**: Custom component library with lucide-react icons
-- **Markdown**: react-markdown with syntax highlighting
-- **Font**: Inter font family
-
-## Getting Started
-
-### Prerequisites
-
-- [Python 3.8+](https://www.python.org/downloads/)
-- [Bun](https://bun.sh/) installed (for frontend and voice server)
-- OpenAI API key
-- ElevenLabs API key (optional, for Voice AI features)
-
-### Installation
-
-1. Clone the repository
-
-2. Install dependencies:
-
-   ```bash
-   # Install all dependencies at once
-   bun run install:all
-
-   # Or install individually:
-   # Frontend dependencies
-   cd client && bun install
-
-   # Backend dependencies
-   cd ../server && pip install -r requirements.txt
-
-   # Voice server dependencies
-   cd ../server && bun install
-   ```
-
-3. Create a `.env` file in the root directory:
-
-   ```bash
-   cp .env.example .env
-   ```
-
-4. Add your API keys to the `.env` file:
-   ```
-   OPENAI_API_KEY=sk-your-api-key-here
-   ELEVENLABS_API_KEY=your-elevenlabs-api-key-here
-   ELEVENLABS_AGENT_ID=your-agent-id-here  # Optional, for conversational AI
-   ```
-
-### Development
-
-Run all servers concurrently from the root:
-
-```bash
-bun run dev
+```
+┌─────────────────────────────┐
+│       React + Vite          │   TypeScript, Tailwind CSS, Axios
+│       (client/)             │   @elevenlabs/react, react-markdown
+└────────────┬────────────────┘
+             │  HTTPS
+┌────────────▼────────────────┐
+│   Supabase Edge Functions   │   Deno runtime (supabase/functions/)
+│   ┌──────────────────────┐  │
+│   │ chat    search       │  │   OpenAI API  (GPT-4o-mini, embeddings)
+│   │ upload-file          │  │   ElevenLabs API (TTS, Conversational AI)
+│   │ voice-tts            │  │
+│   │ voice-signature      │  │
+│   │ voice-webhook        │  │
+│   └──────────────────────┘  │
+└────────────┬────────────────┘
+             │  PostgreSQL + Storage
+┌────────────▼────────────────┐
+│       Supabase              │   Auth, Database (RLS), Storage (private)
+└─────────────────────────────┘
 ```
 
-This will start:
+---
 
-- Python FastAPI backend server on `http://localhost:3001`
-- Bun Voice AI server on `http://localhost:3002`
-- Vite frontend dev server on `http://localhost:5173`
+## 📋 Prerequisites
 
-### Individual Commands
+| Tool                                                 | Version | Purpose                               |
+| ---------------------------------------------------- | ------- | ------------------------------------- |
+| [Bun](https://bun.sh/)                               | ≥ 1.0   | Package manager & script runner       |
+| [Supabase CLI](https://supabase.com/docs/guides/cli) | ≥ 1.100 | Local dev & Edge Function deployment  |
+| [Node.js](https://nodejs.org/)                       | ≥ 18    | Vite dev server (Bun delegates to it) |
 
-```bash
-# Run only the backend (from root)
-bun run dev:server
+You will also need accounts for:
 
-# Run only the frontend (from root)
-bun run dev:client
+- **Supabase** — database, auth, storage, Edge Functions
+- **OpenAI** — GPT-4o-mini chat and `text-embedding-3-small` embeddings
+- **ElevenLabs** _(optional)_ — TTS voices and conversational AI agent
 
-# Or run them separately:
-# Backend (from server/ directory)
-cd server && python -m uvicorn main:app --reload --port 3001
+---
 
-# Frontend (from client/ directory)
-cd client && bun run dev
+## 🔑 Environment Variables
 
-# Build frontend for production
-cd client && bun run build
+### Frontend (`client/.env`)
+
+```env
+VITE_SUPABASE_URL=https://<YOUR_PROJECT_REF>.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJ...
+VITE_API_URL=http://127.0.0.1:54321/functions/v1   # local dev only
 ```
 
-## Project Structure
+### Supabase Secrets (Edge Functions)
+
+Set these via `supabase secrets set` or from the Supabase dashboard:
+
+```env
+OPENAI_API_KEY=sk-...
+ELEVENLABS_API_KEY=...            # optional
+ELEVENLABS_AGENT_ID=...           # optional, for Conversational AI
+```
+
+> The `SUPABASE_URL` and `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` are automatically available inside Edge Functions.
+
+---
+
+## 🚀 Local Development Setup
+
+### 1. Clone & install
+
+```bash
+git clone https://github.com/AitorGH13/ai-assistant.git
+cd ai-assistant
+cd client && bun install
+```
+
+### 2. Start Supabase locally
+
+```bash
+supabase start          # starts local Supabase (Postgres, Auth, Storage, Edge Functions)
+supabase db reset       # applies supabase/schema.sql migrations
+```
+
+### 3. Configure environment
+
+```bash
+cp client/.env.example client/.env
+# Fill in the values printed by `supabase start` (API URL, anon key)
+```
+
+### 4. Run the frontend
+
+```bash
+cd client
+bun run dev             # Vite dev server → http://localhost:5173
+```
+
+### 5. Serve Edge Functions locally
+
+```bash
+supabase functions serve --env-file supabase/.env.local
+```
+
+---
+
+## 🌐 Deployment Guide
+
+### Deploy Edge Functions
+
+```bash
+# Deploy all functions at once
+supabase functions deploy chat
+supabase functions deploy search
+supabase functions deploy upload-file
+supabase functions deploy voice-tts
+supabase functions deploy voice-signature
+supabase functions deploy voice-webhook --no-verify-jwt   # webhook receives external calls
+```
+
+### Set production secrets
+
+```bash
+supabase secrets set OPENAI_API_KEY=sk-...
+supabase secrets set ELEVENLABS_API_KEY=...
+supabase secrets set ELEVENLABS_AGENT_ID=...
+```
+
+### Configure ElevenLabs Webhook
+
+In the [ElevenLabs dashboard](https://elevenlabs.io/), set the **Webhook URL** for your Conversational AI agent to:
+
+```
+https://<YOUR_PROJECT_REF>.supabase.co/functions/v1/voice-webhook
+```
+
+### Build & deploy frontend
+
+```bash
+cd client
+bun run build           # outputs to client/dist/
+```
+
+Deploy `client/dist/` to your hosting provider (Vercel, Netlify, Supabase Hosting, etc.).
+
+---
+
+## 📁 Project Structure
 
 ```
 ai-assistant/
-├── client/                 # Vite + React frontend
-│   ├── src/
-│   │   ├── components/    # React components
-│   │   │   ├── ui/       # Reusable UI components (Avatar, Button, etc.)
-│   │   │   ├── ChatMessage.tsx
-│   │   │   ├── ChatInput.tsx
-│   │   │   ├── ModeSelector.tsx     # Tab selector with Voice AI
-│   │   │   ├── SemanticSearch.tsx   # Search interface
-│   │   │   ├── VoiceTab.tsx         # NEW: Voice AI interface
-│   │   │   ├── SettingsPanel.tsx
-│   │   │   └── MarkdownMessage.tsx
-│   │   ├── utils/        # Utility functions (theme management)
-│   │   ├── App.tsx       # Main app component
-│   │   ├── main.tsx      # Entry point
-│   │   └── types.ts      # TypeScript types
-│   ├── index.html
-│   ├── vite.config.ts
-│   ├── tailwind.config.js
-│   └── package.json
-├── server/                 # Backend servers
-│   ├── main.py            # Python FastAPI server with API endpoints
-│   ├── index.ts           # NEW: Bun TypeScript server for Voice AI
-│   ├── tsconfig.json      # NEW: TypeScript configuration
-│   ├── requirements.txt   # Python dependencies
-│   └── package.json       # Node/Bun dependencies and scripts
-├── .env.example
-├── .gitignore
-├── cleanup-ports.ps1      # Windows script to cleanup ports
-├── FEATURES.md            # Detailed feature documentation
-├── package.json           # Root scripts
+├── client/                          # React + Vite frontend
+│   └── src/
+│       ├── components/              # UI and feature components
+│       │   ├── ui/                  # Reusable primitives (Button, Card, etc.)
+│       │   ├── ChatMessage.tsx      # Chat bubble with markdown
+│       │   ├── ChatInput.tsx        # Multi-mode input bar
+│       │   ├── ConversationalAI.tsx # Real-time voice AI
+│       │   ├── SemanticSearch.tsx   # Embedding-powered search UI
+│       │   ├── AudioList.tsx        # TTS / voice session player
+│       │   ├── SecureAsset.tsx      # Signed-URL asset loader
+│       │   ├── Sidebar.tsx          # Conversation history
+│       │   └── ...
+│       ├── hooks/                   # useConversations (state management)
+│       ├── context/                 # AuthProvider (Supabase Auth)
+│       ├── lib/                     # supabase client, api-url, auth-headers
+│       ├── services/                # Axios API client with auth interceptor
+│       └── App.tsx                  # Root application shell
+├── supabase/
+│   ├── functions/                   # Deno Edge Functions
+│   │   ├── _shared/                 # Shared modules (CORS, client, constants)
+│   │   ├── chat/                    # CRUD conversations + OpenAI streaming
+│   │   ├── search/                  # Semantic search with embeddings
+│   │   ├── upload-file/             # Supabase Storage image upload
+│   │   ├── voice-tts/               # ElevenLabs text-to-speech
+│   │   ├── voice-signature/         # ElevenLabs signed URL for agent
+│   │   └── voice-webhook/           # ElevenLabs webhook processor
+│   └── schema.sql                   # Database schema & RLS policies
+├── PROPOSED_OPTIMIZATIONS.md        # Future improvement proposals
 └── README.md
 ```
 
-## API
+---
 
-### POST /api/chat
-
-Send messages to the AI and receive streaming responses. Supports function calling and vision analysis.
-
-**Request Body:**
-
-```json
-{
-  "messages": [
-    {
-      "role": "user",
-      "content": "Hello!"
-    }
-  ],
-  "systemPrompt": "You are a helpful assistant.", // optional
-  "mode": "function" // optional: "function" | "vision" | "chat"
-}
-```
-
-**For Vision (multimodal):**
-
-```json
-{
-  "messages": [
-    {
-      "role": "user",
-      "content": [
-        { "type": "text", "text": "What's in this image?" },
-        {
-          "type": "image_url",
-          "image_url": { "url": "data:image/jpeg;base64,..." }
-        }
-      ]
-    }
-  ],
-  "mode": "vision"
-}
-```
-
-**Response:** Server-Sent Events stream with chunks in format:
-
-```
-data: {"content":"Hello"}
-
-data: {"content":" there!"}
-
-data: {"tool_calling": true}  // when function is called
-
-data: [DONE]
-```
-
-### POST /api/search
-
-Semantic search using embeddings.
-
-**Request Body:**
-
-```json
-{
-  "query": "What is the secret code?"
-}
-```
-
-**Response:**
-
-```json
-{
-  "query": "What is the secret code?",
-  "result": "The secret code is 1234.",
-  "similarity": 0.89,
-  "all_results": [
-    { "text": "The secret code is 1234.", "similarity": 0.89 },
-    { "text": "...", "similarity": 0.72 },
-    { "text": "...", "similarity": 0.65 }
-  ]
-}
-```
-
-### Voice AI Endpoints (Port 3002)
-
-#### GET /api/voices
-
-Fetch available ElevenLabs voices.
-
-**Response:**
-
-```json
-[
-  {
-    "id": "voice-id-1",
-    "name": "Rachel",
-    "category": "premade",
-    "preview_url": "https://..."
-  },
-  ...
-]
-```
-
-#### POST /api/speak
-
-Convert text to speech with streaming audio.
-
-**Request Body:**
-
-```json
-{
-  "text": "Hello, this is a test message.",
-  "voiceId": "voice-id-1"
-}
-```
-
-**Response:** Audio stream (audio/mpeg)
-
-#### GET /api/conversation-signature
-
-Get configuration for conversational AI agents.
-
-**Response:**
-
-```json
-{
-  "agentId": "your-agent-id"
-}
-```
-
-### GET /
-
-Health check endpoint.
-
-**Response:**
-
-```json
-{
-  "status": "ok",
-  "message": "AI Assistant API"
-}
-```
-
-## Development Notes
-
-- The backend uses **FastAPI** with **Uvicorn** ASGI server
-- Streaming is handled via `StreamingResponse` with SSE (Server-Sent Events)
-- CORS is configured to allow requests from `http://localhost:5173`
-- Environment variables are loaded from the root `.env` file
-- The frontend proxies API requests to the backend via Vite's proxy configuration
-
-## Supabase Migration Plan
-
-📖 **Ver [supabase/DATABASE.md](supabase/DATABASE.md) para documentación completa de la base de datos**
-
-### Quick Setup
-
-1. Create a Supabase project and copy `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` into `client/.env`.
-2. Run the SQL in `supabase/schema.sql` from Supabase SQL Editor.
-   - **Nota:** La tabla `auth.users` es gestionada automáticamente por Supabase
-   - Solo necesitas ejecutar el schema para crear `profiles`, `conversations`, `messages`, `tts_audios`
-3. Enable Email/Password auth in Supabase Authentication settings.
-4. Start app and verify auth flow in `client/src/components/AuthScreen.tsx` (sign up / login).
-5. Verify protected app shell in `client/src/App.tsx` (unauthenticated users only see auth screen).
-6. Verify profile/logout view in `client/src/components/ProfileView.tsx`.
-7. Confirm persistence in `client/src/hooks/useConversations.ts`:
-
-- conversations and messages load from Supabase on login
-- user and assistant messages persist when sent/streamed
-- TTS/conversational audio entries persist in `tts_audios`
-
-8. Validate RLS by logging in with two users and confirming each can only read/write their own rows.
-
-### 🔐 About Authentication
-
-- **`auth.users`** (email, password, etc.) is **managed automatically by Supabase**
-- **`public.profiles`** is synced automatically via trigger when users sign up
-- Passwords are encrypted by Supabase - never accessible directly
-- RLS policies ensure users only access their own data
-
-## License
+## 📄 License
 
 MIT

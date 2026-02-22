@@ -6,10 +6,9 @@ import { Input } from "./ui/Input";
 import { Card, CardContent } from "./ui/Card";
 
 interface ProfileViewProps {
-  onBack: () => void;
 }
 
-export function ProfileView({ }: ProfileViewProps) {
+export function ProfileView(_props: ProfileViewProps) {
   const { user, signOut, updateProfile } = useAuth();
 
   const [isEditing, setIsEditing] = useState(false);
